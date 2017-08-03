@@ -1,0 +1,205 @@
+body {
+    margin: 20px;
+    background: #f1f1f1;
+}
+
+.score {
+    display: none;
+    font-size: 12px;
+    text-align: right;
+    margin-bottom: 5px;
+}
+
+.team-list.started .score {
+    display: block;
+}
+
+.team-list {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.team-list {
+    display: flex;
+    flex-direction: row;
+}
+
+.team {
+    width: 130px;
+    height: 130px;
+    margin: 10px;
+    padding: 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    background: white;
+    user-select: none;
+    text-align: left;
+}
+
+.team-list.started .team {
+    cursor: default;
+}
+
+.team.join:after {
+    content: '+';
+    font-size: 50px;
+    text-align: center;
+    color: #bdb9b9;
+    width: 100%;
+    display: block;
+    height: 100%;
+    margin-top: 36px;
+}
+
+.team.current {
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+    margin-top: 6px;
+}
+
+.player {
+    margin-bottom: 3px;
+}
+
+.player.self {
+    font-weight: bold;
+}
+
+.player.ready {
+    background: #e2f0c4;
+}
+
+.player.current:before {
+    content: "➜ ";
+    line-height: 0;
+}
+
+.player.offline {
+    color: #adadad;
+}
+
+.spectators {
+    display: inline-block;
+    height: 20px;
+    margin: 10px;
+    padding: 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    background: white;
+    user-select: none;
+}
+
+.spectators.started {
+    cursor: default;
+}
+
+.spectators:empty:after {
+    content: "...";
+}
+
+.spectators .player {
+    display: inline-block;
+    margin: 0 4px;
+}
+
+.spectators-section {
+    display: none;
+}
+
+.spectators-section.active {
+    display: block;
+}
+
+.control-pane {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+}
+
+.action-pane {
+    display: inline-block;
+    background: white;
+    padding: 10px;
+    box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
+}
+
+.button-action {
+    font-size: 50px;
+    background: #9CCC65;
+    padding: 15px;
+    width: 200px;
+    cursor: pointer;
+    margin: 8px;
+    display: none;
+}
+
+.button-action.active {
+    display: block;
+}
+
+.game-board {
+    text-align: center;
+    display: none;
+}
+
+.game-board.active {
+    display: block;
+}
+
+.words {
+    background: white;
+    display: inline-block;
+    font-size: 30px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.words.counting input {
+    display: inline-block;
+}
+
+.word {
+    width: 234px;
+    border-bottom: 1px solid gainsboro;
+}
+
+.word input {
+    display: none;
+    width: 47px;
+    float: right;
+    font-size: 24px;
+    border: none;
+    margin: 3px 0;
+    padding: 0 4px;
+    background: #e5e5e5;
+}
+
+.word input.positive {
+    background: #ddedbc;
+}
+
+.word input.negative {
+    background: #e1a5a5;
+}
+
+.words-bet-input {
+    border: none;
+    background: #eeecec;
+    padding: 3px;
+    margin: -3px 7px;
+    width: 35px;
+    font-size: 18px;
+    display: none;
+}
+
+.words-bet-input.active {
+    display: inline-block;
+}
+
+.status-text {
+    font-size: 18px;
+}
+
+.button-action.pressed {
+    box-shadow: 0 1px 7px 1px green inset;
+}
