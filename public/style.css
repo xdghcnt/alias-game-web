@@ -132,6 +132,7 @@ body {
     cursor: pointer;
     margin: 8px;
     display: none;
+    user-select: none;
 }
 
 .button-action.active {

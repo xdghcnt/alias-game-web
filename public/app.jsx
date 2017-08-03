@@ -19,9 +19,9 @@ class Teams extends React.Component {
             <div
                 className={
                     "team-list"
-                    + (data.started ? " started" : " not-started")
+                    + (data.phase !== 0 ? " started" : " not-started")
                 }>
-                {data.teams && Object.keys(data.teams).filter(it => data.started ? data.teams[it].players.length : true).map((teamId, index) =>
+                {data.teams && Object.keys(data.teams).filter(it => data.phase !== 0 ? data.teams[it].players.length : true).map((teamId, index) =>
                     (<div onClick={() => handleTeamClick(teamId)} className={
                         "team"
                         + (data.teams[teamId].players.length ? "" : " join")
@@ -51,7 +51,7 @@ class Spectators extends React.Component {
                 onClick={handleSpectatorsClick}
                 className={
                     "spectators"
-                    + (data.started ? " started" : " not-started")
+                    + (data.phase !== 0 ? " started" : " not-started")
                 }>
                 {
                     data.spectators && data.spectators.map(
@@ -168,14 +168,14 @@ class Game extends React.Component {
             <div className="game">
                 <div className={
                     "game-board"
-                    + (!this.state.started || this.state.inited ? " active" : "")
+                    + (this.state.inited ? " active" : "")
                 }>
                     Teams:
                     <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}/>
                     <br/>
                     <div className={
                         "spectators-section"
-                        + (!this.state.started || this.state.spectators.length ? " active" : "")
+                        + ((this.state.phase === 0 || this.state.spectators && this.state.spectators.length) ? " active" : "")
                     }>
                         Spectators:
                         <br/>
@@ -204,6 +204,12 @@ class Game extends React.Component {
                                          + (!!actionText ? " active" : "")
                                      }>{actionText}</div>
                             </div>
+                        </div>
+                        <div className={
+                            "host-controls"
+                            + (isHost ? " active" : "")
+                        }>
+                            <div className="button-stop-game">Manage teams</div>
                         </div>
                     </div>
                 </div>
