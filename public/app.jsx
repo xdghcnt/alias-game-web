@@ -209,7 +209,10 @@ class Game extends React.Component {
                             "host-controls"
                             + (isHost ? " active" : "")
                         }>
-                            <div className="button-stop-game">Manage teams</div>
+                            <i className="material-icons settings-button">settings</i>
+                            <div className="host-controls-menu">
+                                <div className="button-stop-game">Manage teams</div>
+                            </div>
                         </div>
                     </div>
                 </div>

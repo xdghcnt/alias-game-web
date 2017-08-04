@@ -204,3 +204,23 @@ body {
 .button-action.pressed {
     box-shadow: 0 1px 7px 1px green inset;
 }
+
+.host-controls {
+    display: none;
+}
+
+.host-controls.active {
+    display: block;
+}
+
+.host-controls-menu {
+    display: none;
+}
+
+.host-controls.active:hover .host-controls-menu {
+    display: block;
+}
+
+.settings-button {
+    float: right;
+}
