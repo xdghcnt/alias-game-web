@@ -207,6 +207,24 @@ body {
 
 .host-controls {
     display: none;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    padding: 6px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    user-select: none;
+    cursor: default;
+    text-align: right;
+}
+
+.host-controls-menu > div {
+    padding: 3px 2px;
+    cursor: pointer;
+}
+
+.host-controls-menu > div:hover {
+    background: #9ccc65;
 }
 
 .host-controls.active {
