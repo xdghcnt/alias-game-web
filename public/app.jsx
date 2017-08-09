@@ -45,7 +45,7 @@ class Teams extends React.Component {
 class Spectators extends React.Component {
     render() {
         const data = this.props.data,
-            handleSpectatorsClick = this.props.handleSpectatorsClick
+            handleSpectatorsClick = this.props.handleSpectatorsClick;
         return (
             <div
                 onClick={handleSpectatorsClick}
@@ -129,11 +129,13 @@ class Game extends React.Component {
     }
 
     handleSpectatorsClick() {
-        this.socket.emit("spectators-join");
+        if (this.state.phase === 0)
+            this.socket.emit("spectators-join");
     }
 
     handleTeamClick(id) {
-        this.socket.emit("team-join", id);
+        if (this.state.phase === 0)
+            this.socket.emit("team-join", id);
     }
 
     handleAction() {
@@ -148,20 +150,61 @@ class Game extends React.Component {
     }
 
     handleChangeBet(value) {
-        this.setState(Object.assign(this.state, {currentBet: value}))
+        this.socket.emit("set-words-bet", value);
+    }
+
+    handleHostAction(evt) {
+        const action = evt.target.className;
+        if (action === "set-score")
+            this.socket.emit("set-score", prompt("Team number"), prompt("Score"));
+        else if (action === "remove-player")
+            this.socket.emit("remove-player", prompt("Nickname"));
+        else
+            this.socket.emit(action);
     }
 
     render() {
         const
             data = this.state,
             isHost = data.hostId === data.userId,
-            isTurn = data.currentPlayer === data.userId;
-        let actionText, statusText;
-        if (data.phase === 0 && isHost)
-            actionText = "Start";
+            isTurn = data.currentPlayer === data.userId,
+            isTeamTurn = !!~data.teams[data.currentTeam].players.indexOf(data.userId),
+            currentTeam = data.teams[data.currentTeam];
+        let actionText, statusText,
+            showWordsBet = false;
+        if (data.phase === 0) {
+            if (Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
+                if (isHost) {
+                    statusText = "You can start the game";
+                    actionText = "Start";
+                }
+                else
+                    statusText = "Host can start the game";
+            }
+            else
+                statusText = "Waiting for players";
+        }
         else if (data.phase === 1) {
-            statusText = "Waiting for team";
-            actionText = "Ready";
+            if (isTurn && data.readyPlayers.length === currentTeam.players.length) {
+                actionText = "Start!";
+                statusText = "Words count";
+                showWordsBet = true;
+            } else if (isTeamTurn) {
+                actionText = "Ready";
+                statusText = "Waiting for team";
+            }
+            else
+                statusText = "Waiting for other team";
+        }
+        else if (data.phase === 2) {
+            if (isTurn) {
+                statusText = "Explain things!";
+                actionText = "Next";
+            }
+            else if (isTeamTurn)
+                statusText = "Call out things!";
+            else
+                statusText = "Other team playing, keep silent";
         }
 
         return (
@@ -187,12 +230,13 @@ class Game extends React.Component {
                             <div className="action-pane">
                                 <div className="status-text">
                                     {statusText}
+                                    Words:
                                     <input
                                         className={
                                             "words-bet-input"
-                                            + ((data.phase === 1 || data.phase === 2) ? " active" : "")
+                                            + ((showWordsBet) ? " active" : "")
                                         }
-                                        disabled={!isTurn || data.phase !== 1}
+                                        disabled={!(isTurn && this.state.phase === 1)}
                                         type="number" min="0" max="99" value={data.currentBet}
                                         onChange={(evt) => !isNaN(evt.target.valueAsNumber)
                                             && this.handleChangeBet(evt.target.valueAsNumber)}/>
@@ -205,17 +249,20 @@ class Game extends React.Component {
                                      }>{actionText}</div>
                             </div>
                         </div>
-                        <div className={
-                            "host-controls"
-                            + (isHost ? " active" : "")
-                        }>
-                            <div className="host-controls-menu">
-                                <div className="stop-game">Manage teams</div>
-                                <div className="skip-player">Skip player</div>
-                                <div className="skip-turn">Skip teams</div>
-                            </div>
-                            <i className="material-icons settings-button">settings</i>
+                    </div>
+                    <div className={
+                        "host-controls"
+                        + (isHost ? " active" : "")
+                    }>
+                        <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
+                            <div className="stop-game">Manage teams</div>
+                            <div className="restart-round">Restart round</div>
+                            <div className="remove-player">Remove player</div>
+                            <div className="skip-player">Skip player</div>
+                            <div className="skip-turn">Skip turn</div>
+                            <div className="set-score">Set score</div>
                         </div>
+                        <i className="material-icons settings-button">settings</i>
                     </div>
                 </div>
             </div>

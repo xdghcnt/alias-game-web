@@ -58,6 +58,10 @@ const stateExample = {
         }
     }
 };
+let words;
+fs.readFile("words.json", "utf8", function (err, chats) {
+    words = JSON.parse(chats);
+});
 
 const rooms = {};
 // Server part
@@ -93,13 +97,13 @@ io.on("connection", socket => {
             readyPlayers: new JSONSet(),
             onlinePlayers: new JSONSet(),
             currentBet: 4,
+            currentWords: new JSONSet(),
             teams: {[makeId()]: {score: 0, players: new JSONSet()}}
         };
         if (!room.playerNames[user])
             room.spectators.add(user);
         room.onlinePlayers.add(user);
         room.playerNames[user] = args.userName;
-        console.log(room);
         update();
     });
     socket.on("team-join", id => {
@@ -118,15 +122,51 @@ io.on("connection", socket => {
         update();
     });
     socket.on("action", () => {
-        if (room.phase === 0 && room.hostId === user) {
-            room.phase = 1;
-        } else if (room.phase === 1) {
-            if (room.readyPlayers.has(user))
-                room.readyPlayers.delete(user);
-            else
-                room.readyPlayers.add(user);
+            if (room.phase === 0 && room.hostId === user) {
+                room.phase = 1;
+                room.currentTeam = room.currentTeam || Object.keys(room.teams)[0];
+                const currentTeam = room.teams[room.currentTeam];
+                currentTeam.currentPlayer = currentTeam.currentPlayer || [...currentTeam.players][0];
+                room.currentPlayer = currentTeam.currentPlayer;
+            } else if (room.phase === 1) {
+                if (room.currentPlayer !== user || room.readyPlayers.size !== room.teams[room.currentTeam].players.size)
+                    if (room.readyPlayers.has(user))
+                        room.readyPlayers.delete(user);
+                    else
+                        room.readyPlayers.add(user);
+                else {
+                    room.phase = 2;
+                    room.currentWords = [];
+                }
+            }
+            if (room.phase === 2 && room.currentPlayer === user) {
+                if (room.wordsBet < room.currentWords.size) {
+                    let randomWord, result;
+                    while (!result) {
+                        if (!room.currentWords.has(randomWord))
+                            result = true;
+                    }
+                    room.currentWords.add(randomWord);
+                }
+                else
+                    room.phase = 1;
+            }
+            update();
         }
+    );
+    socket.on("set-score", (teamIndex, score) => {
+        const team = room.teams[Object.keys(room.teams)[teamIndex - 1]];
+        if (team)
+            team.score = score;
         update();
-    })
+    });
+    socket.on("stop-game", () => {
+        room.phase = 0;
+        update();
+    });
+    socket.on("set-words-bet", value => {
+        room.wordsBet = value;
+        update();
+    });
 });
 
