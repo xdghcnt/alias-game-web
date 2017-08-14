@@ -37,7 +37,6 @@ const stateExample = {
     readyPlayers: ["d", "c", "a"],
     playerNames: {a: "churuya", b: "lol", c: "lel", d: "kek"},
     onlinePlayers: ["a", "b", "c"],
-    wordsBet: 4,
     phase: 0,
     currentWords: [],
     gameTime: 42321232323,
@@ -83,6 +82,11 @@ io.on("connection", socket => {
                 if (teamId !== exceptId && room.teams[teamId].players.delete(user) && room.teams[teamId].players.size === 0)
                     delete room.teams[teamId];
             });
+        },
+        calcWordPoints = () => {
+            let wordPoints = 0;
+            room.currentWords.forEach(word => wordPoints += word.points);
+            room.teams[room.currentTeam].wordPoints = wordPoints;
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -97,7 +101,7 @@ io.on("connection", socket => {
             readyPlayers: new JSONSet(),
             onlinePlayers: new JSONSet(),
             currentBet: 4,
-            currentWords: new JSONSet(),
+            currentWords: [],
             teams: {[makeId()]: {score: 0, players: new JSONSet()}}
         };
         if (!room.playerNames[user])
@@ -137,19 +141,23 @@ io.on("connection", socket => {
                 else {
                     room.phase = 2;
                     room.currentWords = [];
+                    room.readyPlayers.clear();
                 }
             }
             if (room.phase === 2 && room.currentPlayer === user) {
-                if (room.wordsBet < room.currentWords.size) {
+                if (room.currentBet > room.currentWords.length) {
                     let randomWord, result;
                     while (!result) {
-                        if (!room.currentWords.has(randomWord))
+                        randomWord = words.normal[Math.floor(Math.random() * words.normal.length)];
+                        if (!room.currentWords.some(word => word.word === randomWord))
                             result = true;
                     }
-                    room.currentWords.add(randomWord);
+                    room.currentWords.push({points: 1, word: randomWord});
                 }
-                else
+                else {
+                    calcWordPoints();
                     room.phase = 1;
+                }
             }
             update();
         }
@@ -165,7 +173,11 @@ io.on("connection", socket => {
         update();
     });
     socket.on("set-words-bet", value => {
-        room.wordsBet = value;
+        room.currentBet = value;
+        update();
+    });
+    socket.on("set-word-points", value => {
+        room.currentWords = value;
         update();
     });
 });

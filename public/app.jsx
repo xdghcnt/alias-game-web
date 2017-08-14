@@ -70,7 +70,7 @@ class Words extends React.Component {
         return (
             <div className={
                 "words"
-                + (data.phase === 3 ? " counting" : "")
+                + (data.phase === 1 ? " counting" : "")
             }>
                 {data.currentWords && data.currentWords.map((word, index) => (
                     <div className="word">{word.word}
@@ -145,7 +145,7 @@ class Game extends React.Component {
     handleChangeWordPoints(id, value) {
         if (value > -2 && value < 2) {
             this.state.currentWords[id].points = value;
-            this.setState(Object.assign(this.state, {currentWords: this.state.currentWords}))
+            this.socket.emit("set-word-points", this.state.currentWords);
         }
     }
 
@@ -164,65 +164,66 @@ class Game extends React.Component {
     }
 
     render() {
-        const
-            data = this.state,
-            isHost = data.hostId === data.userId,
-            isTurn = data.currentPlayer === data.userId,
-            isTeamTurn = !!~data.teams[data.currentTeam].players.indexOf(data.userId),
-            currentTeam = data.teams[data.currentTeam];
-        let actionText, statusText,
-            showWordsBet = false;
-        if (data.phase === 0) {
-            if (Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
-                if (isHost) {
-                    statusText = "You can start the game";
-                    actionText = "Start";
+        if (this.state.inited) {
+            const
+                data = this.state,
+                isHost = data.hostId === data.userId,
+                isTurn = data.currentPlayer === data.userId,
+                isTeamTurn = data.currentTeam && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
+                currentTeam = data.teams[data.currentTeam];
+            let actionText, statusText,
+                showWordsBet = false;
+            if (data.phase === 0) {
+                if (true || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
+                    if (isHost) {
+                        statusText = "You can start the game";
+                        actionText = "Start";
+                    }
+                    else
+                        statusText = "Host can start the game";
                 }
                 else
-                    statusText = "Host can start the game";
+                    statusText = "Waiting for players";
             }
-            else
-                statusText = "Waiting for players";
-        }
-        else if (data.phase === 1) {
-            if (isTurn && data.readyPlayers.length === currentTeam.players.length) {
-                actionText = "Start!";
-                statusText = "Words count";
+            else if (data.phase === 1) {
                 showWordsBet = true;
-            } else if (isTeamTurn) {
-                actionText = "Ready";
-                statusText = "Waiting for team";
+                if (isTurn && data.readyPlayers.length === currentTeam.players.length) {
+                    actionText = "Start!";
+                } else if (isTeamTurn) {
+                    actionText = "Ready";
+                    statusText = "Waiting for team.";
+                }
+                else
+                    statusText = "Waiting for other team.";
             }
-            else
-                statusText = "Waiting for other team";
-        }
-        else if (data.phase === 2) {
-            if (isTurn) {
-                statusText = "Explain things!";
-                actionText = "Next";
+            else if (data.phase === 2) {
+                if (isTurn) {
+                    statusText = "Explain things!";
+                    actionText = "Next";
+                }
+                else if (isTeamTurn)
+                    statusText = "Call out things!";
+                else
+                    statusText = "Other team playing, keep silent.";
             }
-            else if (isTeamTurn)
-                statusText = "Call out things!";
-            else
-                statusText = "Other team playing, keep silent";
-        }
 
-        return (
-            <div className="game">
-                <div className={
-                    "game-board"
-                    + (this.state.inited ? " active" : "")
-                }>
-                    Teams:
-                    <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}/>
-                    <br/>
+            return (
+                <div className="game">
                     <div className={
-                        "spectators-section"
-                        + ((this.state.phase === 0 || this.state.spectators && this.state.spectators.length) ? " active" : "")
+                        "game-board"
+                        + (this.state.inited ? " active" : "")
                     }>
-                        Spectators:
+                        Teams:
+                        <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}/>
                         <br/>
-                        <Spectators data={this.state} handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
+                        <div className={
+                            "spectators-section"
+                            + ((this.state.phase === 0 || this.state.spectators && this.state.spectators.length) ? " active" : "")
+                        }>
+                            Spectators:
+                            <br/>
+                            <Spectators data={this.state} handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
+                        </div>
                         <div className="control-pane">
                             <Words data={this.state}
                                    handleChange={(id, value) => this.handleChangeWordPoints(id, value)}/>
@@ -230,14 +231,17 @@ class Game extends React.Component {
                             <div className="action-pane">
                                 <div className="status-text">
                                     {statusText}
-                                    Words:
+                                    <span className={
+                                        "words-bet-label"
+                                        + ((showWordsBet) ? " active" : "")
+                                    }> Words: </span>
                                     <input
                                         className={
                                             "words-bet-input"
                                             + ((showWordsBet) ? " active" : "")
                                         }
                                         disabled={!(isTurn && this.state.phase === 1)}
-                                        type="number" min="0" max="99" value={data.currentBet}
+                                        type="number" min="1" max="99" value={data.currentBet}
                                         onChange={(evt) => !isNaN(evt.target.valueAsNumber)
                                             && this.handleChangeBet(evt.target.valueAsNumber)}/>
                                 </div>
@@ -249,24 +253,25 @@ class Game extends React.Component {
                                      }>{actionText}</div>
                             </div>
                         </div>
-                    </div>
-                    <div className={
-                        "host-controls"
-                        + (isHost ? " active" : "")
-                    }>
-                        <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
-                            <div className="stop-game">Manage teams</div>
-                            <div className="restart-round">Restart round</div>
-                            <div className="remove-player">Remove player</div>
-                            <div className="skip-player">Skip player</div>
-                            <div className="skip-turn">Skip turn</div>
-                            <div className="set-score">Set score</div>
+                        <div className={
+                            "host-controls"
+                            + (isHost ? " active" : "")
+                        }>
+                            <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
+                                <div className="stop-game">Manage teams</div>
+                                <div className="restart-round">Restart round</div>
+                                <div className="remove-player">Remove player</div>
+                                <div className="skip-player">Skip player</div>
+                                <div className="skip-turn">Skip turn</div>
+                                <div className="set-score">Set score</div>
+                            </div>
+                            <i className="material-icons settings-button">settings</i>
                         </div>
-                        <i className="material-icons settings-button">settings</i>
                     </div>
                 </div>
-            </div>
-        );
+            );
+        }
+        else return (<div></div>);
     }
 }
 

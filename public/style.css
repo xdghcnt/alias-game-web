@@ -153,6 +153,7 @@ body {
     display: inline-block;
     font-size: 30px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    padding-bottom: 7px;
 }
 
 .words.counting input {
@@ -162,6 +163,8 @@ body {
 .word {
     width: 234px;
     border-bottom: 1px solid gainsboro;
+    padding: 3px 0;
+    position: relative;
 }
 
 .word input {
@@ -173,6 +176,8 @@ body {
     margin: 3px 0;
     padding: 0 4px;
     background: #e5e5e5;
+    position: absolute;
+    right: 0;
 }
 
 .word input.positive {
@@ -187,14 +192,22 @@ body {
     border: none;
     background: #eeecec;
     padding: 3px;
-    margin: -3px 7px;
+    margin: -3px 2px;
     width: 35px;
     font-size: 18px;
     display: none;
 }
 
+.words-bet-label {
+    display: none;
+}
+
 .words-bet-input.active {
-    display: inline-block;
+    display: inline;
+}
+
+.words-bet-label.active {
+    display: inline;
 }
 
 .status-text {
