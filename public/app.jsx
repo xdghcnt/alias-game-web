@@ -27,7 +27,14 @@ class Teams extends React.Component {
                         + (data.teams[teamId].players.length ? "" : " join")
                         + (data.currentTeam === teamId ? " current" : "")
                     } key={index}>
-                        <div className="score">Score: {data.teams[teamId].score}</div>
+                        <div className="score">Score: {data.teams[teamId].score}
+                            <span className={
+                                "word-points"
+                                + (data.teams[teamId].wordPoints ? " active" : "")
+                                + (data.teams[teamId].wordPoints > 0 ? " positive" : "")
+                                + (data.teams[teamId].wordPoints < 0 ? " negative" : "")
+                            }>{Math.abs(data.teams[teamId].wordPoints)}</span>
+                        </div>
                         <div className="players-container">
                             {
                                 data.teams[teamId].players && data.teams[teamId].players.map(
@@ -117,7 +124,17 @@ class Game extends React.Component {
         initArgs.userId = this.userId = localStorage.userId;
         initArgs.userName = localStorage.userName;
         this.socket = io();
-        this.socket.on("state", state => this.setState(Object.assign({userId: this.userId}, state)));
+        this.socket.on("state", state => this.setState(Object.assign({
+            userId: this.userId,
+            activeWord: this.activeWord
+        }, state)));
+        this.socket.on("active-word", word => {
+            this.activeWord = word;
+            this.setState(Object.assign({
+                userId: this.userId,
+                activeWord: this.activeWord
+            }, this.state));
+        });
         this.socket.emit("init", initArgs);
     }
 
@@ -173,6 +190,8 @@ class Game extends React.Component {
                 currentTeam = data.teams[data.currentTeam];
             let actionText, statusText,
                 showWordsBet = false;
+            if (data.activeWord)
+                data.currentWords.push({word: data.activeWord});
             if (data.phase === 0) {
                 if (true || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
                     if (isHost) {

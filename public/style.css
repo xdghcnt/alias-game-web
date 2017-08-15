@@ -153,7 +153,8 @@ body {
     display: inline-block;
     font-size: 30px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-    padding-bottom: 7px;
+    padding-bottom: 53px;
+    margin-bottom: -41px;
 }
 
 .words.counting input {
@@ -254,4 +255,29 @@ body {
 
 .settings-button {
     float: right;
+}
+
+.word-points {
+    display: none;
+    margin-left: 2px;
+}
+
+.word-points.active {
+    display: inline;
+}
+
+.word-points.positive {
+    color: green;
+}
+
+.word-points.positive:before {
+    content: "+";
+}
+
+.word-points.negative {
+    color: red;
+}
+
+.word-points.negative:before {
+    content: "−";
 }

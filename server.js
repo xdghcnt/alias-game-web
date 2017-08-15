@@ -63,6 +63,8 @@ fs.readFile("words.json", "utf8", function (err, chats) {
 });
 
 const rooms = {};
+const activeWords = {};
+
 // Server part
 const app = express();
 app.use('/', express.static(path.join(__dirname, 'public')));
@@ -87,6 +89,37 @@ io.on("connection", socket => {
             let wordPoints = 0;
             room.currentWords.forEach(word => wordPoints += word.points);
             room.teams[room.currentTeam].wordPoints = wordPoints;
+        },
+        addWordPoints = () => {
+            Object.keys(room.teams).forEach(teamId => {
+                const team = room.teams[teamId];
+                if (team.wordPoints) {
+                    team.score += team.wordPoints;
+                    delete team.wordPoints;
+                }
+            });
+        },
+        rotatePlayers = () => {
+            const
+                currentTeam = room.teams[room.currentTeam],
+                currentPlayerKeys = [...currentTeam.players],
+                indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
+            if (indexOfCurrentPlayer === currentTeam.players.size - 1)
+                currentTeam.currentPlayer = currentPlayerKeys[0];
+            else
+                currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
+            room.currentPlayer = currentTeam.currentPlayer;
+        },
+        rotateTeams = () => {
+            const
+                teamKeys = Object.keys(room.teams),
+                indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
+            if (indexOfCurrentTeam === teamKeys.length - 2)
+                room.currentTeam = teamKeys[0];
+            else
+                room.currentTeam = teamKeys[indexOfCurrentTeam + 1];
+            room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
+            room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -108,6 +141,8 @@ io.on("connection", socket => {
             room.spectators.add(user);
         room.onlinePlayers.add(user);
         room.playerNames[user] = args.userName;
+        if (room.currentPlayer === user && activeWords[room.roomId])
+            socket.emit("active-word", activeWords[room.roomId]);
         update();
     });
     socket.on("team-join", id => {
@@ -142,20 +177,29 @@ io.on("connection", socket => {
                     room.phase = 2;
                     room.currentWords = [];
                     room.readyPlayers.clear();
+                    addWordPoints();
                 }
             }
             if (room.phase === 2 && room.currentPlayer === user) {
-                if (room.currentBet > room.currentWords.length) {
+                if (room.currentBet > room.currentWords.length + 1) {
                     let randomWord, result;
                     while (!result) {
                         randomWord = words.normal[Math.floor(Math.random() * words.normal.length)];
                         if (!room.currentWords.some(word => word.word === randomWord))
                             result = true;
                     }
-                    room.currentWords.push({points: 1, word: randomWord});
+                    if (activeWords[room.roomId])
+                        room.currentWords.push({points: 1, word: activeWords[room.roomId]});
+                    activeWords[room.roomId] = randomWord;
+                    socket.emit("active-word", activeWords[room.roomId]);
                 }
                 else {
+                    room.currentWords.push({points: 1, word: activeWords[room.roomId]});
+                    activeWords[room.roomId] = undefined;
+                    socket.emit("active-word", undefined);
                     calcWordPoints();
+                    rotatePlayers();
+                    rotateTeams();
                     room.phase = 1;
                 }
             }
@@ -178,6 +222,17 @@ io.on("connection", socket => {
     });
     socket.on("set-word-points", value => {
         room.currentWords = value;
+        room.readyPlayers.delete(room.currentPlayer);
+        calcWordPoints();
+        update();
+    });
+    socket.on("skip-player", () => {
+        rotatePlayers();
+        update();
+    });
+    socket.on("skip-turn", () => {
+        rotatePlayers();
+        rotateTeams();
         update();
     });
 });
