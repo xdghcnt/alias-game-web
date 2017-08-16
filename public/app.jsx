@@ -149,7 +149,12 @@ class Game extends React.Component {
                 activeWord: word
             }));
         });
+        this.socket.on("timer-end", word => {
+            this.timerSound.play();
+        });
+        document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
+        this.timerSound = new Audio("beep.mp3");
     }
 
     constructor() {
@@ -190,6 +195,8 @@ class Game extends React.Component {
             this.socket.emit("set-score", prompt("Team number"), prompt("Score"));
         else if (action === "remove-player")
             this.socket.emit("remove-player", prompt("Nickname"));
+        else if (action === "set-round-time")
+            this.socket.emit("set-round-time", prompt("Round time in seconds"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -247,7 +254,7 @@ class Game extends React.Component {
                 const timerSecondDiff = ((this.state.timer % 100) || 100);
                 if (this.state.timer - timerSecondDiff > 0)
                     this.timeOut = setTimeout(() => {
-                        console.log(`timer: ${this.state.timer} diff: ${timerSecondDiff}`);
+                        //console.log(`timer: ${this.state.timer} diff: ${timerSecondDiff}`);
                         if (data.phase === 2 && this.state.timer)
                             this.setState(Object.assign({}, this.state, {timer: this.state.timer - timerSecondDiff}));
                     }, timerSecondDiff);
@@ -310,6 +317,7 @@ class Game extends React.Component {
                                         <div className="skip-player">Skip player</div>
                                         <div className="skip-turn">Skip turn</div>
                                         <div className="set-score">Set score</div>
+                                        <div className="set-round-time">Set round time</div>
                                     </div>
                                 ) : ""}
                                 <div>

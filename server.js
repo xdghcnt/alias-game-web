@@ -113,6 +113,7 @@ io.on("connection", socket => {
                 room.timer -= 100;
                 if (room.timer <= 0) {
                     endRound();
+                    io.to(room.roomId).emit("timer-end", room);
                     update();
                 }
             }, 100);
@@ -252,6 +253,9 @@ io.on("connection", socket => {
         room.currentWords = [];
         room.readyPlayers.clear();
         update();
+    });
+    socket.on("set-round-time", time => {
+        room.roundTime = time;
     });
     socket.on("disconnect", () => {
         if (room) {
