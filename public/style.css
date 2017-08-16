@@ -220,7 +220,6 @@ body {
 }
 
 .host-controls {
-    display: none;
     position: fixed;
     right: 0;
     bottom: 0;
@@ -232,24 +231,20 @@ body {
     text-align: right;
 }
 
-.host-controls-menu > div {
+.host-controls-menu > div > div {
     padding: 3px 2px;
     cursor: pointer;
 }
 
-.host-controls-menu > div:hover {
+.host-controls-menu > div > div:hover {
     background: #9ccc65;
-}
-
-.host-controls.active {
-    display: block;
 }
 
 .host-controls-menu {
     display: none;
 }
 
-.host-controls.active:hover .host-controls-menu {
+.host-controls:hover .host-controls-menu {
     display: block;
 }
 
@@ -280,4 +275,9 @@ body {
 
 .word-points.negative:before {
     content: "−";
+}
+
+.timer {
+    font-size: 39px;
+    margin-bottom: 4px;
 }

@@ -23,47 +23,15 @@ class JSONSet extends Set {
     }
 }
 
-const stateExample = {
-    inited: true,
-    started: false,
-    actionRequired: true,
-    readyState: true,
-    actionText: "Readye",
-    statusText: "Start game",
-    currentTeam: 2,
-    actionDisabled: false,
-    currentBet: 4,
-    currentPlayer: "b",
-    readyPlayers: ["d", "c", "a"],
-    playerNames: {a: "churuya", b: "lol", c: "lel", d: "kek"},
-    onlinePlayers: ["a", "b", "c"],
-    phase: 0,
-    currentWords: [],
-    gameTime: 42321232323,
-    roundTime: 12312316541,
-    spectators: ["c", "d"],
-    teams: {
-        1: {
-            score: 1231,
-            players: ["a", "b"]
-        },
-        2: {
-            score: 11,
-            players: ["c", "d"]
-        },
-        3: {
-            score: 0,
-            players: []
-        }
-    }
-};
 let words;
 fs.readFile("words.json", "utf8", function (err, chats) {
     words = JSON.parse(chats);
 });
 
-const rooms = {};
-const activeWords = {};
+const
+    rooms = {},
+    activeWords = {},
+    timers = {};
 
 // Server part
 const app = express();
@@ -99,16 +67,18 @@ io.on("connection", socket => {
                 }
             });
         },
-        rotatePlayers = () => {
+        rotatePlayers = (teamId) => {
             const
-                currentTeam = room.teams[room.currentTeam],
+                currentTeam = room.teams[teamId || room.currentTeam],
+                currentPlayer = currentTeam.currentPlayer,
                 currentPlayerKeys = [...currentTeam.players],
                 indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
             if (indexOfCurrentPlayer === currentTeam.players.size - 1)
                 currentTeam.currentPlayer = currentPlayerKeys[0];
             else
                 currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
-            room.currentPlayer = currentTeam.currentPlayer;
+            if (room.currentPlayer === currentPlayer)
+                room.currentPlayer = currentTeam.currentPlayer;
         },
         rotateTeams = () => {
             const
@@ -120,6 +90,28 @@ io.on("connection", socket => {
                 room.currentTeam = teamKeys[indexOfCurrentTeam + 1];
             room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
             room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
+        },
+        stopTimer = () => {
+            room.timer = null;
+            clearInterval(timers[room.roomId]);
+        },
+        endRound = () => {
+            activeWords[room.roomId] = undefined;
+            calcWordPoints();
+            rotatePlayers();
+            rotateTeams();
+            stopTimer();
+            room.phase = 1;
+        },
+        startTimer = () => {
+            room.timer = room.roundTime * 1000;
+            timers[room.roomId] = setInterval(() => {
+                room.timer -= 100;
+                if (room.timer <= 0) {
+                    endRound();
+                    update();
+                }
+            }, 100);
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -133,6 +125,7 @@ io.on("connection", socket => {
             playerNames: {},
             readyPlayers: new JSONSet(),
             onlinePlayers: new JSONSet(),
+            roundTime: 10,
             currentBet: 4,
             currentWords: [],
             teams: {[makeId()]: {score: 0, players: new JSONSet()}}
@@ -178,6 +171,7 @@ io.on("connection", socket => {
                     room.currentWords = [];
                     room.readyPlayers.clear();
                     addWordPoints();
+                    startTimer();
                 }
             }
             if (room.phase === 2 && room.currentPlayer === user) {
@@ -195,12 +189,7 @@ io.on("connection", socket => {
                 }
                 else {
                     room.currentWords.push({points: 1, word: activeWords[room.roomId]});
-                    activeWords[room.roomId] = undefined;
-                    socket.emit("active-word", undefined);
-                    calcWordPoints();
-                    rotatePlayers();
-                    rotateTeams();
-                    room.phase = 1;
+                    endRound();
                 }
             }
             update();
@@ -234,6 +223,43 @@ io.on("connection", socket => {
         rotatePlayers();
         rotateTeams();
         update();
+    });
+    socket.on("change-name", value => {
+        room.playerNames[user] = value;
+        update();
+    });
+    socket.on("remove-player", nickname => {
+        let user;
+        Object.keys(room.playerNames).forEach(userId => {
+            if (room.playerNames[userId] === nickname)
+                user = userId;
+        });
+        Object.keys(room.teams).forEach(teamId => {
+            room.teams[teamId].players.delete(user);
+            if (room.teams[teamId].currentPlayer === user)
+                rotatePlayers(teamId);
+        });
+        delete room.playerNames[user];
+        room.readyPlayers.delete(user);
+        room.onlinePlayers.delete(user);
+        room.spectators.delete(user);
+        update();
+    });
+    socket.on("restart-round", nickname => {
+        room.phase = 1;
+        room.currentWords = [];
+        room.readyPlayers.clear();
+        update();
+    });
+    socket.on("disconnect", () => {
+        if (room) {
+            room.onlinePlayers.delete(user);
+            if (room.spectators.has(user))
+                delete room.playerNames[user];
+            room.spectators.delete(user);
+            room.readyPlayers.delete(user);
+            update();
+        }
     });
 });
 

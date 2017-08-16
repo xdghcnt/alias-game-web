@@ -13,7 +13,8 @@ function makeId() {
 
 class Teams extends React.Component {
     render() {
-        const data = this.props.data,
+        const
+            data = this.props.data,
             handleTeamClick = this.props.handleTeamClick;
         return (
             <div
@@ -70,6 +71,16 @@ class Spectators extends React.Component {
     }
 }
 
+class Timer extends React.Component {
+    render() {
+        return (
+            <div className="timer">
+                {this.props.data.timer && (new Date(this.props.data.timer)).toUTCString().match(/(\d\d:\d\d )/)[0].trim()}
+            </div>
+        );
+    }
+}
+
 class Words extends React.Component {
     render() {
         const data = this.props.data,
@@ -113,7 +124,7 @@ class Player extends React.Component {
 class Game extends React.Component {
     componentDidMount() {
         const initArgs = {};
-        if (!window.localStorage.userId) {
+        if (!localStorage.userId) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
             localStorage.userId = makeId();
@@ -176,12 +187,19 @@ class Game extends React.Component {
             this.socket.emit("set-score", prompt("Team number"), prompt("Score"));
         else if (action === "remove-player")
             this.socket.emit("remove-player", prompt("Nickname"));
+        else if (action === "change-name") {
+            const name = prompt("New name");
+            this.socket.emit("change-name", name);
+            localStorage.userName = name;
+        }
         else
             this.socket.emit(action);
     }
 
     render() {
-        if (this.state.inited) {
+        if (this.state.inited && !this.state.playerNames[this.state.userId])
+            return (<div>You was kicked</div>);
+        else if (this.state.inited) {
             const
                 data = this.state,
                 isHost = data.hostId === data.userId,
@@ -190,8 +208,6 @@ class Game extends React.Component {
                 currentTeam = data.teams[data.currentTeam];
             let actionText, statusText,
                 showWordsBet = false;
-            if (data.activeWord)
-                data.currentWords.push({word: data.activeWord});
             if (data.phase === 0) {
                 if (true || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
                     if (isHost) {
@@ -224,6 +240,13 @@ class Game extends React.Component {
                     statusText = "Call out things!";
                 else
                     statusText = "Other team playing, keep silent.";
+                if (data.activeWord)
+                    data.currentWords = data.currentWords.concat([{words: data.activeWord}]);
+                const timerSecondDiff = (this.state.timer % 1000) || 1000;
+                if (this.state.timer - timerSecondDiff > 0)
+                    setTimeout(() => {
+                        this.setState(Object.assign({timer: this.state.timer - timerSecondDiff}, this.state));
+                    }, timerSecondDiff);
             }
 
             return (
@@ -244,6 +267,7 @@ class Game extends React.Component {
                             <Spectators data={this.state} handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
                         </div>
                         <div className="control-pane">
+                            <Timer data={this.state}/>
                             <Words data={this.state}
                                    handleChange={(id, value) => this.handleChangeWordPoints(id, value)}/>
                             <br/>
@@ -272,17 +296,21 @@ class Game extends React.Component {
                                      }>{actionText}</div>
                             </div>
                         </div>
-                        <div className={
-                            "host-controls"
-                            + (isHost ? " active" : "")
-                        }>
+                        <div className="host-controls">
                             <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
-                                <div className="stop-game">Manage teams</div>
-                                <div className="restart-round">Restart round</div>
-                                <div className="remove-player">Remove player</div>
-                                <div className="skip-player">Skip player</div>
-                                <div className="skip-turn">Skip turn</div>
-                                <div className="set-score">Set score</div>
+                                {isHost ? (
+                                    <div>
+                                        <div className="stop-game">Manage teams</div>
+                                        <div className="remove-player">Remove player</div>
+                                        <div className="restart-round">Restart round</div>
+                                        <div className="skip-player">Skip player</div>
+                                        <div className="skip-turn">Skip turn</div>
+                                        <div className="set-score">Set score</div>
+                                    </div>
+                                ) : ""}
+                                <div>
+                                    <div className="change-name">Change name</div>
+                                </div>
                             </div>
                             <i className="material-icons settings-button">settings</i>
                         </div>
@@ -290,7 +318,7 @@ class Game extends React.Component {
                 </div>
             );
         }
-        else return (<div></div>);
+        else return (<div/>);
     }
 }
 
