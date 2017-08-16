@@ -88,7 +88,8 @@ io.on("connection", socket => {
                 room.currentTeam = teamKeys[0];
             else
                 room.currentTeam = teamKeys[indexOfCurrentTeam + 1];
-            room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
+            if (!room.teams[room.currentTeam].currentPlayer)
+                room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
             room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
         },
         stopTimer = () => {
@@ -96,6 +97,9 @@ io.on("connection", socket => {
             clearInterval(timers[room.roomId]);
         },
         endRound = () => {
+            if (activeWords[room.roomId])
+                room.currentWords.push({points: 1, word: activeWords[room.roomId]});
+            socket.emit("active-word", null);
             activeWords[room.roomId] = undefined;
             calcWordPoints();
             rotatePlayers();
@@ -125,7 +129,7 @@ io.on("connection", socket => {
             playerNames: {},
             readyPlayers: new JSONSet(),
             onlinePlayers: new JSONSet(),
-            roundTime: 10,
+            roundTime: 60,
             currentBet: 4,
             currentWords: [],
             teams: {[makeId()]: {score: 0, players: new JSONSet()}}
@@ -187,10 +191,8 @@ io.on("connection", socket => {
                     activeWords[room.roomId] = randomWord;
                     socket.emit("active-word", activeWords[room.roomId]);
                 }
-                else {
-                    room.currentWords.push({points: 1, word: activeWords[room.roomId]});
+                else
                     endRound();
-                }
             }
             update();
         }

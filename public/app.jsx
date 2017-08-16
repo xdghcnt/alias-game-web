@@ -90,14 +90,18 @@ class Words extends React.Component {
                 "words"
                 + (data.phase === 1 ? " counting" : "")
             }>
-                {data.currentWords && data.currentWords.map((word, index) => (
+                {data.currentWords && ((!(data.activeWord && data.phase === 2) ? data.currentWords : data.currentWords.concat([{
+                    points: 1,
+                    word: data.activeWord
+                }])).map((word, index) => (
                     <div className="word">{word.word}
                         <input
                             className={word.points > 0 ? "positive" : (word.points === 0 ? "" : "negative")}
                             type="number" value={word.points} min="-2" max="1"
-                            onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}/>
+                            onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}
+                        />
                     </div>
-                ))}
+                )))}
             </div>
         );
     }
@@ -137,14 +141,13 @@ class Game extends React.Component {
         this.socket = io();
         this.socket.on("state", state => this.setState(Object.assign({
             userId: this.userId,
-            activeWord: this.activeWord
+            activeWord: this.state.activeWord
         }, state)));
         this.socket.on("active-word", word => {
-            this.activeWord = word;
-            this.setState(Object.assign({
+            this.setState(Object.assign({}, this.state, {
                 userId: this.userId,
-                activeWord: this.activeWord
-            }, this.state));
+                activeWord: word
+            }));
         });
         this.socket.emit("init", initArgs);
     }
@@ -197,6 +200,7 @@ class Game extends React.Component {
     }
 
     render() {
+        clearTimeout(this.timeOut);
         if (this.state.inited && !this.state.playerNames[this.state.userId])
             return (<div>You was kicked</div>);
         else if (this.state.inited) {
@@ -240,12 +244,12 @@ class Game extends React.Component {
                     statusText = "Call out things!";
                 else
                     statusText = "Other team playing, keep silent.";
-                if (data.activeWord)
-                    data.currentWords = data.currentWords.concat([{words: data.activeWord}]);
-                const timerSecondDiff = (this.state.timer % 1000) || 1000;
+                const timerSecondDiff = ((this.state.timer % 100) || 100);
                 if (this.state.timer - timerSecondDiff > 0)
-                    setTimeout(() => {
-                        this.setState(Object.assign({timer: this.state.timer - timerSecondDiff}, this.state));
+                    this.timeOut = setTimeout(() => {
+                        console.log(`timer: ${this.state.timer} diff: ${timerSecondDiff}`);
+                        if (data.phase === 2 && this.state.timer)
+                            this.setState(Object.assign({}, this.state, {timer: this.state.timer - timerSecondDiff}));
                     }, timerSecondDiff);
             }
 
