@@ -209,7 +209,7 @@ class Game extends React.Component {
     render() {
         clearTimeout(this.timeOut);
         if (this.state.inited && !this.state.playerNames[this.state.userId])
-            return (<div>You was kicked</div>);
+            return (<div>You were kicked</div>);
         else if (this.state.inited) {
             const
                 data = this.state,
