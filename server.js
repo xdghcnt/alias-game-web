@@ -56,12 +56,15 @@ io.on("connection", socket => {
         calcWordPoints = () => {
             let wordPoints = 0;
             room.currentWords.forEach(word => wordPoints += word.points);
-            room.teams[room.currentTeam].wordPoints = wordPoints;
+            Object.keys(room.teams).forEach(teamId => {
+                if (room.teams[teamId].wordPoints !== undefined)
+                    room.teams[teamId].wordPoints = wordPoints;
+            });
         },
         addWordPoints = () => {
             Object.keys(room.teams).forEach(teamId => {
                 const team = room.teams[teamId];
-                if (team.wordPoints) {
+                if (team.wordPoints !== undefined) {
                     team.score += team.wordPoints;
                     delete team.wordPoints;
                 }
@@ -180,6 +183,7 @@ io.on("connection", socket => {
                 }
             }
             if (room.phase === 2 && room.currentPlayer === user) {
+                room.teams[room.currentTeam].wordPoints = 0;
                 if (room.currentBet > room.currentWords.length + 1) {
                     let randomWord, result;
                     while (!result) {
