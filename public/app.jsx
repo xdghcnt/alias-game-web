@@ -197,6 +197,10 @@ class Game extends React.Component {
             this.socket.emit("remove-player", prompt("Nickname"));
         else if (action === "set-round-time")
             this.socket.emit("set-round-time", prompt("Round time in seconds"));
+        else if (action === "set-goal")
+            this.socket.emit("set-goal", prompt("Words count to win"));
+        else if (action === "restart-game" && confirm("Restart? Are you sure?"))
+            this.socket.emit("restart-game");
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -209,7 +213,7 @@ class Game extends React.Component {
     render() {
         clearTimeout(this.timeOut);
         if (this.state.inited && !this.state.playerNames[this.state.userId])
-            return (<div>You was kicked</div>);
+            return (<div>You were kicked</div>);
         else if (this.state.inited) {
             const
                 data = this.state,
@@ -218,7 +222,8 @@ class Game extends React.Component {
                 isTeamTurn = data.currentTeam && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
                 currentTeam = data.teams[data.currentTeam];
             let actionText, statusText,
-                showWordsBet = false;
+                showWordsBet = false,
+                gameIsOver;
             if (data.phase === 0) {
                 if (true || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
                     if (isHost) {
@@ -232,15 +237,39 @@ class Game extends React.Component {
                     statusText = "Waiting for players";
             }
             else if (data.phase === 1) {
-                showWordsBet = true;
-                if (isTurn && data.readyPlayers.length === currentTeam.players.length) {
-                    actionText = "Start!";
-                } else if (isTeamTurn) {
-                    actionText = "Ready";
-                    statusText = "Waiting for team.";
+                if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
+                    let mostPoints = 0,
+                        mostPointsTeam,
+                        teamsReachedGoal = Object.keys(data.teams).filter(teamId => {
+                            const
+                                team = data.teams[teamId],
+                                points = team.score + team.wordPoints >= data.goal;
+                            if (points > mostPoints)
+                                mostPointsTeam = teamId;
+                            return team.score + team.wordPoints >= data.goal;
+                        });
+                    if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoal.filter(teamId => {
+                            const
+                                team = data.teams[teamId],
+                                firstTeam = data.teams[teamsReachedGoal[0]];
+                            return (team.score + team.wordPoints) === (firstTeam.score + firstTeam.wordPoints);
+                        }).length === 0)) {
+                        gameIsOver = true;
+                        statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
+                    }
                 }
-                else
-                    statusText = "Waiting for other team.";
+                //showWordsBet = true;
+                if (!gameIsOver) {
+                    if (isTurn && data.readyPlayers.length === currentTeam.players.length) {
+                        actionText = "Start!";
+                        statusText = "Prepare to explain things";
+                    } else if (isTeamTurn) {
+                        actionText = "Ready";
+                        statusText = "Waiting for team.";
+                    }
+                    else
+                        statusText = "Waiting for other team.";
+                }
             }
             else if (data.phase === 2) {
                 if (isTurn) {
@@ -259,7 +288,7 @@ class Game extends React.Component {
                             this.setState(Object.assign({}, this.state, {timer: this.state.timer - timerSecondDiff}));
                     }, timerSecondDiff);
             }
-
+            showWordsBet = false;
             return (
                 <div className="game">
                     <div className={
@@ -314,9 +343,12 @@ class Game extends React.Component {
                                         <div className="stop-game">Manage teams</div>
                                         <div className="remove-player">Remove player</div>
                                         <div className="restart-round">Restart round</div>
+                                        <div className="restart-game">Restart game</div>
                                         <div className="skip-player">Skip player</div>
+                                        <div className="stop-timer">Stop timer</div>
                                         <div className="skip-turn">Skip turn</div>
                                         <div className="set-score">Set score</div>
+                                        <div className="set-goal">Set goal</div>
                                         <div className="set-round-time">Set round time</div>
                                     </div>
                                 ) : ""}
