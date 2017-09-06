@@ -180,6 +180,11 @@ body {
     position: absolute;
     right: 0;
     top: 4px;
+    opacity: 0.8;
+}
+
+.word input:hover {
+    opacity: 1;
 }
 
 .word input.positive {

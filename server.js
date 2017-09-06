@@ -25,7 +25,7 @@ class JSONSet extends Set {
 
 let words;
 fs.readFile("words.json", "utf8", function (err, chats) {
-    words = JSON.parse(chats);
+    words = JSON.parse(chats).normal;
 });
 
 const
@@ -56,7 +56,10 @@ io.on("connection", socket => {
         calcWordPoints = () => {
             let wordPoints = 0;
             room.currentWords.forEach(word => wordPoints += word.points);
-            room.teams[room.currentTeam].wordPoints = wordPoints;
+            Object.keys(room.teams).forEach(teamId => {
+                if (room.teams[teamId].wordPoints !== undefined)
+                    room.teams[teamId].wordPoints = wordPoints;
+            });
         },
         addWordPoints = () => {
             Object.keys(room.teams).forEach(teamId => {
@@ -117,6 +120,16 @@ io.on("connection", socket => {
                     update();
                 }
             }, 100);
+        },
+        restartGame = () => {
+            room.phase = 0;
+            room.currentWords = [];
+            room.readyPlayers.clear();
+            Object.keys(room.teams).forEach(teamId => {
+                const team = room.teams[teamId];
+                delete team.wordPoints;
+                team.score = 0;
+            });
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -131,7 +144,8 @@ io.on("connection", socket => {
             readyPlayers: new JSONSet(),
             onlinePlayers: new JSONSet(),
             roundTime: 60,
-            currentBet: 4,
+            currentBet: Infinity,
+            goal: 20,
             currentWords: [],
             teams: {[makeId()]: {score: 0, players: new JSONSet()}}
         };
@@ -183,7 +197,7 @@ io.on("connection", socket => {
                 if (room.currentBet > room.currentWords.length + 1) {
                     let randomWord, result;
                     while (!result) {
-                        randomWord = words.normal[Math.floor(Math.random() * words.normal.length)];
+                        randomWord = words[Math.floor(Math.random() * words.length)];
                         if (!room.currentWords.some(word => word.word === randomWord))
                             result = true;
                     }
@@ -200,8 +214,8 @@ io.on("connection", socket => {
     );
     socket.on("set-score", (teamIndex, score) => {
         const team = room.teams[Object.keys(room.teams)[teamIndex - 1]];
-        if (team)
-            team.score = score;
+        if (team && !isNaN(parseInt(score)))
+            team.score = parseInt(score);
         update();
     });
     socket.on("stop-game", () => {
@@ -209,7 +223,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("set-words-bet", value => {
-        room.currentBet = value;
+        //room.currentBet = value;
         update();
     });
     socket.on("set-word-points", value => {
@@ -254,8 +268,20 @@ io.on("connection", socket => {
         room.readyPlayers.clear();
         update();
     });
+    socket.on("restart-game", () => {
+        restartGame();
+        update();
+    });
     socket.on("set-round-time", time => {
         room.roundTime = time;
+    });
+    socket.on("stop-timer", () => {
+        endRound();
+        update();
+    });
+    socket.on("set-goal", goal => {
+        room.goal = goal;
+        update();
     });
     socket.on("disconnect", () => {
         if (room) {
