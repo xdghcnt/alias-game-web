@@ -2,7 +2,8 @@ const
     path = require('path'),
     fs = require('fs'),
     express = require('express'),
-    socketIo = require("socket.io");
+    socketIo = require("socket.io"),
+    http = require('http');
 
 function makeId() {
     let text = "";
@@ -23,9 +24,9 @@ class JSONSet extends Set {
     }
 }
 
-let words;
+let defaultWords;
 fs.readFile("words.json", "utf8", function (err, chats) {
-    words = JSON.parse(chats).normal;
+    defaultWords = JSON.parse(chats).normal;
 });
 
 const
@@ -147,6 +148,7 @@ io.on("connection", socket => {
             currentBet: Infinity,
             goal: 20,
             currentWords: [],
+            words: defaultWords,
             teams: {[makeId()]: {score: 0, players: new JSONSet()}}
         };
         if (!room.playerNames[user])
@@ -196,10 +198,10 @@ io.on("connection", socket => {
             if (room.phase === 2 && room.currentPlayer === user) {
                 room.teams[room.currentTeam].wordPoints = 0;
                 if (room.currentBet > room.currentWords.length + 1) {
-                    let randomWord, result;
+                    let randomWord, result, n = 0;
                     while (!result) {
-                        randomWord = words[Math.floor(Math.random() * words.length)];
-                        if (!room.currentWords.some(word => word.word === randomWord))
+                        randomWord = room.words[Math.floor(Math.random() * room.words.length)];
+                        if (!room.currentWords.some(word => word.word === randomWord) || n++)
                             result = true;
                     }
                     if (activeWords[room.roomId])
@@ -243,7 +245,8 @@ io.on("connection", socket => {
         update();
     });
     socket.on("change-name", value => {
-        room.playerNames[user] = value;
+        if (value)
+            room.playerNames[user] = value;
         update();
     });
     socket.on("remove-player", nickname => {
@@ -283,6 +286,29 @@ io.on("connection", socket => {
     socket.on("set-goal", goal => {
         room.goal = goal;
         update();
+    });
+    socket.on("setup-words", wordsURL => {
+        if (wordsURL)
+            try {
+                http.get(wordsURL.replace("https", "http"),
+                    res => {
+                        res.on("data", function (chunk) {
+                            const newWords = chunk.toString().split("\r\n");
+                            if (newWords.length > 0) {
+                                room.words = newWords;
+                                socket.emit("message", "Success");
+                            }
+                            else
+                                socket.emit("message", `You did something wrong`);
+                        });
+                    },
+                    err => {
+                        socket.emit("message", `You did something wrong: ${err.message}`);
+                    }
+                );
+            } catch (err) {
+                socket.emit("message", `You did something wrong: ${err}`);
+            }
     });
     socket.on("disconnect", () => {
         if (room) {

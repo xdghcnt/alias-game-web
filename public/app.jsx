@@ -151,8 +151,11 @@ class Game extends React.Component {
                 activeWord: word
             }));
         });
-        this.socket.on("timer-end", word => {
+        this.socket.on("timer-end", () => {
             this.timerSound.play();
+        });
+        this.socket.on("message", text => {
+            alert(text);
         });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
@@ -203,6 +206,8 @@ class Game extends React.Component {
             this.socket.emit("set-goal", prompt("Words count to win"));
         else if (action === "restart-game" && confirm("Restart? Are you sure?"))
             this.socket.emit("restart-game");
+        else if (action === "setup-words")
+            this.socket.emit("setup-words", prompt("URL to words separated by lines"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -355,6 +360,7 @@ class Game extends React.Component {
                                         <div className="skip-turn">Skip turn</div>
                                         <div className="set-score">Set score</div>
                                         <div className="set-goal">Set goal</div>
+                                        <div className="setup-words">Setup words</div>
                                         <div className="set-round-time">Set round time</div>
                                     </div>
                                 ) : ""}
