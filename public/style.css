@@ -57,6 +57,18 @@ body {
     margin-top: 6px;
 }
 
+.game-over .team.current {
+    margin-top: 10px;
+}
+
+.team.goal-reached {
+    box-shadow: 0 6px 14px rgba(255, 145, 0, 0.3);
+}
+
+.team.winner {
+    box-shadow: 0 6px 14px rgba(255, 0, 0, 0.3);
+}
+
 .player {
     margin-bottom: 3px;
 }

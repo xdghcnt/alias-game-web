@@ -27,6 +27,8 @@ class Teams extends React.Component {
                         "team"
                         + (data.teams[teamId].players.length ? "" : " join")
                         + (data.currentTeam === teamId ? " current" : "")
+                        + (data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal ? " goal-reached" : "")
+                        + (data.teams[teamId].winner ? " winner" : "")
                     } key={index}>
                         <div className="score">Score: {data.teams[teamId].score}
                             <span className={
@@ -243,18 +245,21 @@ class Game extends React.Component {
                         teamsReachedGoal = Object.keys(data.teams).filter(teamId => {
                             const
                                 team = data.teams[teamId],
-                                points = team.score + team.wordPoints >= data.goal;
-                            if (points > mostPoints)
+                                points = team.score + (team.wordPoints || 0);
+                            if (points > mostPoints) {
+                                mostPoints = points;
                                 mostPointsTeam = teamId;
-                            return team.score + team.wordPoints >= data.goal;
+                            }
+                            return points >= data.goal;
                         });
                     if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoal.filter(teamId => {
                             const
                                 team = data.teams[teamId],
                                 firstTeam = data.teams[teamsReachedGoal[0]];
-                            return (team.score + team.wordPoints) === (firstTeam.score + firstTeam.wordPoints);
-                        }).length === 0)) {
+                            return (team.score + (team.wordPoints || 0)) === (firstTeam.score + (firstTeam.wordPoints || 0));
+                        }).length === 1)) {
                         gameIsOver = true;
+                        data.teams[mostPointsTeam].winner = true;
                         statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
                     }
                 }
@@ -294,6 +299,7 @@ class Game extends React.Component {
                     <div className={
                         "game-board"
                         + (this.state.inited ? " active" : "")
+                        + (gameIsOver ? " game-over" : "")
                     }>
                         Teams:
                         <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}/>
