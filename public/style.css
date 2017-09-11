@@ -299,3 +299,22 @@ body {
     font-size: 39px;
     margin-bottom: 4px;
 }
+
+.dict-progress {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 100%;
+    height: 5px;
+    background: #e3f0c9;
+}
+
+.dict-progress.active {
+    display: block;
+}
+
+.dict-progress-bar {
+    height: 100%;
+    background: #9ccc65;
+}

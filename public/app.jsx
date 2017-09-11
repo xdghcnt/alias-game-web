@@ -208,6 +208,8 @@ class Game extends React.Component {
             this.socket.emit("restart-game");
         else if (action === "setup-words")
             this.socket.emit("setup-words", prompt("URL to words separated by lines"));
+        else if (action === "select-word-set")
+            this.socket.emit("select-word-set", prompt("1-3 difficulty levels. Default is 23 which means 2 and 3 both"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -298,6 +300,10 @@ class Game extends React.Component {
                             this.setState(Object.assign({}, this.state, {timer: this.state.timer - timerSecondDiff}));
                     }, timerSecondDiff);
             }
+            if (this.state.dictMode && this.state.dictLength === 0) {
+                actionText = null;
+                statusText = "No more words, GG"
+            }
             showWordsBet = false;
             return (
                 <div className="game">
@@ -306,6 +312,16 @@ class Game extends React.Component {
                         + (this.state.inited ? " active" : "")
                         + (gameIsOver ? " game-over" : "")
                     }>
+                        <div
+                            title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
+                            className={
+                                "dict-progress"
+                                + (this.state.dictMode ? " active" : "")
+                            }
+                        >
+                            <div className="dict-progress-bar"
+                                 style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
+                        </div>
                         Teams:
                         <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}/>
                         <br/>
@@ -361,6 +377,7 @@ class Game extends React.Component {
                                         <div className="set-score">Set score</div>
                                         <div className="set-goal">Set goal</div>
                                         <div className="setup-words">Setup words</div>
+                                        <div className="select-word-set">Select word set</div>
                                         <div className="set-round-time">Set round time</div>
                                     </div>
                                 ) : ""}
