@@ -306,12 +306,14 @@ class Game extends React.Component {
                 else
                     statusText = "Other team playing, keep silent.";
                 const timerSecondDiff = ((this.state.timer % 100) || 100);
-                if (this.state.timer - timerSecondDiff > 0)
+                if (this.state.timer - timerSecondDiff > 0) {
+                    let timeStart = new Date();
                     this.timeOut = setTimeout(() => {
                         //console.log(`timer: ${this.state.timer} diff: ${timerSecondDiff}`);
                         if (data.phase === 2 && this.state.timer)
-                            this.setState(Object.assign({}, this.state, {timer: this.state.timer - timerSecondDiff}));
+                            this.setState(Object.assign({}, this.state, {timer: this.state.timer - (new Date() - timeStart)}));
                     }, timerSecondDiff);
+                }
             }
             if (this.state.dictMode && this.state.dictLength === 0) {
                 actionText = null;
