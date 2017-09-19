@@ -16,16 +16,21 @@ class Teams extends React.Component {
         const
             data = this.props.data,
             handleTeamClick = this.props.handleTeamClick;
+        if (data.phase === 0)
+            data.teams["new"] = {
+                players: [],
+                score: 0
+            };
         return (
             <div
                 className={
                     "team-list"
                     + (data.phase !== 0 ? " started" : " not-started")
                 }>
-                {data.teams && Object.keys(data.teams).filter(it => data.phase !== 0 ? data.teams[it].players.length : true).map((teamId, index) =>
+                {data.teams && Object.keys(data.teams).map((teamId, index) =>
                     (<div onClick={() => handleTeamClick(teamId)} className={
                         "team"
-                        + (data.teams[teamId].players.length ? "" : " join")
+                        + (teamId !== "new" || data.phase !== 0 ? "" : " join")
                         + (data.currentTeam === teamId ? " current" : "")
                         + (data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal ? " goal-reached" : "")
                         + (data.teams[teamId].winner ? " winner" : "")
@@ -157,6 +162,12 @@ class Game extends React.Component {
         this.socket.on("message", text => {
             alert(text);
         });
+        this.socket.on("disconnect", () => {
+            this.setState({
+                inited: false
+            });
+            window.location.reload();
+        });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("beep.mp3");
@@ -210,6 +221,8 @@ class Game extends React.Component {
             this.socket.emit("setup-words", prompt("URL to words separated by lines"));
         else if (action === "select-word-set")
             this.socket.emit("select-word-set", prompt("1-3 difficulty levels. Default is 23 which means 2 and 3 both"));
+        else if (action === "give-host")
+            this.socket.emit("give-host", prompt("Nickname"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -228,13 +241,13 @@ class Game extends React.Component {
                 data = this.state,
                 isHost = data.hostId === data.userId,
                 isTurn = data.currentPlayer === data.userId,
-                isTeamTurn = data.currentTeam && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
+                isTeamTurn = data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
                 currentTeam = data.teams[data.currentTeam];
             let actionText, statusText,
                 showWordsBet = false,
                 gameIsOver;
             if (data.phase === 0) {
-                if (true || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
+                if (Object.keys(data.teams).length > 0 || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
                     if (isHost) {
                         statusText = "You can start the game";
                         actionText = "Start";
@@ -367,8 +380,9 @@ class Game extends React.Component {
                             <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
                                 {isHost ? (
                                     <div>
-                                        <div className="stop-game">Manage teams</div>
+                                        <div className="shuffle-players">Shuffle players</div>
                                         <div className="remove-player">Remove player</div>
+                                        <div className="remove-offline">Remove offline</div>
                                         <div className="restart-round">Restart round</div>
                                         <div className="restart-game">Restart game</div>
                                         <div className="skip-player">Skip player</div>
@@ -376,9 +390,11 @@ class Game extends React.Component {
                                         <div className="skip-turn">Skip turn</div>
                                         <div className="set-score">Set score</div>
                                         <div className="set-goal">Set goal</div>
+                                        <div className="give-host">Give host</div>
                                         <div className="setup-words">Setup words</div>
                                         <div className="select-word-set">Select word set</div>
                                         <div className="set-round-time">Set round time</div>
+                                        <div className="stop-game">Manage teams</div>
                                     </div>
                                 ) : ""}
                                 <div>

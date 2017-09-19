@@ -66,7 +66,7 @@ body {
 }
 
 .team.winner {
-    box-shadow: 0 6px 14px rgba(255, 0, 0, 0.3);
+    box-shadow: 0 6px 14px rgb(179, 228, 142);
 }
 
 .player {

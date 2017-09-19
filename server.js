@@ -14,6 +14,10 @@ function makeId() {
     return text;
 }
 
+function shuffleArray(array) {
+    array.sort(() => (Math.random() - 0.5));
+}
+
 class JSONSet extends Set {
     constructor(iterable) {
         super(iterable)
@@ -51,11 +55,66 @@ const io = socketIo(server);
 io.on("connection", socket => {
     let room, user,
         update = () => io.to(room.roomId).emit("state", room),
+        rotatePlayers = (teamId) => {
+            if (room.currentTeam) {
+                const currentTeam = room.teams[teamId || room.currentTeam],
+                    currentPlayer = currentTeam.currentPlayer,
+                    currentPlayerKeys = [...currentTeam.players],
+                    indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
+                if (indexOfCurrentPlayer === currentTeam.players.size - 1)
+                    currentTeam.currentPlayer = currentPlayerKeys[0];
+                else
+                    currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
+                if (room.currentPlayer === currentPlayer)
+                    room.currentPlayer = currentTeam.currentPlayer;
+            }
+        },
+        rotateTeams = () => {
+            if (room.currentTeam) {
+                const
+                    teamKeys = Object.keys(room.teams),
+                    indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
+                if (indexOfCurrentTeam === teamKeys.length - 1)
+                    room.currentTeam = teamKeys[0];
+                else
+                    room.currentTeam = teamKeys[indexOfCurrentTeam + 1];
+                if (!room.teams[room.currentTeam].currentPlayer)
+                    room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
+                room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
+            }
+        },
+        rotateBack = () => {
+            if (room.currentTeam) {
+                const
+                    teamKeys = Object.keys(room.teams),
+                    indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
+                if (indexOfCurrentTeam === 0)
+                    room.currentTeam = teamKeys[teamKeys.length - 1];
+                else
+                    room.currentTeam = teamKeys[indexOfCurrentTeam - 1];
+                const currentTeam = room.teams[room.currentTeam],
+                    currentPlayerKeys = [...currentTeam.players],
+                    indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
+                if (indexOfCurrentPlayer === 0)
+                    currentTeam.currentPlayer = currentPlayerKeys[currentTeam.players.size - 1];
+                else
+                    currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer - 1];
+                room.currentPlayer = currentTeam.currentPlayer;
+            }
+        },
         leaveTeams = (exceptId) => {
+            if (room.currentPlayer === user)
+                rotatePlayers();
+            if (room.currentTeam && room.teams[room.currentTeam].players.size === 1)
+                rotateTeams();
             Object.keys(room.teams).forEach(teamId => {
                 if (teamId !== exceptId && room.teams[teamId].players.delete(user) && room.teams[teamId].players.size === 0)
                     delete room.teams[teamId];
             });
+            if (room.currentPlayer === user)
+                room.currentPlayer = null;
+            if (!room.teams[room.currentTeam])
+                room.currentTeam = null;
         },
         calcWordPoints = () => {
             let wordPoints = 0;
@@ -85,31 +144,6 @@ io.on("connection", socket => {
                     initialLength: dictInitialLength
                 }, null, 4));
             }
-        },
-        rotatePlayers = (teamId) => {
-            const
-                currentTeam = room.teams[teamId || room.currentTeam],
-                currentPlayer = currentTeam.currentPlayer,
-                currentPlayerKeys = [...currentTeam.players],
-                indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
-            if (indexOfCurrentPlayer === currentTeam.players.size - 1)
-                currentTeam.currentPlayer = currentPlayerKeys[0];
-            else
-                currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
-            if (room.currentPlayer === currentPlayer)
-                room.currentPlayer = currentTeam.currentPlayer;
-        },
-        rotateTeams = () => {
-            const
-                teamKeys = Object.keys(room.teams),
-                indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
-            if (indexOfCurrentTeam === teamKeys.length - 2)
-                room.currentTeam = teamKeys[0];
-            else
-                room.currentTeam = teamKeys[indexOfCurrentTeam + 1];
-            if (!room.teams[room.currentTeam].currentPlayer)
-                room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
-            room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
         },
         stopTimer = () => {
             room.timer = null;
@@ -181,6 +215,24 @@ io.on("connection", socket => {
                 }
                 update();
             }
+        },
+        removePlayer = playerId => {
+            Object.keys(room.teams).forEach(teamId => {
+                const team = room.teams[teamId];
+                if (team.players.delete(playerId)) {
+                    if (team.players.size === 0) {
+                        if (room.currentTeam === teamId)
+                            rotateTeams();
+                        delete room.teams[teamId];
+                    }
+                    else if (team.currentPlayer === playerId)
+                        rotatePlayers(teamId);
+                }
+            });
+            delete room.playerNames[playerId];
+            room.readyPlayers.delete(playerId);
+            room.onlinePlayers.delete(playerId);
+            room.spectators.delete(playerId);
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -201,22 +253,25 @@ io.on("connection", socket => {
             dictMode: false,
             dictInitLength: null,
             dictLength: null,
-            teams: {[makeId()]: {score: 0, players: new JSONSet()}}
+            teams: {}
         };
         usedWords[room.roomId] = [];
         if (!room.playerNames[user])
             room.spectators.add(user);
         room.onlinePlayers.add(user);
         room.playerNames[user] = args.userName;
-        selectWordSet(defaultWordSet);
+        if (!roomWords[room.roomId])
+            selectWordSet(defaultWordSet);
         if (room.currentPlayer === user && activeWords[room.roomId])
             socket.emit("active-word", activeWords[room.roomId]);
         update();
     });
     socket.on("team-join", id => {
+        if (id === "new") {
+            id = makeId();
+            room.teams[id] = {score: 0, players: new JSONSet()};
+        }
         if (room.teams[id]) {
-            if (room.teams[id].players.size === 0)
-                room.teams[makeId()] = {score: 0, players: new JSONSet()};
             leaveTeams(id);
             room.spectators.delete(user);
             room.teams[id].players.add(user);
@@ -229,7 +284,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("action", () => {
-            if (room.phase === 0 && room.hostId === user) {
+            if (room.phase === 0 && room.hostId === user && Object.keys(room.teams).length > 0) {
                 room.phase = 1;
                 room.currentTeam = room.currentTeam || Object.keys(room.teams)[0];
                 const currentTeam = room.teams[room.currentTeam];
@@ -304,27 +359,45 @@ io.on("connection", socket => {
             room.playerNames[user] = value;
         update();
     });
-    socket.on("remove-player", nickname => {
-        let user;
+    socket.on("remove-player", name => {
+        let playerId;
         Object.keys(room.playerNames).forEach(userId => {
-            if (room.playerNames[userId] === nickname)
-                user = userId;
+            if (room.playerNames[userId] === name)
+                playerId = userId;
         });
-        Object.keys(room.teams).forEach(teamId => {
-            room.teams[teamId].players.delete(user);
-            if (room.teams[teamId].currentPlayer === user)
-                rotatePlayers(teamId);
-        });
-        delete room.playerNames[user];
-        room.readyPlayers.delete(user);
-        room.onlinePlayers.delete(user);
-        room.spectators.delete(user);
+        if (playerId)
+            removePlayer(playerId);
         update();
     });
-    socket.on("restart-round", nickname => {
+    socket.on("remove-offline", () => {
+        Object.keys(room.playerNames).forEach(playerId => {
+            if (!room.onlinePlayers.has(playerId))
+                removePlayer(playerId);
+        });
+        update();
+    });
+    socket.on("shuffle-players", () => {
+        let currentPlayers = [];
+        Object.keys(room.teams).forEach(teamId => {
+            const team = room.teams[teamId];
+            currentPlayers = currentPlayers.concat([...team.players]);
+            team.players = new JSONSet();
+        });
+        shuffleArray(currentPlayers);
+        while (currentPlayers.length > 0) {
+            Object.keys(room.teams).forEach(teamId => {
+                if (currentPlayers.length > 0)
+                    room.teams[teamId].players.add(currentPlayers.pop());
+            });
+        }
+        update();
+    });
+    socket.on("restart-round", () => {
         room.phase = 1;
         room.currentWords = [];
         room.readyPlayers.clear();
+        rotateBack();
+        delete room.teams[room.currentTeam].wordPoints;
         update();
     });
     socket.on("restart-game", () => {
@@ -344,6 +417,16 @@ io.on("connection", socket => {
     });
     socket.on("select-word-set", wordSet => {
         selectWordSet(wordSet);
+    });
+    socket.on("give-host", name => {
+        let playerId;
+        Object.keys(room.playerNames).forEach(userId => {
+            if (room.playerNames[userId] === name)
+                playerId = userId;
+        });
+        if (playerId)
+            room.hostId = playerId;
+        update();
     });
     socket.on("setup-words", wordsURL => {
         if (wordsURL)
@@ -378,5 +461,6 @@ io.on("connection", socket => {
             update();
         }
     });
+    socket.emit("re-init");
 });
 
