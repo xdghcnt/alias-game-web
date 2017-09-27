@@ -315,9 +315,14 @@ class Game extends React.Component {
                     }, timerSecondDiff);
                 }
             }
-            if (this.state.dictMode && this.state.dictLength === 0) {
-                actionText = null;
-                statusText = "No more words, GG"
+            if (!gameIsOver) {
+                if (this.state.dictMode && this.state.dictLength === 0) {
+                    actionText = null;
+                    statusText = "No more words, GG"
+                } else if (data.wordsEnded) {
+                    actionText = null;
+                    statusText = `No more words`;
+                }
             }
             showWordsBet = false;
             return (
