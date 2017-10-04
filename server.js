@@ -16,6 +16,7 @@ function makeId() {
 
 function shuffleArray(array) {
     array.sort(() => (Math.random() - 0.5));
+    return array;
 }
 
 class JSONSet extends Set {
@@ -37,7 +38,6 @@ const
     rooms = {},
     activeWords = {},
     roomWords = {},
-    usedWords = {},
     timers = {},
     defaultWordSet = "23";
 
@@ -140,7 +140,7 @@ io.on("connection", socket => {
                     if (word.points === 1)
                         dictWords.delete(word.word);
                 });
-                roomWords[room.roomId] = [...dictWords];
+                roomWords[room.roomId] = shuffleArray([...dictWords]);
                 room.dictLength = dictWords.size;
                 fs.writeFile("dict.json", JSON.stringify({
                     words: roomWords[room.roomId],
@@ -187,6 +187,8 @@ io.on("connection", socket => {
             room.phase = 0;
             room.currentWords = [];
             room.readyPlayers.clear();
+            room.wordIndex = 0;
+            room.wordsEnded = false;
             Object.keys(room.teams).forEach(teamId => {
                 const team = room.teams[teamId];
                 delete team.wordPoints;
@@ -201,12 +203,14 @@ io.on("connection", socket => {
                         const data = JSON.parse(words);
                         dictWords = data.words;
                         dictInitialLength = data.initialLength || dictWords.length;
-                        roomWords[room.roomId] = dictWords;
+                        roomWords[room.roomId] = shuffleArray(dictWords);
                         dictWords = new Set(dictWords);
                         room.dictMode = true;
                         room.dictInitLength = dictInitialLength;
                         room.dictLength = dictWords.size;
                         socket.emit("message", "Success");
+                        room.wordIndex = 0;
+                        room.wordsEnded = false;
                         update();
                     } catch (error) {
                         socket.emit("message", `You did something wrong: ${error}`);
@@ -221,8 +225,10 @@ io.on("connection", socket => {
                 else {
                     roomWords[room.roomId] = [];
                     difficultyList.forEach(wordIndex => {
-                        roomWords[room.roomId] = roomWords[room.roomId].concat(defaultWords[wordIndex]);
-                    })
+                        roomWords[room.roomId] = shuffleArray(roomWords[room.roomId].concat(defaultWords[wordIndex]));
+                    });
+                    room.wordIndex = 0;
+                    room.wordsEnded = false;
                 }
                 update();
             }
@@ -272,9 +278,10 @@ io.on("connection", socket => {
             dictMode: false,
             dictInitLength: null,
             dictLength: null,
-            teams: {}
+            teams: {},
+            wordIndex: 0,
+            wordsEnded: false
         };
-        usedWords[room.roomId] = [];
         if (!room.playerNames[user])
             room.spectators.add(user);
         room.onlinePlayers.add(user);
@@ -326,17 +333,16 @@ io.on("connection", socket => {
             if (room.phase === 2 && room.currentPlayer === user) {
                 room.teams[room.currentTeam].wordPoints = 0;
                 if (room.currentBet > room.currentWords.length + 1) {
-                    let randomWord, result, n = 0;
-                    while (!result) {
-                        randomWord = roomWords[room.roomId][Math.floor(Math.random() * roomWords[room.roomId].length)];
-                        if (!usedWords[room.roomId].some(word => word === randomWord) || n++ > 10)
-                            result = true;
+                    if (room.wordIndex < roomWords[room.roomId].length) {
+                        const randomWord = roomWords[room.roomId][room.wordIndex++];
+                        if (activeWords[room.roomId])
+                            room.currentWords.push({points: 1, word: activeWords[room.roomId]});
+                        activeWords[room.roomId] = randomWord;
+                        socket.emit("active-word", activeWords[room.roomId]);
+                    } else {
+                        endRound();
+                        room.wordsEnded = true;
                     }
-                    if (activeWords[room.roomId])
-                        room.currentWords.push({points: 1, word: activeWords[room.roomId]});
-                    activeWords[room.roomId] = randomWord;
-                    usedWords[room.roomId].push(randomWord);
-                    socket.emit("active-word", activeWords[room.roomId]);
                 }
                 else
                     endRound();
@@ -448,8 +454,11 @@ io.on("connection", socket => {
                         res.on("data", function (chunk) {
                             const newWords = chunk.toString().split("\r\n");
                             if (newWords.length > 0) {
-                                roomWords[room.roomId] = newWords;
+                                roomWords[room.roomId] = shuffleArray(newWords);
+                                room.wordIndex = 0;
+                                room.wordsEnded = false;
                                 socket.emit("message", "Success");
+                                update();
                             }
                             else
                                 socket.emit("message", `You did something wrong`);
