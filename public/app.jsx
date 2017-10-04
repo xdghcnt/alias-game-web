@@ -215,8 +215,6 @@ class Game extends React.Component {
             this.socket.emit("set-round-time", prompt("Round time in seconds"));
         else if (action === "set-goal")
             this.socket.emit("set-goal", prompt("Words count to win"));
-        else if (action === "restart-game" && confirm("Restart? Are you sure?"))
-            this.socket.emit("restart-game");
         else if (action === "setup-words")
             this.socket.emit("setup-words", prompt("URL to words separated by lines"));
         else if (action === "select-word-set")
@@ -228,7 +226,9 @@ class Game extends React.Component {
             this.socket.emit("change-name", name);
             localStorage.userName = name;
         }
-        else
+        else if (action === "restart-game" && confirm("Restart? Are you sure?"))
+            this.socket.emit("restart-game");
+        else if (action !== "restart-game")
             this.socket.emit(action);
     }
 

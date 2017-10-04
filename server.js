@@ -82,6 +82,7 @@ io.on("connection", socket => {
                     room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
                 room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
             }
+            room.readyPlayers.clear();
         },
         rotateBack = () => {
             if (room.currentTeam) {
@@ -101,6 +102,7 @@ io.on("connection", socket => {
                     currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer - 1];
                 room.currentPlayer = currentTeam.currentPlayer;
             }
+            room.readyPlayers.clear();
         },
         leaveTeams = (exceptId) => {
             if (room.currentPlayer === user)
@@ -115,6 +117,7 @@ io.on("connection", socket => {
                 room.currentPlayer = null;
             if (!room.teams[room.currentTeam])
                 room.currentTeam = null;
+            room.readyPlayers.delete(user);
         },
         calcWordPoints = () => {
             let wordPoints = 0;
@@ -171,17 +174,25 @@ io.on("connection", socket => {
                 }
             }, 100);
         },
+        resetOrder = () => {
+            Object.keys(room.teams).forEach(teamId => {
+                const team = room.teams[teamId];
+                team.currentPlayer = [...team.players][0];
+            });
+            room.currentTeam = Object.keys(room.teams)[0];
+            room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
+        },
         restartGame = () => {
             addWordPoints();
             room.phase = 0;
             room.currentWords = [];
-            usedWords[room.roomId] = [];
             room.readyPlayers.clear();
             Object.keys(room.teams).forEach(teamId => {
                 const team = room.teams[teamId];
                 delete team.wordPoints;
                 team.score = 0;
             });
+            resetOrder();
         },
         selectWordSet = wordSet => {
             if (wordSet === "1488") {
@@ -233,6 +244,14 @@ io.on("connection", socket => {
             room.readyPlayers.delete(playerId);
             room.onlinePlayers.delete(playerId);
             room.spectators.delete(playerId);
+        },
+        getPlayerByName = name => {
+            let playerId;
+            Object.keys(room.playerNames).forEach(userId => {
+                if (room.playerNames[userId] === name)
+                    playerId = userId;
+            });
+            return playerId;
         };
     socket.on("init", args => {
         socket.join(args.roomId);
@@ -360,11 +379,7 @@ io.on("connection", socket => {
         update();
     });
     socket.on("remove-player", name => {
-        let playerId;
-        Object.keys(room.playerNames).forEach(userId => {
-            if (room.playerNames[userId] === name)
-                playerId = userId;
-        });
+        const playerId = getPlayerByName(name);
         if (playerId)
             removePlayer(playerId);
         update();
@@ -390,6 +405,7 @@ io.on("connection", socket => {
                     room.teams[teamId].players.add(currentPlayers.pop());
             });
         }
+        resetOrder();
         update();
     });
     socket.on("restart-round", () => {
@@ -419,11 +435,7 @@ io.on("connection", socket => {
         selectWordSet(wordSet);
     });
     socket.on("give-host", name => {
-        let playerId;
-        Object.keys(room.playerNames).forEach(userId => {
-            if (room.playerNames[userId] === name)
-                playerId = userId;
-        });
+        const playerId = getPlayerByName(name);
         if (playerId)
             room.hostId = playerId;
         update();
