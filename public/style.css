@@ -3,6 +3,60 @@ body {
     background: #f1f1f1;
 }
 
+body.dark-theme {
+    background: #202020;
+    color: #cccaca;
+}
+
+.dark-theme .team, .dark-theme .action-pane, .dark-theme .words, .dark-theme .host-controls, .dark-theme .spectators {
+    background: rgb(64, 64, 63);
+}
+
+.dark-theme .team.current {
+    box-shadow: 0 2px 14px rgba(169, 169, 169, 0.3);
+}
+
+.dark-theme .word {
+    border-bottom: 1px solid #6b6b6b;
+}
+
+.dark-theme .button-action {
+    background: rgb(79, 109, 109);
+}
+
+.dark-theme .word input {
+    color: #e6e6e6;
+    background: rgb(116, 119, 119);
+}
+
+.dark-theme .word input.positive {
+    background: rgb(79, 109, 109);
+}
+
+.dark-theme .word input.negative {
+    background: #947676;
+}
+
+.dark-theme .button-action.pressed {
+    box-shadow: 0 1px 11px 4px #007d80 inset;
+}
+
+.dark-theme .player.ready {
+    background: #4c6463;
+}
+
+.dark-theme .host-controls-menu > div > div:hover {
+    background: rgb(79, 109, 109);
+}
+
+.dark-theme .team.goal-reached {
+    box-shadow: 0 6px 14px rgba(255, 145, 0, 0.3);
+}
+
+.dark-theme .team.winner {
+    box-shadow: 0 6px 14px rgb(179, 228, 142);
+}
+
 .score {
     display: none;
     font-size: 12px;

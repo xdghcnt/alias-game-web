@@ -135,6 +135,8 @@ class Player extends React.Component {
 class Game extends React.Component {
     componentDidMount() {
         const initArgs = {};
+        if (parseInt(localStorage.darkTheme))
+            document.body.classList.add("dark-theme");
         if (!localStorage.userId) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
@@ -228,7 +230,10 @@ class Game extends React.Component {
         }
         else if (action === "restart-game" && confirm("Restart? Are you sure?"))
             this.socket.emit("restart-game");
-        else if (action !== "restart-game")
+        else if (action === "toggle-theme") {
+            localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
+            document.body.classList.toggle("dark-theme");
+        } else if (action !== "restart-game")
             this.socket.emit(action);
     }
 
@@ -405,6 +410,7 @@ class Game extends React.Component {
                                     </div>
                                 ) : ""}
                                 <div>
+                                    <div className="toggle-theme">Toggle theme</div>
                                     <div className="change-name">Change name</div>
                                 </div>
                             </div>
