@@ -182,7 +182,7 @@ io.on("connection", socket => {
             room.phase = 0;
             room.currentWords = [];
             room.readyPlayers.clear();
-            room.wordIndex = 0;
+            //room.wordIndex = 0;
             room.wordsEnded = false;
             Object.keys(room.teams).forEach(teamId => {
                 const team = room.teams[teamId];
