@@ -170,6 +170,22 @@ class Game extends React.Component {
             });
             window.location.reload();
         });
+        this.socket.on("auth-required", () => {
+            this.setState(Object.assign({}, this.state, {
+                userId: this.userId,
+                authRequired: true
+            }));
+            if (grecaptcha)
+                grecaptcha.render("captcha-container", {
+                    sitekey: "",
+                    callback: (key) => this.socket.emit("auth", key)
+                });
+            else
+                setTimeout(() => window.location.reload(), 3000)
+        });
+        this.socket.on("reload", () => {
+            window.location.reload();
+        });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("beep.mp3");
@@ -239,9 +255,10 @@ class Game extends React.Component {
 
     render() {
         clearTimeout(this.timeOut);
-        if (this.state.inited && !this.state.playerNames[this.state.userId])
+        if (!this.state.authRequired && this.state.inited && !this.state.playerNames[this.state.userId])
             return (<div>You were kicked</div>);
         else if (this.state.inited) {
+            document.body.classList.add("captcha-solved");
             const
                 data = this.state,
                 isHost = data.hostId === data.userId,
@@ -395,7 +412,6 @@ class Game extends React.Component {
                                         <div className="shuffle-players">Shuffle players</div>
                                         <div className="remove-player">Remove player</div>
                                         <div className="remove-offline">Remove offline</div>
-                                        <div className="restart-round">Restart round</div>
                                         <div className="restart-game">Restart game</div>
                                         <div className="skip-player">Skip player</div>
                                         <div className="stop-timer">Stop timer</div>

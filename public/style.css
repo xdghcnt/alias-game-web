@@ -372,3 +372,7 @@ body.dark-theme {
     height: 100%;
     background: #9ccc65;
 }
+
+.captcha-solved #captcha-container {
+    display: none;
+}

@@ -3,7 +3,8 @@ const
     fs = require('fs'),
     express = require('express'),
     socketIo = require("socket.io"),
-    http = require('http');
+    http = require('http'),
+    reCAPTCHA = require('recaptcha2');
 
 function makeId() {
     let text = "";
@@ -29,8 +30,13 @@ class JSONSet extends Set {
     }
 }
 
+const recaptcha = new reCAPTCHA({
+    siteKey: "",
+    secretKey: ""
+});
+
 let defaultWords, dictWords, dictInitialLength;
-fs.readFile("words.json", "utf8", function (err, words) {
+fs.readFile(__dirname + "/words.json", "utf8", function (err, words) {
     defaultWords = JSON.parse(words);
 });
 
@@ -39,22 +45,27 @@ const
     activeWords = {},
     roomWords = {},
     timers = {},
-    defaultWordSet = "23";
+    defaultWordSet = "2",
+    authorizedUsers = {};
 
 // Server part
 const app = express();
-app.use('/', express.static(path.join(__dirname, 'public')));
+app.use('/alias', express.static(path.join(__dirname, 'public')));
 
-const server = app.listen(8000);
-console.log('Server listening on port 8000');
+const server = app.listen(1489);
+console.log('Server listening on port 1489');
 
 
 // Socket.IO part
 const io = socketIo(server);
 
 io.on("connection", socket => {
-    let room, user,
-        update = () => io.to(room.roomId).emit("state", room),
+    let room, user, initArgs;
+    socket.use((packet, next) => {
+        if (packet[0] === "init" || initArgs)
+            return next();
+    });
+    let update = () => io.to(room.roomId).emit("state", room),
         rotatePlayers = (teamId) => {
             if (room.currentTeam) {
                 const currentTeam = room.teams[teamId || room.currentTeam],
@@ -142,7 +153,7 @@ io.on("connection", socket => {
                 });
                 roomWords[room.roomId] = shuffleArray([...dictWords]);
                 room.dictLength = dictWords.size;
-                fs.writeFile("dict.json", JSON.stringify({
+                fs.writeFile(__dirname + "/dict.json", JSON.stringify({
                     words: roomWords[room.roomId],
                     initialLength: dictInitialLength
                 }, null, 4));
@@ -180,7 +191,7 @@ io.on("connection", socket => {
                 team.currentPlayer = [...team.players][0];
             });
             room.currentTeam = Object.keys(room.teams)[0];
-            room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
+            room.currentPlayer = room.teams[room.currentTeam] && room.teams[room.currentTeam].currentPlayer;
         },
         restartGame = () => {
             addWordPoints();
@@ -198,7 +209,7 @@ io.on("connection", socket => {
         },
         selectWordSet = wordSet => {
             if (wordSet === "1488") {
-                fs.readFile("dict.json", "utf8", function (err, words) {
+                fs.readFile(__dirname + "/dict.json", "utf8", function (err, words) {
                     try {
                         const data = JSON.parse(words);
                         dictWords = data.words;
@@ -258,39 +269,51 @@ io.on("connection", socket => {
                     playerId = userId;
             });
             return playerId;
+        },
+        init = () => {
+            socket.join(initArgs.roomId);
+            user = initArgs.userId;
+            room = rooms[initArgs.roomId] = rooms[initArgs.roomId] || {
+                inited: true,
+                roomId: initArgs.roomId,
+                hostId: user,
+                phase: 0,
+                spectators: new JSONSet(),
+                playerNames: {},
+                readyPlayers: new JSONSet(),
+                onlinePlayers: new JSONSet(),
+                roundTime: 60,
+                currentBet: Infinity,
+                goal: 20,
+                currentWords: [],
+                dictMode: false,
+                dictInitLength: null,
+                dictLength: null,
+                teams: {},
+                wordIndex: 0,
+                wordsEnded: false
+            };
+            if (!room.playerNames[user])
+                room.spectators.add(user);
+            room.onlinePlayers.add(user);
+            room.playerNames[user] = initArgs.userName;
+            if (!roomWords[room.roomId])
+                selectWordSet(defaultWordSet);
+            if (room.currentPlayer === user && activeWords[room.roomId])
+                socket.emit("active-word", activeWords[room.roomId]);
+            update();
         };
+
+    socket.use((packet, next) => {
+        if (packet[0] === "init" || initArgs)
+            return next();
+    });
     socket.on("init", args => {
-        socket.join(args.roomId);
-        user = args.userId;
-        room = rooms[args.roomId] = rooms[args.roomId] || {
-            inited: true,
-            roomId: args.roomId,
-            hostId: user,
-            phase: 0,
-            spectators: new JSONSet(),
-            playerNames: {},
-            readyPlayers: new JSONSet(),
-            onlinePlayers: new JSONSet(),
-            roundTime: 60,
-            currentBet: Infinity,
-            goal: 20,
-            currentWords: [],
-            dictMode: false,
-            dictInitLength: null,
-            dictLength: null,
-            teams: {},
-            wordIndex: 0,
-            wordsEnded: false
-        };
-        if (!room.playerNames[user])
-            room.spectators.add(user);
-        room.onlinePlayers.add(user);
-        room.playerNames[user] = args.userName;
-        if (!roomWords[room.roomId])
-            selectWordSet(defaultWordSet);
-        if (room.currentPlayer === user && activeWords[room.roomId])
-            socket.emit("active-word", activeWords[room.roomId]);
-        update();
+        initArgs = args;
+        if (authorizedUsers[initArgs.userId + initArgs.roomId])
+            init();
+        else
+            socket.emit("auth-required")
     });
     socket.on("team-join", id => {
         if (id === "new") {
@@ -414,14 +437,6 @@ io.on("connection", socket => {
         resetOrder();
         update();
     });
-    socket.on("restart-round", () => {
-        room.phase = 1;
-        room.currentWords = [];
-        room.readyPlayers.clear();
-        rotateBack();
-        delete room.teams[room.currentTeam].wordPoints;
-        update();
-    });
     socket.on("restart-game", () => {
         restartGame();
         update();
@@ -482,6 +497,14 @@ io.on("connection", socket => {
             update();
         }
     });
-    socket.emit("re-init");
+    socket.on("auth", (key) => {
+        if (initArgs)
+            recaptcha.validate(key)
+                .then(() => {
+                    authorizedUsers[initArgs.userId + initArgs.roomId] = true;
+                    init();
+                })
+                .catch(() => socket.emit("reload"));
+    });
 });
 
