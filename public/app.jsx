@@ -46,7 +46,10 @@ class Teams extends React.Component {
                         <div className="players-container">
                             {
                                 data.teams[teamId].players && data.teams[teamId].players.map(
-                                    (player, index) => (<Player key={index} data={data} id={player}/>)
+                                    (player, index) => (<Player key={index} data={data} id={player}
+                                                                handleRemovePlayer={this.props.handleRemovePlayer}
+                                                                handleGiveHost={this.props.handleGiveHost}
+                                                                handleSetTurn={this.props.handleSetTurn}/>)
                                 )
                             }
                         </div>
@@ -70,7 +73,10 @@ class Spectators extends React.Component {
                 }>
                 {
                     data.spectators && data.spectators.map(
-                        (player, index) => (<Player key={index} data={data} id={player}/>)
+                        (player, index) => (<Player key={index} data={data} id={player} spectator={true}
+                                                    handleRemovePlayer={this.props.handleRemovePlayer}
+                                                    handleGiveHost={this.props.handleGiveHost}
+                                                    handleSetTurn={this.props.handleSetTurn}/>)
                     )
                 }
             </div>
@@ -127,6 +133,28 @@ class Player extends React.Component {
                 + (id === data.currentPlayer ? " current" : "")
             }>
                 {data.playerNames[id]}
+                {(data.hostId === data.userId) ? (
+                    <div className="player-host-controls">
+                        {!this.props.spectator ?
+                            (<i className="material-icons host-button"
+                                title="Give turn"
+                                onClick={(evt) => this.props.handleSetTurn(id, evt)}>
+                                reply
+                            </i>) : ""}
+                        {data.userId !== id ?
+                            (<i className="material-icons host-button"
+                               title="Give host"
+                               onClick={(evt) => this.props.handleGiveHost(id, evt)}>
+                                vpn_key
+                            </i>) : ""}
+                        {data.userId !== id ?
+                            (<i className="material-icons host-button"
+                               title="Remove"
+                               onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
+                                delete_forever
+                            </i>) : ""}
+                    </div>
+                ) : ""}
             </div>
         );
     }
@@ -227,8 +255,6 @@ class Game extends React.Component {
         const action = evt.target.className;
         if (action === "set-score")
             this.socket.emit("set-score", prompt("Team number"), prompt("Score"));
-        else if (action === "remove-player")
-            this.socket.emit("remove-player", prompt("Nickname"));
         else if (action === "set-round-time")
             this.socket.emit("set-round-time", prompt("Round time in seconds"));
         else if (action === "set-goal")
@@ -237,8 +263,6 @@ class Game extends React.Component {
             this.socket.emit("setup-words", prompt("URL to words separated by lines"));
         else if (action === "select-word-set")
             this.socket.emit("select-word-set", prompt("1-3 difficulty levels. Default is 23 which means 2 and 3 both"));
-        else if (action === "give-host")
-            this.socket.emit("give-host", prompt("Nickname"));
         else if (action === "change-name") {
             const name = prompt("New name");
             this.socket.emit("change-name", name);
@@ -251,6 +275,23 @@ class Game extends React.Component {
             document.body.classList.toggle("dark-theme");
         } else if (action !== "restart-game")
             this.socket.emit(action);
+    }
+
+    handleRemovePlayer(id, evt) {
+        evt.stopPropagation();
+        if (confirm(`Removing ${this.state.playerNames[id]}?`))
+            this.socket.emit("remove-player", id);
+    }
+
+    handleGiveHost(id, evt) {
+        evt.stopPropagation();
+        if (confirm(`Give host ${this.state.playerNames[id]}?`))
+            this.socket.emit("give-host", id);
+    }
+
+    handleSetTurn(id, evt) {
+        evt.stopPropagation();
+        this.socket.emit("set-turn", id);
     }
 
     render() {
@@ -365,7 +406,10 @@ class Game extends React.Component {
                                  style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
                         </div>
                         Teams:
-                        <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}/>
+                        <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}
+                               handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
+                               handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
+                               handleSetTurn={(id, evt) => this.handleSetTurn(id, evt)}/>
                         <br/>
                         <div className={
                             "spectators-section"
@@ -373,7 +417,11 @@ class Game extends React.Component {
                         }>
                             Spectators:
                             <br/>
-                            <Spectators data={this.state} handleSpectatorsClick={() => this.handleSpectatorsClick()}/>
+                            <Spectators data={this.state}
+                                        handleSpectatorsClick={() => this.handleSpectatorsClick()}
+                                        handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
+                                        handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
+                                        handleSetTurn={(id, evt) => this.handleSetTurn(id, evt)}/>
                         </div>
                         <div className="control-pane">
                             <Timer data={this.state}/>
@@ -410,15 +458,11 @@ class Game extends React.Component {
                                 {isHost ? (
                                     <div>
                                         <div className="shuffle-players">Shuffle players</div>
-                                        <div className="remove-player">Remove player</div>
                                         <div className="remove-offline">Remove offline</div>
                                         <div className="restart-game">Restart game</div>
-                                        <div className="skip-player">Skip player</div>
                                         <div className="stop-timer">Stop timer</div>
-                                        <div className="skip-turn">Skip turn</div>
                                         <div className="set-score">Set score</div>
                                         <div className="set-goal">Set goal</div>
-                                        <div className="give-host">Give host</div>
                                         <div className="setup-words">Setup words</div>
                                         <div className="select-word-set">Select word set</div>
                                         <div className="set-round-time">Set round time</div>

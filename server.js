@@ -50,7 +50,11 @@ const
 
 // Server part
 const app = express();
-app.use('/alias', express.static(path.join(__dirname, 'public')));
+app.use('/', express.static(path.join(__dirname, 'public')));
+
+app.get('/alias', function (req, res) {
+    res.sendFile(__dirname + '/public/index.html');
+});
 
 const server = app.listen(1489);
 console.log('Server listening on port 1489');
@@ -92,26 +96,6 @@ io.on("connection", socket => {
                 if (!room.teams[room.currentTeam].currentPlayer)
                     room.teams[room.currentTeam].currentPlayer = [...room.teams[room.currentTeam].players][0];
                 room.currentPlayer = room.teams[room.currentTeam].currentPlayer;
-            }
-            room.readyPlayers.clear();
-        },
-        rotateBack = () => {
-            if (room.currentTeam) {
-                const
-                    teamKeys = Object.keys(room.teams),
-                    indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
-                if (indexOfCurrentTeam === 0)
-                    room.currentTeam = teamKeys[teamKeys.length - 1];
-                else
-                    room.currentTeam = teamKeys[indexOfCurrentTeam - 1];
-                const currentTeam = room.teams[room.currentTeam],
-                    currentPlayerKeys = [...currentTeam.players],
-                    indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
-                if (indexOfCurrentPlayer === 0)
-                    currentTeam.currentPlayer = currentPlayerKeys[currentTeam.players.size - 1];
-                else
-                    currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer - 1];
-                room.currentPlayer = currentTeam.currentPlayer;
             }
             room.readyPlayers.clear();
         },
@@ -262,13 +246,18 @@ io.on("connection", socket => {
             room.onlinePlayers.delete(playerId);
             room.spectators.delete(playerId);
         },
-        getPlayerByName = name => {
-            let playerId;
-            Object.keys(room.playerNames).forEach(userId => {
-                if (room.playerNames[userId] === name)
-                    playerId = userId;
+        setTurn = playerId => {
+            Object.keys(room.teams).forEach(teamId => {
+                const team = room.teams[teamId];
+                [...team.players].forEach(teamPlayerId => {
+                    if (teamPlayerId === playerId) {
+                        team.currentPlayer = playerId;
+                        room.currentPlayer = playerId;
+                        room.currentTeam = teamId;
+                        room.readyPlayers.clear();
+                    }
+                })
             });
-            return playerId;
         },
         init = () => {
             socket.join(initArgs.roomId);
@@ -393,22 +382,12 @@ io.on("connection", socket => {
         calcWordPoints();
         update();
     });
-    socket.on("skip-player", () => {
-        rotatePlayers();
-        update();
-    });
-    socket.on("skip-turn", () => {
-        rotatePlayers();
-        rotateTeams();
-        update();
-    });
     socket.on("change-name", value => {
         if (value)
             room.playerNames[user] = value;
         update();
     });
-    socket.on("remove-player", name => {
-        const playerId = getPlayerByName(name);
+    socket.on("remove-player", playerId => {
         if (playerId)
             removePlayer(playerId);
         update();
@@ -455,10 +434,14 @@ io.on("connection", socket => {
     socket.on("select-word-set", wordSet => {
         selectWordSet(wordSet);
     });
-    socket.on("give-host", name => {
-        const playerId = getPlayerByName(name);
+    socket.on("give-host", playerId => {
         if (playerId)
             room.hostId = playerId;
+        update();
+    });
+    socket.on("set-turn", playerId => {
+        if (playerId)
+            setTurn(playerId);
         update();
     });
     socket.on("setup-words", wordsURL => {
@@ -466,8 +449,13 @@ io.on("connection", socket => {
             try {
                 http.get(wordsURL.replace("https", "http"),
                     res => {
+                        let str = "";
                         res.on("data", function (chunk) {
-                            const newWords = chunk.toString().split("\r\n");
+                            str += chunk;
+                        });
+
+                        res.on("end", function () {
+                            const newWords = str.toString().split("\r\n");
                             if (newWords.length > 0) {
                                 roomWords[room.roomId] = shuffleArray(newWords);
                                 room.wordIndex = 0;

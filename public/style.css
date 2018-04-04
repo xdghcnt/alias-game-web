@@ -373,6 +373,29 @@ body.dark-theme {
     background: #9ccc65;
 }
 
+.player-host-controls {
+    margin-left: 5px;
+    display: none;
+}
+
+.player:hover .player-host-controls {
+    display: inline-block;
+}
+
+.player .host-button {
+    font-size: 16px;
+    cursor: pointer;
+    vertical-align: text-top;
+}
+
+.player .host-button {
+    opacity: 0.4;
+}
+
+.player .host-button:hover {
+    opacity: 1;
+}
+
 .captcha-solved #captcha-container {
     display: none;
 }
