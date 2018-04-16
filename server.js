@@ -4,7 +4,8 @@ const
     express = require('express'),
     socketIo = require("socket.io"),
     http = require('http'),
-    reCAPTCHA = require('recaptcha2');
+    reCAPTCHA = require('recaptcha2'),
+    logging = false;
 
 function makeId() {
     let text = "";
@@ -46,7 +47,8 @@ const
     roomWords = {},
     timers = {},
     defaultWordSet = "2",
-    authorizedUsers = {};
+    authorizedUsers = {},
+    attemptIPs = {};
 
 // Server part
 const app = express();
@@ -66,8 +68,11 @@ const io = socketIo(server);
 io.on("connection", socket => {
     let room, user, initArgs;
     socket.use((packet, next) => {
-        if (packet[0] === "init" || initArgs)
+        if (packet[0] === "init" || packet[0] === "auth" || room) {
+            if (logging)
+                fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {});
             return next();
+        }
     });
     let update = () => io.to(room.roomId).emit("state", room),
         rotatePlayers = (teamId) => {
@@ -140,7 +145,8 @@ io.on("connection", socket => {
                 fs.writeFile(__dirname + "/dict.json", JSON.stringify({
                     words: roomWords[room.roomId],
                     initialLength: dictInitialLength
-                }, null, 4));
+                }, null, 4), () => {
+                });
             }
         },
         stopTimer = () => {
@@ -212,7 +218,7 @@ io.on("connection", socket => {
                     }
                 });
             }
-            else {
+            else if (!isNaN(parseFloat(wordSet))) {
                 room.dictMode = false;
                 const difficultyList = wordSet.split("");
                 if (difficultyList.filter(number => !~["1", "2", "3"].indexOf(number)).length > 0)
@@ -292,11 +298,6 @@ io.on("connection", socket => {
                 socket.emit("active-word", activeWords[room.roomId]);
             update();
         };
-
-    socket.use((packet, next) => {
-        if (packet[0] === "init" || initArgs)
-            return next();
-    });
     socket.on("init", args => {
         initArgs = args;
         if (authorizedUsers[initArgs.userId + initArgs.roomId])
@@ -486,13 +487,20 @@ io.on("connection", socket => {
         }
     });
     socket.on("auth", (key) => {
-        if (initArgs)
+        if (initArgs && !room && !attemptIPs[socket.handshake.address]) {
+            attemptIPs[socket.handshake.address] = true;
             recaptcha.validate(key)
                 .then(() => {
                     authorizedUsers[initArgs.userId + initArgs.roomId] = true;
                     init();
                 })
-                .catch(() => socket.emit("reload"));
+                .catch(() => socket.emit("reload"))
+                .then(() => {
+                    setTimeout(() => {
+                        delete attemptIPs[socket.handshake.address];
+                    }, 5000)
+                })
+        }
     });
 });
 
