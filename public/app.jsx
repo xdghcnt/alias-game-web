@@ -35,7 +35,14 @@ class Teams extends React.Component {
                         + (data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal ? " goal-reached" : "")
                         + (data.teams[teamId].winner ? " winner" : "")
                     } key={index}>
-                        <div className="score">Score: {data.teams[teamId].score}
+                        <div className="score">
+                            {data.hostId === data.userId ?
+                                (<i className="material-icons host-button change-score"
+                                    title="Change"
+                                    onClick={(evt) => this.props.handleSetScore(teamId, evt)}>
+                                    edit
+                                </i>) : ""}
+                            Score: {data.teams[teamId].score}
                             <span className={
                                 "word-points"
                                 + (data.teams[teamId].wordPoints ? " active" : "")
@@ -143,14 +150,14 @@ class Player extends React.Component {
                             </i>) : ""}
                         {data.userId !== id ?
                             (<i className="material-icons host-button"
-                               title="Give host"
-                               onClick={(evt) => this.props.handleGiveHost(id, evt)}>
+                                title="Give host"
+                                onClick={(evt) => this.props.handleGiveHost(id, evt)}>
                                 vpn_key
                             </i>) : ""}
                         {data.userId !== id ?
                             (<i className="material-icons host-button"
-                               title="Remove"
-                               onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
+                                title="Remove"
+                                onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
                                 delete_forever
                             </i>) : ""}
                     </div>
@@ -251,30 +258,44 @@ class Game extends React.Component {
         this.socket.emit("set-words-bet", value);
     }
 
-    handleHostAction(evt) {
-        const action = evt.target.className;
-        if (action === "set-score")
-            this.socket.emit("set-score", prompt("Team number"), prompt("Score"));
-        else if (action === "set-round-time")
-            this.socket.emit("set-round-time", prompt("Round time in seconds"));
-        else if (action === "set-goal")
-            this.socket.emit("set-goal", prompt("Words count to win"));
-        else if (action === "setup-words")
-            this.socket.emit("setup-words", prompt("URL to words separated by lines"));
-        else if (action === "select-word-set")
-            this.socket.emit("select-word-set", prompt("1-3 difficulty levels. Default is 23 which means 2 and 3 both"));
-        else if (action === "change-name") {
-            const name = prompt("New name");
-            this.socket.emit("change-name", name);
-            localStorage.userName = name;
-        }
-        else if (action === "restart-game" && confirm("Restart? Are you sure?"))
+    handleClickChangeName() {
+        const name = prompt("New name");
+        this.socket.emit("change-name", name);
+        localStorage.userName = name;
+    }
+
+    handleClickShuffle() {
+        this.socket.emit("shuffle-players");
+    }
+
+    handleClickLevel(level) {
+        this.socket.emit("select-word-set", level);
+    }
+
+    handleClickCustom() {
+        this.socket.emit("setup-words", prompt("URL to words separated by lines"));
+    }
+
+    handleClickRestart() {
+        if (this.gameIsOver || confirm("Restart? Are you sure?"))
             this.socket.emit("restart-game");
-        else if (action === "toggle-theme") {
-            localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
-            document.body.classList.toggle("dark-theme");
-        } else if (action !== "restart-game")
-            this.socket.emit(action);
+    }
+
+    handleToggleTheme() {
+        localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
+        document.body.classList.toggle("dark-theme");
+        this.setState(Object.assign({
+            userId: this.userId,
+            activeWord: this.state.activeWord
+        }, this.state));
+    }
+
+    handleClickStop() {
+        this.socket.emit("stop-game");
+    }
+
+    handleClickResume() {
+        this.socket.emit("action");
     }
 
     handleRemovePlayer(id, evt) {
@@ -294,6 +315,19 @@ class Game extends React.Component {
         this.socket.emit("set-turn", id);
     }
 
+    handleSetScore(id, evt) {
+        evt.stopPropagation();
+        this.socket.emit("set-score", id, prompt("Score"))
+    }
+
+    handleChangeGoal(value) {
+        this.socket.emit("set-goal", value);
+    }
+
+    handleChangeRoundTime(value) {
+        this.socket.emit("set-round-time", value)
+    }
+
     render() {
         clearTimeout(this.timeOut);
         if (!this.state.authRequired && this.state.inited && !this.state.playerNames[this.state.userId])
@@ -308,9 +342,11 @@ class Game extends React.Component {
                 currentTeam = data.teams[data.currentTeam];
             let actionText, statusText,
                 showWordsBet = false,
-                gameIsOver;
+                gameIsOver,
+                hasPlayers = data.phase !== 0;
             if (data.phase === 0) {
-                if (Object.keys(data.teams).length > 0 || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1) {
+                hasPlayers = Object.keys(data.teams).length > 0 || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1;
+                if (hasPlayers) {
                     if (isHost) {
                         statusText = "You can start the game";
                         actionText = "Start";
@@ -358,6 +394,7 @@ class Game extends React.Component {
                     else
                         statusText = "Waiting for other team.";
                 }
+                this.gameIsOver = gameIsOver;
             }
             else if (data.phase === 2) {
                 if (isTurn) {
@@ -409,6 +446,7 @@ class Game extends React.Component {
                         <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}
                                handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
                                handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
+                               handleSetScore={(id, evt) => this.handleSetScore(id, evt)}
                                handleSetTurn={(id, evt) => this.handleSetTurn(id, evt)}/>
                         <br/>
                         <div className={
@@ -454,27 +492,79 @@ class Game extends React.Component {
                             </div>
                         </div>
                         <div className="host-controls">
-                            <div className="host-controls-menu" onClick={evt => this.handleHostAction(evt)}>
-                                {isHost ? (
-                                    <div>
-                                        <div className="shuffle-players">Shuffle players</div>
-                                        <div className="remove-offline">Remove offline</div>
-                                        <div className="restart-game">Restart game</div>
-                                        <div className="stop-timer">Stop timer</div>
-                                        <div className="set-score">Set score</div>
-                                        <div className="set-goal">Set goal</div>
-                                        <div className="setup-words">Setup words</div>
-                                        <div className="select-word-set">Select word set</div>
-                                        <div className="set-round-time">Set round time</div>
-                                        <div className="stop-game">Manage teams</div>
-                                    </div>
-                                ) : ""}
+                            <div className="host-controls-menu">
                                 <div>
-                                    <div className="toggle-theme">Toggle theme</div>
-                                    <div className="change-name">Change name</div>
+                                    <div className="little-controls">
+                                        <div className="game-settings">
+                                            <div className="set-goal"><i title="goal"
+                                                                         className="material-icons">flag</i>
+                                                {(isHost && this.state.phase === 0) ? (<input id="goal"
+                                                                                              type="number"
+                                                                                              defaultValue="20" min="0"
+                                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
+                                                                                                  && this.handleChangeGoal(evt.target.valueAsNumber)}
+                                                />) : (<span className="value">{this.state.goal}</span>)}
+                                            </div>
+                                            <div className="set-round-time"><i title="time"
+                                                                               className="material-icons">timer</i>
+                                                {(isHost && this.state.phase === 0) ? (<input id="round-time"
+                                                                                              type="number"
+                                                                                              defaultValue="60" min="0"
+                                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
+                                                                                                  && this.handleChangeRoundTime(evt.target.valueAsNumber)}
+                                                />) : (<span className="value">{this.state.roundTime}</span>)}
+                                            </div>
+                                        </div>
+                                        {(isHost && this.state.phase === 0) ? (
+                                            <div className="shuffle-players settings-button"
+                                                 onClick={() => this.handleClickShuffle()}>shuffle players<i
+                                                className="material-icons">casino</i>
+                                            </div>) : ""}
+                                    </div>
+                                    <div className="start-game-buttons">
+                                        <div
+                                            className={((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 1 ? " level-selected" : "")}
+                                            onClick={() => this.handleClickLevel(1)}><i
+                                            className="material-icons">pets</i>Easy
+                                        </div>
+                                        <div
+                                            className={((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 2 ? " level-selected" : "")}
+                                            onClick={() => this.handleClickLevel(2)}><i
+                                            className="material-icons">child_friendly</i>Normal
+                                        </div>
+                                        <div
+                                            className={((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 3 ? " level-selected" : "")}
+                                            onClick={() => this.handleClickLevel(3)}><i
+                                            className="material-icons">school</i>Hard
+                                        </div>
+                                    </div>
+                                    <div
+                                        className={"custom-game-button" +
+                                        ((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 0 ? " level-selected" : "")}
+                                        onClick={() => (isHost && this.state.phase === 0) && this.handleClickCustom()}>
+                                        <i
+                                            className="material-icons">accessible</i>Custom
+                                    </div>
                                 </div>
                             </div>
-                            <i className="material-icons settings-button">settings</i>
+                            <div className="side-buttons">
+                                {(isHost && hasPlayers && (data.phase === 0 || this.gameIsOver)) ?
+                                    (<i onClick={() => this.handleClickRestart()}
+                                        className="material-icons start-game settings-button">sync</i>) : ""}
+                                {(isHost && hasPlayers) ? (data.phase === 0
+                                    ? (<i onClick={() => this.handleClickResume()}
+                                          className="material-icons start-game settings-button">play_arrow</i>)
+                                    : (<i onClick={() => this.handleClickStop()}
+                                          className="material-icons start-game settings-button">pause</i>)) : ""}
+                                <i onClick={() => this.handleClickChangeName()}
+                                   className="toggle-theme material-icons settings-button">edit</i>
+                                {!parseInt(localStorage.darkTheme)
+                                    ? (<i onClick={() => this.handleToggleTheme()}
+                                          className="toggle-theme material-icons settings-button">brightness_2</i>)
+                                    : (<i onClick={() => this.handleToggleTheme()}
+                                          className="toggle-theme material-icons settings-button">wb_sunny</i>)}
+                            </div>
+                            <i className="material-icons">settings</i>
                         </div>
                     </div>
                 </div>

@@ -46,7 +46,7 @@ const
     activeWords = {},
     roomWords = {},
     timers = {},
-    defaultWordSet = "2",
+    defaultWordSet = 2,
     authorizedUsers = {},
     attemptIPs = {};
 
@@ -70,7 +70,8 @@ io.on("connection", socket => {
     socket.use((packet, next) => {
         if (packet[0] === "init" || packet[0] === "auth" || room) {
             if (logging)
-                fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {});
+                fs.appendFile(__dirname + "/logs.txt", `${(new Date()).toISOString()}: ${socket.handshake.address} - ${JSON.stringify(packet)} \n`, () => {
+                });
             return next();
         }
     });
@@ -198,36 +199,14 @@ io.on("connection", socket => {
             resetOrder();
         },
         selectWordSet = wordSet => {
-            if (wordSet === "1488") {
-                fs.readFile(__dirname + "/dict.json", "utf8", function (err, words) {
-                    try {
-                        const data = JSON.parse(words);
-                        dictWords = data.words;
-                        dictInitialLength = data.initialLength || dictWords.length;
-                        roomWords[room.roomId] = shuffleArray(dictWords);
-                        dictWords = new Set(dictWords);
-                        room.dictMode = true;
-                        room.dictInitLength = dictInitialLength;
-                        room.dictLength = dictWords.size;
-                        socket.emit("message", "Success");
-                        room.wordIndex = 0;
-                        room.wordsEnded = false;
-                        update();
-                    } catch (error) {
-                        socket.emit("message", `You did something wrong: ${error}`);
-                    }
-                });
-            }
-            else if (!isNaN(parseFloat(wordSet))) {
+            if (!isNaN(parseFloat(wordSet))) {
                 room.dictMode = false;
-                const difficultyList = wordSet.split("");
-                if (difficultyList.filter(number => !~["1", "2", "3"].indexOf(number)).length > 0)
+                const difficulty = parseFloat(wordSet);
+                if (!~[1, 2, 3].indexOf(difficulty) > 0)
                     socket.emit("message", "You did something wrong");
                 else {
-                    roomWords[room.roomId] = [];
-                    difficultyList.forEach(wordIndex => {
-                        roomWords[room.roomId] = shuffleArray(roomWords[room.roomId].concat(defaultWords[wordIndex]));
-                    });
+                    room.level = difficulty;
+                    roomWords[room.roomId] = shuffleArray(defaultWords[difficulty]);
                     room.wordIndex = 0;
                     room.wordsEnded = false;
                 }
@@ -286,7 +265,8 @@ io.on("connection", socket => {
                 dictLength: null,
                 teams: {},
                 wordIndex: 0,
-                wordsEnded: false
+                wordsEnded: false,
+                level: defaultWordSet
             };
             if (!room.playerNames[user])
                 room.spectators.add(user);
@@ -300,7 +280,7 @@ io.on("connection", socket => {
         };
     socket.on("init", args => {
         initArgs = args;
-        if (authorizedUsers[initArgs.userId + initArgs.roomId])
+        if (true || authorizedUsers[initArgs.userId + initArgs.roomId])
             init();
         else
             socket.emit("auth-required")
@@ -363,19 +343,20 @@ io.on("connection", socket => {
             update();
         }
     );
-    socket.on("set-score", (teamIndex, score) => {
-        const team = room.teams[Object.keys(room.teams)[teamIndex - 1]];
-        if (team && !isNaN(parseInt(score)))
-            team.score = parseInt(score);
-        update();
+    socket.on("set-score", (teamId, score) => {
+        if (room.hostId === user && room.teams[teamId]) {
+            const team = room.teams[teamId];
+            if (team && !isNaN(parseInt(score)))
+                team.score = parseInt(score);
+            update();
+        }
     });
     socket.on("stop-game", () => {
-        room.phase = 0;
-        update();
-    });
-    socket.on("set-words-bet", value => {
-        //room.currentBet = value;
-        update();
+        if (room.hostId === user) {
+            endRound();
+            room.phase = 0;
+            update();
+        }
     });
     socket.on("set-word-points", value => {
         room.currentWords = value;
@@ -389,64 +370,60 @@ io.on("connection", socket => {
         update();
     });
     socket.on("remove-player", playerId => {
-        if (playerId)
+        if (room.hostId === user && playerId)
             removePlayer(playerId);
         update();
     });
-    socket.on("remove-offline", () => {
-        Object.keys(room.playerNames).forEach(playerId => {
-            if (!room.onlinePlayers.has(playerId))
-                removePlayer(playerId);
-        });
-        update();
-    });
     socket.on("shuffle-players", () => {
-        let currentPlayers = [];
-        Object.keys(room.teams).forEach(teamId => {
-            const team = room.teams[teamId];
-            currentPlayers = currentPlayers.concat([...team.players]);
-            team.players = new JSONSet();
-        });
-        shuffleArray(currentPlayers);
-        while (currentPlayers.length > 0) {
+        if (room.hostId === user) {
+            let currentPlayers = [];
             Object.keys(room.teams).forEach(teamId => {
-                if (currentPlayers.length > 0)
-                    room.teams[teamId].players.add(currentPlayers.pop());
+                const team = room.teams[teamId];
+                currentPlayers = currentPlayers.concat([...team.players]);
+                team.players = new JSONSet();
             });
+            shuffleArray(currentPlayers);
+            while (currentPlayers.length > 0) {
+                Object.keys(room.teams).forEach(teamId => {
+                    if (currentPlayers.length > 0)
+                        room.teams[teamId].players.add(currentPlayers.pop());
+                });
+            }
+            resetOrder();
+            update();
         }
-        resetOrder();
-        update();
     });
     socket.on("restart-game", () => {
-        restartGame();
+        if (room.hostId === user)
+            restartGame();
         update();
     });
     socket.on("set-round-time", time => {
-        room.roundTime = time;
-    });
-    socket.on("stop-timer", () => {
-        endRound();
+        if (room.hostId === user)
+            room.roundTime = time;
         update();
     });
     socket.on("set-goal", goal => {
-        room.goal = goal;
+        if (room.hostId === user)
+            room.goal = goal;
         update();
     });
     socket.on("select-word-set", wordSet => {
-        selectWordSet(wordSet);
+        if (room.phase === 0 && room.hostId === user)
+            selectWordSet(wordSet);
     });
     socket.on("give-host", playerId => {
-        if (playerId)
+        if (room.hostId === user && playerId)
             room.hostId = playerId;
         update();
     });
     socket.on("set-turn", playerId => {
-        if (playerId)
+        if (room.hostId === user && playerId)
             setTurn(playerId);
         update();
     });
     socket.on("setup-words", wordsURL => {
-        if (wordsURL)
+        if (room.hostId === user && wordsURL)
             try {
                 http.get(wordsURL.replace("https", "http"),
                     res => {
@@ -461,6 +438,7 @@ io.on("connection", socket => {
                                 roomWords[room.roomId] = shuffleArray(newWords);
                                 room.wordIndex = 0;
                                 room.wordsEnded = false;
+                                room.level = 0;
                                 socket.emit("message", "Success");
                                 update();
                             }

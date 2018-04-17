@@ -45,10 +45,6 @@ body.dark-theme {
     background: #4c6463;
 }
 
-.dark-theme .host-controls-menu > div > div:hover {
-    background: rgb(79, 109, 109);
-}
-
 .dark-theme .team.goal-reached {
     box-shadow: 0 6px 14px rgba(255, 145, 0, 0.3);
 }
@@ -303,25 +299,12 @@ body.dark-theme {
     text-align: right;
 }
 
-.host-controls-menu > div > div {
-    padding: 3px 2px;
-    cursor: pointer;
-}
-
-.host-controls-menu > div > div:hover {
-    background: #9ccc65;
-}
-
 .host-controls-menu {
     display: none;
 }
 
 .host-controls:hover .host-controls-menu {
     display: block;
-}
-
-.settings-button {
-    float: right;
 }
 
 .word-points {
@@ -382,20 +365,138 @@ body.dark-theme {
     display: inline-block;
 }
 
-.player .host-button {
+.host-button {
     font-size: 16px;
     cursor: pointer;
     vertical-align: text-top;
 }
 
-.player .host-button {
+.host-button {
     opacity: 0.4;
 }
 
-.player .host-button:hover {
+.host-button:hover {
     opacity: 1;
 }
 
 .captcha-solved #captcha-container {
     display: none;
+}
+
+.little-controls input {
+    width: 39px;
+    background: transparent;
+    border: 1px solid;
+    color: #cccaca;
+    padding: 2px;
+    margin: 3px;
+}
+
+.start-game-buttons div {
+    display: inline-block;
+    padding: 17px;
+}
+
+.little-controls div {
+    display: inline-block;
+}
+
+.settings-button {
+    cursor: pointer;
+}
+
+.settings-button:hover {
+    background: #9ccc65;
+}
+
+.dark-theme .settings-button:hover {
+    background: rgb(79, 109, 109);
+}
+
+.level-selected {
+    background: #eaffcf;
+}
+
+.dark-theme .level-selected {
+    background: rgba(76, 134, 134, 0.45);
+}
+
+.little-controls input {
+    color: black;
+}
+
+.dark-theme .little-controls input {
+    color: #cccaca;
+}
+
+.start-game-buttons i, .custom-game-button i {
+    vertical-align: bottom;
+    margin-right: 3px;
+}
+
+.little-controls i {
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
+.side-buttons {
+    display: none;
+}
+
+.host-controls:hover .side-buttons {
+    display: inline-block;
+}
+
+.start-game-title {
+    text-align: center;
+    padding: 7px;
+    border-top: 1px solid;
+    margin-top: 4px;
+    padding-bottom: 3px;
+}
+
+.custom-game-button {
+    text-align: left;
+    padding-bottom: 4px;
+    padding-left: 13px;
+    width: 91px;
+    margin-bottom: -14px;
+}
+
+.little-controls {
+    text-align: left;
+    border-bottom: 1px solid;
+    padding-bottom: 6px;
+}
+
+.shuffle-players {
+    float: right;
+    margin-top: 2px;
+    padding-left: 5px;
+}
+
+.side-buttons * {
+    margin-right: 2px;
+}
+
+.game-settings .value {
+    vertical-align: middle;
+    padding: 4px;
+    padding-right: 5px;
+}
+
+.change-score {
+    margin-top: -2px;
+    margin-right: 3px;
+    display: none;
+}
+
+.change-score {
+    margin-top: -2px;
+    margin-left: 3px;
+    display: none;
+}
+
+.score:hover .change-score {
+    display: inline-block;
 }
