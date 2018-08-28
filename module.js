@@ -1,6 +1,5 @@
 function init(wsServer) {
     const
-        path = require("path"),
         fs = require('fs'),
         http = require("http"),
         express = require('express'),
@@ -15,7 +14,7 @@ function init(wsServer) {
     app.get('/alias', function (req, res) {
         res.sendFile(`${__dirname}/public/app.html`);
     });
-    app.use('/alias', express.static(path.join(__dirname, '/public')));
+    app.use('/alias', express.static(`${__dirname}/public`));
 
     const rooms = new Map();
 
