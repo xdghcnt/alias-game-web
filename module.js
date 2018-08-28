@@ -1,4 +1,4 @@
-function init(wsServer) {
+function init(wsServer, path) {
     const
         fs = require('fs'),
         http = require("http"),
@@ -11,10 +11,10 @@ function init(wsServer) {
         defaultWords = JSON.parse(words);
     });
 
-    app.get('/alias', function (req, res) {
+    app.get(path, function (req, res) {
         res.sendFile(`${__dirname}/public/app.html`);
     });
-    app.use('/alias', express.static(`${__dirname}/public`));
+    app.use("/alias", express.static(`${__dirname}/public`));
 
     const rooms = new Map();
 

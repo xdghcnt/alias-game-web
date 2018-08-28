@@ -226,7 +226,7 @@ class Game extends React.Component {
         });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
-        this.timerSound = new Audio("alias/beep.mp3");
+        this.timerSound = new Audio("/alias/beep.mp3");
     }
 
     constructor() {
