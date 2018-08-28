@@ -1,9 +1,11 @@
-function init(app, users) {
+function init(wsServer) {
     const
         path = require("path"),
         fs = require('fs'),
         http = require("http"),
-        express = require('express');
+        express = require('express'),
+        app = wsServer.app,
+        users = wsServer.users.of("alias");
 
     let defaultWords;
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
