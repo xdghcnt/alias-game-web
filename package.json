@@ -1,21 +1,14 @@
 {
   "name": "alias",
   "version": "0.0.0",
+  "main": "module.js",
   "private": true,
-  "scripts": {
-    "start": "node ./bin/www"
-  },
+  "files": [
+    "module.js",
+    "words.json",
+    "public"
+  ],
   "dependencies": {
-    "body-parser": "~1.17.1",
-    "cookie-parser": "~1.4.3",
-    "debug": "~2.6.3",
-    "express": "~4.15.2",
-    "jade": "~1.11.0",
-    "morgan": "~1.8.1",
-    "react": "^15.6.1",
-    "react-dom": "^15.6.1",
-    "recaptcha2": "^1.3.2",
-    "serve-favicon": "~2.4.2",
-    "socket.io": "^1.3.7"
+    "ws-server-engine": "git://github.com/xdghcnt/ws-server-engine.git"
   }
 }

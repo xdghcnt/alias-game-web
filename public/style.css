@@ -500,3 +500,7 @@ body.dark-theme {
 .score:hover .change-score {
     display: inline-block;
 }
+
+.dark-theme .player.offline {
+    color: #787878;
+}

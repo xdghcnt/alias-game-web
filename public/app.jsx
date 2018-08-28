@@ -172,17 +172,19 @@ class Game extends React.Component {
         const initArgs = {};
         if (parseInt(localStorage.darkTheme))
             document.body.classList.add("dark-theme");
-        if (!localStorage.userId) {
+        if (!localStorage.userId || !localStorage.token) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
             localStorage.userId = makeId();
+            localStorage.token = makeId();
         }
         if (!location.hash)
             location.hash = makeId();
         initArgs.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.userId;
         initArgs.userName = localStorage.userName;
-        this.socket = io();
+        initArgs.token = localStorage.token;
+        this.socket = window.socket.of("alias");
         this.socket.on("state", state => this.setState(Object.assign({
             userId: this.userId,
             activeWord: this.state.activeWord
@@ -199,11 +201,12 @@ class Game extends React.Component {
         this.socket.on("message", text => {
             alert(text);
         });
-        this.socket.on("disconnect", () => {
+        window.socket.on("disconnect", (event) => {
             this.setState({
-                inited: false
+                inited: false,
+                disconnected: true,
+                disconnectReason: event.reason
             });
-            window.location.reload();
         });
         this.socket.on("auth-required", () => {
             this.setState(Object.assign({}, this.state, {
@@ -213,17 +216,17 @@ class Game extends React.Component {
             if (grecaptcha)
                 grecaptcha.render("captcha-container", {
                     sitekey: "",
-                    callback: (key) => this.socket.emit("auth", key)
+                    callback: (key) => this.socket.emit("auth", key, initArgs)
                 });
             else
                 setTimeout(() => window.location.reload(), 3000)
         });
         this.socket.on("reload", () => {
-            window.location.reload();
+            setTimeout(() => window.location.reload(), 3000);
         });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
-        this.timerSound = new Audio("beep.mp3");
+        this.timerSound = new Audio("alias/beep.mp3");
     }
 
     constructor() {
@@ -317,7 +320,7 @@ class Game extends React.Component {
 
     handleSetScore(id, evt) {
         evt.stopPropagation();
-        this.socket.emit("set-score", id, prompt("Score"))
+        this.socket.emit("set-score", {id: id, score: prompt("Score")});
     }
 
     handleChangeGoal(value) {
@@ -330,8 +333,9 @@ class Game extends React.Component {
 
     render() {
         clearTimeout(this.timeOut);
-        if (!this.state.authRequired && this.state.inited && !this.state.playerNames[this.state.userId])
-            return (<div>You were kicked</div>);
+        if (this.state.disconnected)
+            return (<div
+                className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
         else if (this.state.inited) {
             document.body.classList.add("captcha-solved");
             const
@@ -372,11 +376,11 @@ class Game extends React.Component {
                             return points >= data.goal;
                         });
                     if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoal.filter(teamId => {
-                            const
-                                team = data.teams[teamId],
-                                firstTeam = data.teams[teamsReachedGoal[0]];
-                            return (team.score + (team.wordPoints || 0)) === (firstTeam.score + (firstTeam.wordPoints || 0));
-                        }).length === 1)) {
+                        const
+                            team = data.teams[teamId],
+                            firstTeam = data.teams[teamsReachedGoal[0]];
+                        return (team.score + (team.wordPoints || 0)) === (firstTeam.score + (firstTeam.wordPoints || 0));
+                    }).length === 1)) {
                         gameIsOver = true;
                         data.teams[mostPointsTeam].winner = true;
                         statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
