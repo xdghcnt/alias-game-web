@@ -350,7 +350,8 @@ class Game extends React.Component {
                 isHost = data.hostId === data.userId,
                 isTurn = data.currentPlayer === data.userId,
                 isTeamTurn = data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
-                currentTeam = data.teams[data.currentTeam];
+                currentTeam = data.teams[data.currentTeam],
+                parentDir = location.pathname.match(/(.+?)\//)[1];
             let actionText, statusText,
                 showWordsBet = false,
                 gameIsOver,
@@ -559,6 +560,8 @@ class Game extends React.Component {
                                 </div>
                             </div>
                             <div className="side-buttons">
+                                <i onClick={() => window.location = parentDir}
+                                   className="material-icons exit settings-button">exit_to_app</i>
                                 {(isHost && hasPlayers && (data.phase === 0 || this.gameIsOver)) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
