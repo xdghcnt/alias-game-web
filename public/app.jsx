@@ -229,6 +229,13 @@ class Game extends React.Component {
         this.timerSound = new Audio("/alias/beep.mp3");
     }
 
+    debouncedEmit(event, data) {
+        clearTimeout(this.debouncedEmitTimer);
+        this.debouncedEmitTimer = setTimeout(() => {
+            this.socket.emit(event, data);
+        }, 100);
+    }
+
     constructor() {
         super();
         this.state = {
@@ -324,11 +331,11 @@ class Game extends React.Component {
     }
 
     handleChangeGoal(value) {
-        this.socket.emit("set-goal", value);
+        this.debouncedEmit("set-goal", value);
     }
 
     handleChangeRoundTime(value) {
-        this.socket.emit("set-round-time", value)
+        this.debouncedEmit("set-round-time", value)
     }
 
     render() {
