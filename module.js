@@ -16,11 +16,32 @@ function init(wsServer, path) {
     });
     app.use("/alias", express.static(`${__dirname}/public`));
 
-    const rooms = new Map();
+    const
+        rooms = new Map(),
+        onlineUsers = new Map();
 
     users.on("user-joined", (id, data) => {
-        if (data && data.roomId && !rooms.has(data.roomId))
-            rooms.set(data.roomId, new GameState(id, data, users));
+        if (data.roomId) {
+            if (!rooms.has(data.roomId))
+                rooms.set(data.roomId, new GameState(id, data, users));
+            rooms.get(data.roomId).userJoin(data);
+            onlineUsers.set(data.userId, data.roomId);
+        }
+    });
+    users.on("user-left", (id) => {
+        if (onlineUsers.has(id)) {
+            const roomId = onlineUsers.get(id);
+            if (rooms.has(roomId))
+                rooms.get(roomId).userLeft(id);
+            onlineUsers.delete(id);
+        }
+    });
+    users.on("user-event", (id, event, data) => {
+        if (onlineUsers.has(id)) {
+            const roomId = onlineUsers.get(id);
+            if (rooms.has(roomId))
+                rooms.get(roomId).userEvent(id, event, data);
+        }
     });
 
     class GameState {
@@ -42,6 +63,8 @@ function init(wsServer, path) {
                 wordsEnded: false,
                 level: 2
             };
+            this.room = room;
+            this.onlinePlayers = room.onlinePlayers;
             let timer, activeWord, roomWordsList;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
@@ -204,7 +227,8 @@ function init(wsServer, path) {
                         })
                     });
                 },
-                joinUser = (user, data) => {
+                userJoin = (data) => {
+                    const user = data.userId;
                     if (!room.playerNames[user])
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
@@ -214,27 +238,26 @@ function init(wsServer, path) {
                     if (room.currentPlayer === user && activeWord)
                         send(user, "active-word", activeWord);
                     update();
+                },
+                userLeft = (user) => {
+                    room.onlinePlayers.delete(user);
+                    if (room.spectators.has(user))
+                        delete room.playerNames[user];
+                    room.spectators.delete(user);
+                    room.readyPlayers.delete(user);
+                    update();
+                },
+                userEvent = (user, event, data) => {
+                    try {
+                        if (this.eventHandlers[event])
+                            this.eventHandlers[event](user, data[0]);
+                    } catch (error) {
+                        console.error(error);
+                    }
                 };
-            joinUser(hostId, hostData);
-            userRegistry.on("user-joined", (user, data) => {
-                joinUser(user, data);
-            });
-            userRegistry.on("user-left", (user) => {
-                room.onlinePlayers.delete(user);
-                if (room.spectators.has(user))
-                    delete room.playerNames[user];
-                room.spectators.delete(user);
-                room.readyPlayers.delete(user);
-                update();
-            });
-            userRegistry.on("user-event", (user, eventName, data) => {
-                try {
-                    if (this.eventHandlers[eventName])
-                        this.eventHandlers[eventName](user, data[0]);
-                } catch (error) {
-                    console.error(error);
-                }
-            });
+            this.userJoin = userJoin;
+            this.userLeft = userLeft;
+            this.userEvent = userEvent;
             this.eventHandlers = {
                 "team-join": (user, id) => {
                     if (id === "new") {
