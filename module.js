@@ -63,7 +63,6 @@ function init(wsServer, path) {
                 wordsEnded: false,
                 level: 2
             };
-            this.room = room;
             this.onlinePlayers = room.onlinePlayers;
             let timer, activeWord, roomWordsList;
             const
@@ -253,6 +252,7 @@ function init(wsServer, path) {
                             this.eventHandlers[event](user, data[0]);
                     } catch (error) {
                         console.error(error);
+                        userRegistry.log(error.message);
                     }
                 };
             this.userJoin = userJoin;
