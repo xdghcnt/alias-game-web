@@ -63,7 +63,6 @@ function init(wsServer, path) {
                 wordsEnded: false,
                 level: 2
             };
-            this.onlinePlayers = room.onlinePlayers;
             let timer, activeWord, roomWordsList;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
@@ -252,7 +251,7 @@ function init(wsServer, path) {
                             this.eventHandlers[event](user, data[0]);
                     } catch (error) {
                         console.error(error);
-                        userRegistry.log(error.message);
+                        wsServer.users.log(error.message);
                     }
                 };
             this.userJoin = userJoin;
