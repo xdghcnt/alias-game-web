@@ -403,6 +403,10 @@ function init(wsServer, path, config) {
                 }
             };
         }
+
+        getPlayerCount() {
+            return Object.keys(this.room.playerNames).length;
+        }
     }
 
     function makeId() {
