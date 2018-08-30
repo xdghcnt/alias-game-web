@@ -1,4 +1,4 @@
-function init(wsServer, path) {
+function init(wsServer, path, config) {
     const
         fs = require('fs'),
         http = require("http"),
@@ -15,34 +15,6 @@ function init(wsServer, path) {
         res.sendFile(`${__dirname}/public/app.html`);
     });
     app.use("/alias", express.static(`${__dirname}/public`));
-
-    const
-        rooms = new Map(),
-        onlineUsers = new Map();
-
-    users.on("user-joined", (id, data) => {
-        if (data.roomId) {
-            if (!rooms.has(data.roomId))
-                rooms.set(data.roomId, new GameState(id, data, users));
-            rooms.get(data.roomId).userJoin(data);
-            onlineUsers.set(data.userId, data.roomId);
-        }
-    });
-    users.on("user-left", (id) => {
-        if (onlineUsers.has(id)) {
-            const roomId = onlineUsers.get(id);
-            if (rooms.has(roomId))
-                rooms.get(roomId).userLeft(id);
-            onlineUsers.delete(id);
-        }
-    });
-    users.on("user-event", (id, event, data) => {
-        if (onlineUsers.has(id)) {
-            const roomId = onlineUsers.get(id);
-            if (rooms.has(roomId))
-                rooms.get(roomId).userEvent(id, event, data);
-        }
-    });
 
     class GameState {
         constructor(hostId, hostData, userRegistry) {
@@ -63,6 +35,7 @@ function init(wsServer, path) {
                 wordsEnded: false,
                 level: 2
             };
+            this.room = room;
             let timer, activeWord, roomWordsList;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
@@ -251,7 +224,7 @@ function init(wsServer, path) {
                             this.eventHandlers[event](user, data[0]);
                     } catch (error) {
                         console.error(error);
-                        wsServer.users.log(error.message);
+                        users.registry.log(error.message);
                     }
                 };
             this.userJoin = userJoin;
@@ -455,6 +428,8 @@ function init(wsServer, path) {
             return [...this]
         }
     }
+
+    new users.registry.RoomManager(users, GameState);
 }
 
 module.exports = init;
