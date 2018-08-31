@@ -4,8 +4,9 @@ function init(wsServer, path) {
         http = require("http"),
         express = require('express'),
         app = wsServer.app,
-        users = wsServer.users.of("alias"),
-        EventEmitter = require("events");
+        registry = wsServer.users,
+        EventEmitter = require("events"),
+        channel = "alias";
 
     let defaultWords;
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
@@ -38,8 +39,12 @@ function init(wsServer, path) {
                 level: 2
             };
             this.room = room;
+            this.state = {
+                activeWord: null,
+                roomWordsList: null
+            };
             this.lastInteraction = new Date();
-            let timer, activeWord, roomWordsList;
+            let timer;
             const
                 send = (target, event, data) => {
                     this.lastInteraction = new Date();
@@ -114,10 +119,10 @@ function init(wsServer, path) {
                     clearInterval(timer);
                 },
                 endRound = () => {
-                    if (activeWord)
-                        room.currentWords.push({points: 1, word: activeWord});
+                    if (this.state.activeWord)
+                        room.currentWords.push({points: 1, word: this.state.activeWord});
                     send(room.onlinePlayers, "active-word", null);
-                    activeWord = undefined;
+                    this.state.activeWord = undefined;
                     calcWordPoints();
                     rotatePlayers();
                     rotateTeams();
@@ -166,7 +171,7 @@ function init(wsServer, path) {
                         }
                         else {
                             room.level = difficulty;
-                            roomWordsList = shuffleArray([...defaultWords[difficulty]]);
+                            this.state.roomWordsList = shuffleArray([...defaultWords[difficulty]]);
                             room.wordIndex = 0;
                             room.wordsEnded = false;
                         }
@@ -210,10 +215,10 @@ function init(wsServer, path) {
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
-                    if (!roomWordsList)
+                    if (!this.state.roomWordsList)
                         selectWordSet(2);
-                    if (room.currentPlayer === user && activeWord)
-                        send(user, "active-word", activeWord);
+                    if (room.currentPlayer === user && this.state.activeWord)
+                        send(user, "active-word", this.state.activeWord);
                     update();
                 },
                 userLeft = (user) => {
@@ -230,7 +235,7 @@ function init(wsServer, path) {
                             this.eventHandlers[event](user, data[0]);
                     } catch (error) {
                         console.error(error);
-                        users.registry.log(error.message);
+                        registry.log(error.message);
                     }
                 };
             this.userJoin = userJoin;
@@ -280,12 +285,12 @@ function init(wsServer, path) {
                             endRound();
                         room.teams[room.currentTeam].wordPoints = 0;
                         if (room.currentBet > room.currentWords.length + 1) {
-                            if (room.wordIndex < roomWordsList.length) {
-                                const randomWord = roomWordsList[room.wordIndex++];
-                                if (activeWord)
-                                    room.currentWords.push({points: 1, word: activeWord});
-                                activeWord = randomWord;
-                                send(user, "active-word", activeWord);
+                            if (room.wordIndex < this.state.roomWordsList.length) {
+                                const randomWord = this.state.roomWordsList[room.wordIndex++];
+                                if (this.state.activeWord)
+                                    room.currentWords.push({points: 1, word: this.state.activeWord});
+                                this.state.activeWord = randomWord;
+                                send(user, "active-word", this.state.activeWord);
                             } else {
                                 endRound();
                                 room.wordsEnded = true;
@@ -390,7 +395,7 @@ function init(wsServer, path) {
                                     res.on("end", function () {
                                         const newWords = str.toString().split("\r\n");
                                         if (newWords.length > 0) {
-                                            roomWordsList = shuffleArray(newWords);
+                                            this.state.roomWordsList = shuffleArray(newWords);
                                             room.wordIndex = 0;
                                             room.wordsEnded = false;
                                             room.level = 0;
@@ -423,6 +428,33 @@ function init(wsServer, path) {
         getLastInteraction() {
             return this.lastInteraction;
         }
+
+        getSnapshot() {
+            return {
+                room: this.room,
+                state: {
+                    activeWord: this.state.activeWord,
+                    roomWordsList: null
+
+                }
+            };
+        }
+
+        setSnapshot(snapshot) {
+            Object.assign(this.room, snapshot.room);
+            this.state = snapshot.state;
+            this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level]]);
+            this.room.phase = 0;
+            this.room.currentBet = Infinity;
+            this.room.timer = null;
+            this.room.onlinePlayers = new JSONSet(this.room.onlinePlayers);
+            this.room.readyPlayers = new JSONSet(this.room.readyPlayers);
+            this.room.spectators = new JSONSet(this.room.spectators);
+            Object.keys(this.room.teams).forEach((teamId) => {
+                this.room.teams[teamId].players = new JSONSet(this.room.teams[teamId].players);
+            });
+            this.room.onlinePlayers.clear();
+        }
     }
 
     function makeId() {
@@ -449,7 +481,7 @@ function init(wsServer, path) {
         }
     }
 
-    new users.registry.RoomManager(users, GameState);
+    registry.createRoomManager(path, channel, GameState);
 }
 
 module.exports = init;
