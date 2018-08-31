@@ -1,10 +1,11 @@
-function init(wsServer, path, config) {
+function init(wsServer, path) {
     const
         fs = require('fs'),
         http = require("http"),
         express = require('express'),
         app = wsServer.app,
-        users = wsServer.users.of("alias");
+        users = wsServer.users.of("alias"),
+        EventEmitter = require("events");
 
     let defaultWords;
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
@@ -16,8 +17,9 @@ function init(wsServer, path, config) {
     });
     app.use("/alias", express.static(`${__dirname}/public`));
 
-    class GameState {
+    class GameState extends EventEmitter {
         constructor(hostId, hostData, userRegistry) {
+            super();
             const room = {
                 inited: true,
                 hostId: hostId,
@@ -36,9 +38,13 @@ function init(wsServer, path, config) {
                 level: 2
             };
             this.room = room;
+            this.lastInteraction = new Date();
             let timer, activeWord, roomWordsList;
             const
-                send = (target, event, data) => userRegistry.send(target, event, data),
+                send = (target, event, data) => {
+                    this.lastInteraction = new Date();
+                    userRegistry.send(target, event, data);
+                },
                 update = () => {
                     send(room.onlinePlayers, "state", room);
                 },
@@ -360,8 +366,10 @@ function init(wsServer, path, config) {
                         selectWordSet(wordSet, user);
                 },
                 "give-host": (user, playerId) => {
-                    if (room.hostId === user && playerId)
+                    if (room.hostId === user && playerId) {
                         room.hostId = playerId;
+                        this.emit("host-changed", user, playerId);
+                    }
                     update();
                 },
                 "set-turn": (user, playerId) => {
@@ -406,6 +414,14 @@ function init(wsServer, path, config) {
 
         getPlayerCount() {
             return Object.keys(this.room.playerNames).length;
+        }
+
+        getActivePlayerCount() {
+            return this.room.onlinePlayers.size;
+        }
+
+        getLastInteraction() {
+            return this.lastInteraction;
         }
     }
 
