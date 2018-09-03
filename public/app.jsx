@@ -170,7 +170,7 @@ class Player extends React.Component {
 class Game extends React.Component {
     componentDidMount() {
         const initArgs = {};
-        if (parseInt(localStorage.darkTheme))
+        if (parseInt(localStorage.darkThemeAlias))
             document.body.classList.add("dark-theme");
         if (!localStorage.userId || !localStorage.token) {
             while (!localStorage.userName)
@@ -301,7 +301,7 @@ class Game extends React.Component {
     }
 
     handleToggleTheme() {
-        localStorage.darkTheme = !parseInt(localStorage.darkTheme) ? 1 : 0;
+        localStorage.darkThemeAlias = !parseInt(localStorage.darkThemeAlias) ? 1 : 0;
         document.body.classList.toggle("dark-theme");
         this.setState(Object.assign({
             userId: this.userId,
@@ -581,7 +581,7 @@ class Game extends React.Component {
                                           className="material-icons start-game settings-button">pause</i>)) : ""}
                                 <i onClick={() => this.handleClickChangeName()}
                                    className="toggle-theme material-icons settings-button">edit</i>
-                                {!parseInt(localStorage.darkTheme)
+                                {!parseInt(localStorage.darkThemeAlias)
                                     ? (<i onClick={() => this.handleToggleTheme()}
                                           className="toggle-theme material-icons settings-button">brightness_2</i>)
                                     : (<i onClick={() => this.handleToggleTheme()}
