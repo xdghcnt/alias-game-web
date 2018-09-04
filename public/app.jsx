@@ -233,6 +233,9 @@ class Game extends React.Component {
         this.socket.on("reload", () => {
             setTimeout(() => window.location.reload(), 3000);
         });
+        this.socket.on("ping", (id) => {
+            this.socket.emit("pong", id);
+        });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("/alias/beep.mp3");
