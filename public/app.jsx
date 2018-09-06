@@ -172,11 +172,11 @@ class Game extends React.Component {
         const initArgs = {};
         if (parseInt(localStorage.darkThemeAlias))
             document.body.classList.add("dark-theme");
-        if (!localStorage.userId || !localStorage.token) {
+        if (!localStorage.aliasUserId || !localStorage.userToken) {
             while (!localStorage.userName)
                 localStorage.userName = prompt("Your name");
-            localStorage.userId = makeId();
-            localStorage.token = makeId();
+            localStorage.aliasUserId = makeId();
+            localStorage.userToken = makeId();
         }
         if (!location.hash)
             history.replaceState(undefined, undefined, "#" + makeId());
@@ -185,9 +185,9 @@ class Game extends React.Component {
             delete localStorage.acceptDelete;
         }
         initArgs.roomId = location.hash.substr(1);
-        initArgs.userId = this.userId = localStorage.userId;
+        initArgs.userId = this.userId = localStorage.aliasUserId;
         initArgs.userName = localStorage.userName;
-        initArgs.token = localStorage.token;
+        initArgs.token = localStorage.userToken;
         this.socket = window.socket.of("alias");
         this.socket.on("state", state => this.setState(Object.assign({
             userId: this.userId,
