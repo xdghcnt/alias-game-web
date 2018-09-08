@@ -46,10 +46,7 @@ function init(wsServer, path) {
             this.lastInteraction = new Date();
             let timer;
             const
-                send = (target, event, data) => {
-                    this.lastInteraction = new Date();
-                    userRegistry.send(target, event, data);
-                },
+                send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => {
                     send(room.onlinePlayers, "state", room);
                 },
@@ -227,9 +224,12 @@ function init(wsServer, path) {
                         delete room.playerNames[user];
                     room.spectators.delete(user);
                     room.readyPlayers.delete(user);
+                    if (room.onlinePlayers.size === 0)
+                        stopTimer();
                     update();
                 },
                 userEvent = (user, event, data) => {
+                    this.lastInteraction = new Date();
                     try {
                         if (this.eventHandlers[event])
                             this.eventHandlers[event](user, data[0]);
