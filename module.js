@@ -388,11 +388,11 @@ function init(wsServer, path) {
                             http.get(wordsURL.replace("https", "http"),
                                 res => {
                                     let str = "";
-                                    res.on("data", function (chunk) {
+                                    res.on("data", (chunk) => {
                                         str += chunk;
                                     });
 
-                                    res.on("end", function () {
+                                    res.on("end", () => {
                                         const newWords = str.toString().split("\r\n");
                                         if (newWords.length > 0) {
                                             this.state.roomWordsList = shuffleArray(newWords);
