@@ -103,7 +103,9 @@ class Timer extends React.Component {
 
 class Words extends React.Component {
     render() {
-        const data = this.props.data,
+        const
+            data = this.props.data,
+            game = this.props.game,
             handleChange = this.props.handleChange;
         return (
             <div className={
@@ -114,12 +116,36 @@ class Words extends React.Component {
                     points: 1,
                     word: data.activeWord
                 }])).map((word, index) => (
-                    <div className="word">{word.word}
+                    <div className={"word" + (~data.reportedWords.indexOf(word.word) ? " reported" : "")}>{word.word}
                         <input
                             className={word.points > 0 ? "positive" : (word.points === 0 ? "" : "negative")}
                             type="number" value={word.points} min="-2" max="1"
                             onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}
                         />
+                        {(data.level !== 0 && (data.activeWord !== word.word || ~data.reportedWords.indexOf(word.word))) ? (
+                            <div className="report-word-menu">
+                                {!~data.reportedWords.indexOf(word.word) ? (<div className="report-word-list">
+                                    {data.level !== 1 ? (<div
+                                        className="settings-button"
+                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 1)}><i
+                                        className="material-icons">pets</i> Easy ←
+                                    </div>) : ""}
+                                    {data.level !== 2 ? (<div
+                                        className="settings-button"
+                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 2)}><i
+                                        className="material-icons">child_friendly</i> Normal ←
+                                    </div>) : ""}
+                                    {data.level !== 3 ? (<div
+                                        className="settings-button"
+                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 3)}><i
+                                        className="material-icons">school</i> Hard ←
+                                    </div>) : ""}
+                                </div>) : ""}
+                                <i className="material-icons"
+                                   title={!~data.reportedWords.indexOf(word.word) ? "Report word" : "Reported"}>
+                                    report_problem
+                                </i>
+                            </div>) : ""}
                     </div>
                 )))}
             </div>
@@ -191,19 +217,24 @@ class Game extends React.Component {
         this.socket = window.socket.of("alias");
         this.socket.on("state", state => this.setState(Object.assign({
             userId: this.userId,
-            activeWord: this.state.activeWord
+            activeWord: this.state.activeWord,
+            wordReportData: this.state.wordReportData
         }, state)));
         this.socket.on("active-word", word => {
             this.setState(Object.assign({}, this.state, {
-                userId: this.userId,
                 activeWord: word
+            }));
+        });
+        this.socket.on("word-reports-data", (reportData) => {
+            this.setState(Object.assign({}, this.state, {
+                wordReportData: reportData
             }));
         });
         this.socket.on("timer-end", () => {
             this.timerSound.play();
         });
         this.socket.on("message", text => {
-            alert(text);
+            popup.alert({content: text});
         });
         window.socket.on("disconnect", (event) => {
             this.setState({
@@ -281,9 +312,12 @@ class Game extends React.Component {
     }
 
     handleClickChangeName() {
-        const name = prompt("New name");
-        this.socket.emit("change-name", name);
-        localStorage.userName = name;
+        popup.prompt({content: "New name"}, (evt) => {
+            if (evt.proceed) {
+                this.socket.emit("change-name", evt.input_value);
+                localStorage.userName = evt.input_value;
+            }
+        });
     }
 
     handleClickShuffle() {
@@ -295,12 +329,39 @@ class Game extends React.Component {
     }
 
     handleClickCustom() {
-        this.socket.emit("setup-words", prompt("URL to words separated by lines"));
+        popup.prompt({content: "URL to words separated by lines"}, (evt) => evt.proceed && this.socket.emit("setup-words", evt.input_value));
     }
 
     handleClickRestart() {
-        if (this.gameIsOver || confirm("Restart? Are you sure?"))
-            this.socket.emit("restart-game");
+        if (!this.gameIsOver)
+            popup.confirm({content: "Restart? Are you sure?"}, (evt) => evt.proceed && this.socket.emit("restart-game"));
+        else
+            this.socket.emit("restart-game")
+    }
+
+    handleClickGetReports() {
+        this.socket.emit("get-word-reports-data");
+    }
+
+    handleClickCloseReports() {
+        this.setState(Object.assign({}, this.state, {
+            wordReportData: null
+        }));
+    }
+
+    handleClickSubmitReports() {
+        this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, this.state.wordReportData);
+    }
+
+    handleWordReportApprove(index, state) {
+        const wordData = this.state.wordReportData[index];
+        if (wordData.approved == null || wordData.approved !== state)
+            wordData.approved = state;
+        else
+            wordData.approved = null;
+        this.setState(Object.assign({}, this.state, {
+            wordReportData: this.state.wordReportData
+        }));
     }
 
     handleToggleTheme() {
@@ -322,14 +383,12 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        if (confirm(`Removing ${this.state.playerNames[id]}?`))
-            this.socket.emit("remove-player", id);
+        popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
     }
 
     handleGiveHost(id, evt) {
         evt.stopPropagation();
-        if (confirm(`Give host ${this.state.playerNames[id]}?`))
-            this.socket.emit("give-host", id);
+        popup.confirm({content: `Give host ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("give-host", id));
     }
 
     handleSetTurn(id, evt) {
@@ -339,7 +398,10 @@ class Game extends React.Component {
 
     handleSetScore(id, evt) {
         evt.stopPropagation();
-        this.socket.emit("set-score", {id: id, score: prompt("Score")});
+        popup.prompt({content: "Score"}, (evt) => evt.proceed && this.socket.emit("set-score", {
+            teamId: id,
+            score: evt.input_value
+        }));
     }
 
     handleChangeGoal(value) {
@@ -348,6 +410,10 @@ class Game extends React.Component {
 
     handleChangeRoundTime(value) {
         this.debouncedEmit("set-round-time", value)
+    }
+
+    handleClickReportWordLevel(word, currentLevel, level) {
+        this.socket.emit("report-word", word, currentLevel, level);
     }
 
     render() {
@@ -488,6 +554,7 @@ class Game extends React.Component {
                         <div className="control-pane">
                             <Timer data={this.state}/>
                             <Words data={this.state}
+                                   game={this}
                                    handleChange={(id, value) => this.handleChangeWordPoints(id, value)}/>
                             <br/>
                             <div className="action-pane">
@@ -574,6 +641,8 @@ class Game extends React.Component {
                             <div className="side-buttons">
                                 <i onClick={() => window.location = parentDir}
                                    className="material-icons exit settings-button">exit_to_app</i>
+                                <i onClick={() => this.handleClickGetReports()}
+                                   className="material-icons get-reports settings-button">assignment_late</i>
                                 {(isHost && hasPlayers && (data.phase === 0 || this.gameIsOver)) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
@@ -592,6 +661,52 @@ class Game extends React.Component {
                             </div>
                             <i className="material-icons">settings</i>
                         </div>
+                        {data.wordReportData ? (<div className="word-report-modal">
+                            <div className="word-report-modal-content">
+                                <div className="word-report-title">Word reports
+                                    <div className="word-report-modal-close"
+                                         onClick={() => this.handleClickCloseReports()}>✕
+                                    </div>
+                                </div>
+                                <div className="word-report-list">{
+                                    data.wordReportData.length ? data.wordReportData.map((it, index) => (
+                                        <div className={"word-report-item"}>
+                                            <div
+                                                className="word-report-item-name">{it.playerName}</div>
+                                            <div
+                                                className="word-report-item-word">{it.word}</div>
+                                            <div
+                                                className="word-report-item-transfer">
+                                                {["", "Easy", "Normal", "Hard"][it.currentLevel]} → {["", "Easy", "Normal", "Hard"][it.level]}
+                                            </div>
+                                            <div
+                                                className="word-report-item-status">
+                                                {it.processed ? (it.approved ? (
+                                                    <span className="approved">Approved</span>) : (
+                                                    <span className="denied">Denied</span>)) : (
+                                                    <div className="word-report-approve-controls">
+                                                        <input id={`word-report-approve-no-${index}`} type="checkbox"
+                                                               checked={it.approved === false}
+                                                               onChange={() => this.handleWordReportApprove(index, false)}/>
+                                                        <label htmlFor={`word-report-approve-no-${index}`}
+                                                               className="word-report-approve no">✖</label>
+                                                        <input id={`word-report-approve-yes-${index}`}
+                                                               type="checkbox" checked={it.approved}
+                                                               onChange={() => this.handleWordReportApprove(index, true)}/>
+                                                        <label htmlFor={`word-report-approve-yes-${index}`}
+                                                               className="word-report-approve yes">✔</label>
+                                                    </div>)}
+                                            </div>
+                                        </div>)) : (<div className="word-report-no-data">No words reported yet</div>)
+                                }</div>
+                                <div className="word-report-manage-buttons">
+                                    <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"/>
+                                    <div className="word-report-save-button"
+                                         onClick={() => this.handleClickSubmitReports()}>Submit
+                                    </div>
+                                </div>
+                            </div>
+                        </div>) : ""}
                     </div>
                 </div>
             );

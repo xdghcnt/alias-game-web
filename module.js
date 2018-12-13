@@ -1,4 +1,4 @@
-function init(wsServer, path) {
+function init(wsServer, path, moderKey) {
     const
         fs = require('fs'),
         http = require("http"),
@@ -8,9 +8,21 @@ function init(wsServer, path) {
         EventEmitter = require("events"),
         channel = "alias";
 
-    let defaultWords;
+    let defaultWords, reportedWordsData = [], reportedWords = [];
+
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
         defaultWords = JSON.parse(words);
+        fs.readFile(`${registry.config.appDir || __dirname}/alias-moderated-words.txt`, "utf8", function (err, words) {
+            if (words)
+                defaultWords = JSON.parse(words);
+        });
+    });
+
+    fs.readFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
+        if (data) {
+            data.split("\n").forEach((row) => row && reportedWordsData.push(JSON.parse(row)));
+            reportedWordsData.forEach((it) => !it.processed && reportedWords.push(it.word));
+        }
     });
 
     app.get(path, function (req, res) {
@@ -36,7 +48,8 @@ function init(wsServer, path) {
                 teams: {},
                 wordIndex: 0,
                 wordsEnded: false,
-                level: 2
+                level: 2,
+                reportedWords: reportedWords
             };
             this.room = room;
             this.state = {
@@ -121,8 +134,10 @@ function init(wsServer, path) {
                     send(room.onlinePlayers, "active-word", null);
                     this.state.activeWord = undefined;
                     calcWordPoints();
-                    rotatePlayers();
-                    rotateTeams();
+                    if (room.phase !== 1) {
+                        rotatePlayers();
+                        rotateTeams();
+                    }
                     stopTimer();
                     room.phase = 1;
                 },
@@ -161,6 +176,7 @@ function init(wsServer, path) {
                 },
                 selectWordSet = (wordSet, user) => {
                     if (!isNaN(parseFloat(wordSet))) {
+                        room.currentWords = [];
                         const difficulty = parseFloat(wordSet);
                         if (!~[1, 2, 3].indexOf(difficulty) > 0) {
                             if (user)
@@ -232,7 +248,7 @@ function init(wsServer, path) {
                     this.lastInteraction = new Date();
                     try {
                         if (this.eventHandlers[event])
-                            this.eventHandlers[event](user, data[0]);
+                            this.eventHandlers[event](user, data[0], data[1], data[2]);
                     } catch (error) {
                         console.error(error);
                         registry.log(error.message);
@@ -413,6 +429,63 @@ function init(wsServer, path) {
                         } catch (err) {
                             send(user, "message", `You did something wrong: ${err}`);
                         }
+                },
+                "report-word": (user, word, currentLevel, level) => {
+                    if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)) {
+                        const reportInfo = {
+                            datetime: +new Date(),
+                            user: user,
+                            playerName: room.playerNames[user],
+                            word: word,
+                            currentLevel: currentLevel,
+                            level: level,
+                            processed: false,
+                            approved: null
+                        };
+                        reportedWordsData.push(reportInfo);
+                        reportedWords.push(word);
+                        fs.appendFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                        });
+                        update();
+                    }
+                },
+                "get-word-reports-data": (user) => {
+                    send(user, "word-reports-data", reportedWordsData);
+                },
+                "apply-words-moderation": (user, sentModerKey, moderData) => {
+                    if (moderData && moderData[0] && sentModerKey === moderKey) {
+                        moderData.forEach((moderData) => {
+                            if (!moderData.processed && moderData.approved !== null)
+                                reportedWordsData.some((reportData) => {
+                                    if (reportData.datetime === moderData.datetime && !reportData.processed) {
+                                        reportData.processed = true;
+                                        reportData.approved = moderData.approved;
+                                        reportedWords.splice(reportedWords.indexOf(moderData.word), 1);
+                                        if (reportData.approved) {
+                                            defaultWords[moderData.currentLevel].splice(defaultWords[moderData.currentLevel].indexOf(moderData.word), 1);
+                                            defaultWords[moderData.level].push(moderData.word);
+                                        }
+                                        return true;
+                                    }
+                                });
+                        });
+                        fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.txt`, JSON.stringify(defaultWords, null, 4), (err) => {
+                            if (!err) {
+                                fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
+                                    reportedWordsData.map((it) => JSON.stringify(it)).join("\n"),
+                                    () => {
+                                    }
+                                );
+                                send(user, "word-reports-data", reportedWordsData);
+                                send(user, "message", "Success");
+                            }
+                            else
+                                send(user, err.message)
+                        });
+                        update();
+                    }
+                    else
+                        send(user, "message", "Wrong key");
                 }
             };
         }
@@ -441,8 +514,10 @@ function init(wsServer, path) {
         }
 
         setSnapshot(snapshot) {
+            delete snapshot.room.reportedWords;
             Object.assign(this.room, snapshot.room);
             this.state = snapshot.state;
+            this.room.reportedWords = reportedWords;
             this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level]]);
             this.room.phase = 0;
             this.room.currentBet = Infinity;

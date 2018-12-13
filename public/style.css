@@ -504,3 +504,246 @@ body.dark-theme {
 .dark-theme .player.offline {
     color: #787878;
 }
+
+.report-word-menu {
+    user-select: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: none;
+}
+
+.word:hover .report-word-menu {
+    display: block;
+}
+
+.word.reported .report-word-menu {
+    display: block;
+}
+
+.report-word-menu i {
+    font-size: 17px;
+    vertical-align: text-bottom;
+}
+
+.report-word-menu > i {
+    padding: 2px;
+    opacity: 0.6;
+    margin-top: 9px;
+    margin-left: 3px;
+}
+
+.report-word-menu:hover > i {
+    opacity: 1;
+}
+
+.word.reported .report-word-menu > i {
+    color: #d43c3c;
+    opacity: 1;
+}
+
+.report-word-list {
+    display: none;
+    font-size: 12px;
+    position: absolute;
+    right: 17px;
+    width: 75px;
+    background: white;
+    box-shadow: -2px 0 2px rgba(0, 0, 0, 0.4);
+    padding: 2px;
+    padding-right: 4px;
+    text-align: right;
+}
+
+.dark-theme .report-word-list {
+    background: #40403f;
+}
+
+.report-word-menu:hover .report-word-list {
+    display: block;
+}
+
+.popup_modals .modal_buttons .btn.btn_sdry {
+    background-color: #ababab !important;
+}
+
+.popup_modals .modal_buttons .btn.btn_pmry {
+    background-color: #9CCC65 !important;
+}
+
+.dark-theme .popup_modals .modal_buttons .btn.btn_pmry {
+    background-color: rgb(79, 109, 109) !important;
+}
+
+.popup_modals {
+    box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
+}
+
+.word-report-modal {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #00000057;
+}
+
+.word-report-modal-bg {
+    background: black;
+}
+
+.word-report-modal-content {
+    background: white;
+    width: 80%;
+    margin: 0 auto;
+    max-width: 610px;
+    box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .word-report-modal-content {
+    background: #40403f;
+}
+
+.word-report-title {
+    font-size: 20px;
+    padding: 8px 13px;
+    text-align: left;
+    position: relative;
+}
+
+.word-report-modal-close {
+    position: absolute;
+    right: 9px;
+    top: 5px;
+    user-select: none;
+    cursor: pointer;
+}
+
+.word-report-save-button {
+    display: inline-block;
+    padding: 1px 4px;
+    background: #b2e675;
+    margin: 5px;
+    vertical-align: middle;
+    user-select: none;
+    cursor: pointer;
+}
+
+.dark-theme .word-report-save-button {
+    background: rgb(79, 109, 109);
+}
+
+.word-report-manage-buttons input {
+    border: 1px solid #cccaca;
+    padding: 2px;
+    vertical-align: baseline;
+}
+
+.dark-theme .word-report-manage-buttons input {
+    color: #cccaca;
+    background: transparent;
+}
+
+.word-report-manage-buttons {
+    text-align: right;
+}
+
+.word-report-list {
+    width: 100%;
+    overflow: auto;
+    overflow-x: hidden;
+    height: calc(100% - 100px);
+    background: #dedede;
+}
+
+.dark-theme .word-report-list {
+    background: #202020;
+}
+
+.word-report-item {
+    display: table-row;
+}
+
+.word-report-item > * {
+    display: table-cell;
+    vertical-align: middle;
+    padding: 3px;
+    text-align: left;
+}
+
+.word-report-item:nth-child(even) {
+    background: #ffffff;
+}
+
+.word-report-item:nth-child(odd) {
+    background: #f3f3f3;
+}
+
+.dark-theme .word-report-item:nth-child(even) {
+    background: #5a5a5a;
+}
+
+.dark-theme .word-report-item:nth-child(odd) {
+    background: #505050;
+}
+
+.word-report-item-date {
+    width: 156px;
+}
+
+.word-report-item-status {
+    width: 90px;
+}
+
+.word-report-item-transfer {
+    width: 129px;
+}
+
+.word-report-item-name {
+    width: 180px;
+    padding-left: 10px;
+}
+
+.word-report-item-word {
+    width: 203px;
+}
+
+.word-report-manage-buttons {
+    padding: 8px;
+}
+
+.word-report-item-status .approved {
+    background: #49d2493d;
+    padding: 0 8px;
+}
+
+.word-report-item-status .denied {
+    background: #f3306b38;
+    padding: 0 8px;
+}
+
+.word-report-no-data {
+    padding: 14px;
+    opacity: 0.6;
+}
+
+.word-report-approve-controls input {
+    display: none;
+}
+
+.word-report-approve {
+    cursor: pointer;
+    user-select: none;
+    display: inline-block;
+    width: 22px;
+    text-align: center;
+    margin-right: 5px;
+}
+
+input:checked + .word-report-approve.no {
+    background: #f3306b38;
+}
+
+input:checked + .word-report-approve.yes {
+    background: #49d2493d;
+}
