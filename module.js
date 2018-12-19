@@ -12,7 +12,7 @@ function init(wsServer, path, moderKey) {
 
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
         defaultWords = JSON.parse(words);
-        fs.readFile(`${registry.config.appDir || __dirname}/alias-moderated-words.txt`, "utf8", function (err, words) {
+        fs.readFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, "utf8", function (err, words) {
             if (words)
                 defaultWords = JSON.parse(words);
         });
@@ -415,7 +415,6 @@ function init(wsServer, path, moderKey) {
                                             room.wordIndex = 0;
                                             room.wordsEnded = false;
                                             room.level = 0;
-                                            send(user, "message", "Success");
                                             update();
                                         }
                                         else
@@ -469,7 +468,7 @@ function init(wsServer, path, moderKey) {
                                     }
                                 });
                         });
-                        fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.txt`, JSON.stringify(defaultWords, null, 4), (err) => {
+                        fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
                             if (!err) {
                                 fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
                                     reportedWordsData.map((it) => JSON.stringify(it)).join("\n"),

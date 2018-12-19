@@ -227,7 +227,7 @@ class Game extends React.Component {
         });
         this.socket.on("word-reports-data", (reportData) => {
             this.setState(Object.assign({}, this.state, {
-                wordReportData: reportData
+                wordReportData: reportData.reverse()
             }));
         });
         this.socket.on("timer-end", () => {
@@ -350,7 +350,9 @@ class Game extends React.Component {
     }
 
     handleClickSubmitReports() {
-        this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, this.state.wordReportData);
+        this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, this.state.wordReportData.filter(
+            (it) => !it.processed && it.approved !== null
+        ));
     }
 
     handleWordReportApprove(index, state) {
