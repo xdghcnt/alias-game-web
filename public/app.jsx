@@ -442,14 +442,11 @@ class Game extends React.Component {
                     if (isHost) {
                         statusText = "You can start the game";
                         actionText = "Start";
-                    }
-                    else
+                    } else
                         statusText = "Host can start the game";
-                }
-                else
+                } else
                     statusText = "Waiting for players";
-            }
-            else if (data.phase === 1) {
+            } else if (data.phase === 1) {
                 if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
                     let mostPoints = 0,
                         mostPointsTeam,
@@ -482,18 +479,15 @@ class Game extends React.Component {
                     } else if (isTeamTurn) {
                         actionText = "Ready";
                         statusText = "Waiting for team.";
-                    }
-                    else
+                    } else
                         statusText = "Waiting for other team.";
                 }
                 this.gameIsOver = gameIsOver;
-            }
-            else if (data.phase === 2) {
+            } else if (data.phase === 2) {
                 if (isTurn) {
                     statusText = "Explain things!";
                     actionText = "Next";
-                }
-                else if (isTeamTurn)
+                } else if (isTeamTurn)
                     statusText = "Call out things!";
                 else
                     statusText = "Other team playing, keep silent.";
@@ -666,6 +660,11 @@ class Game extends React.Component {
                         {data.wordReportData ? (<div className="word-report-modal">
                             <div className="word-report-modal-content">
                                 <div className="word-report-title">Word reports
+                                    <div className="word-report-modal-stats">
+                                        Репортов<span className="word-report-stat-num">{data.wordReportData.length}</span>
+                                        Обработано<span className="word-report-stat-num">{data.wordReportData.filter((it) => it.processed).length}</span>
+                                        Одобрено<span className="word-report-stat-num">{data.wordReportData.filter((it) => it.approved).length}</span>
+                                    </div>
                                     <div className="word-report-modal-close"
                                          onClick={() => this.handleClickCloseReports()}>✕
                                     </div>
@@ -712,8 +711,7 @@ class Game extends React.Component {
                     </div>
                 </div>
             );
-        }
-        else return (<div/>);
+        } else return (<div/>);
     }
 }
 
