@@ -662,8 +662,10 @@ class Game extends React.Component {
                                 <div className="word-report-title">Word reports
                                     <div className="word-report-modal-stats">
                                         Total<span className="word-report-stat-num">{data.wordReportData.length}</span>
-                                        Processed<span className="word-report-stat-num">{data.wordReportData.filter((it) => it.processed).length}</span>
-                                        Approved<span className="word-report-stat-num">{data.wordReportData.filter((it) => it.approved).length}</span>
+                                        Processed<span
+                                        className="word-report-stat-num">{data.wordReportData.filter((it) => it.processed).length}</span>
+                                        Approved<span
+                                        className="word-report-stat-num">{data.wordReportData.filter((it) => it.approved).length}</span>
                                     </div>
                                     <div className="word-report-modal-close"
                                          onClick={() => this.handleClickCloseReports()}>✕

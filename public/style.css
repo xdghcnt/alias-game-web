@@ -693,11 +693,12 @@ body.dark-theme {
 }
 
 .word-report-item-status {
-    width: 90px;
+    width: 80px;
 }
 
 .word-report-item-transfer {
-    width: 129px;
+    width: 107px;
+    min-width: 110px;
 }
 
 .word-report-item-name {
