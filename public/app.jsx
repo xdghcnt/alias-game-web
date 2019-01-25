@@ -313,7 +313,7 @@ class Game extends React.Component {
 
     handleClickChangeName() {
         popup.prompt({content: "New name"}, (evt) => {
-            if (evt.proceed) {
+            if (evt.proceed && evt.input_value.trim()) {
                 this.socket.emit("change-name", evt.input_value);
                 localStorage.userName = evt.input_value;
             }

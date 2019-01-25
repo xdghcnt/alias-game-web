@@ -333,10 +333,12 @@ function init(wsServer, path, moderKey) {
                     }
                 },
                 "set-word-points": (user, value) => {
-                    room.currentWords = value;
-                    room.readyPlayers.delete(room.currentPlayer);
-                    calcWordPoints();
-                    update();
+                    if (room.hostId === user || Object.keys(room.teams).some((teamId) => room.teams[teamId].players.has(user))) {
+                        room.currentWords = value;
+                        room.readyPlayers.delete(room.currentPlayer);
+                        calcWordPoints();
+                        update();
+                    }
                 },
                 "change-name": (user, value) => {
                     if (value)

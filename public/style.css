@@ -121,6 +121,7 @@ body.dark-theme {
 
 .player {
     margin-bottom: 3px;
+    min-height: 18px;
 }
 
 .player.self {
