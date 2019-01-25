@@ -748,3 +748,15 @@ input:checked + .word-report-approve.no {
 input:checked + .word-report-approve.yes {
     background: #49d2493d;
 }
+
+.word-report-modal-stats {
+    font-size: 16px;
+    display: inline-block;
+    margin-left: 15px;
+}
+
+span.word-report-stat-num {
+    background: #f3f3f3;
+    margin: 0 7px;
+    padding: 1px 4px;
+}
