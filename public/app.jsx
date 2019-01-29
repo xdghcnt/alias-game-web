@@ -114,17 +114,18 @@ class Words extends React.Component {
             }>
                 {data.currentWords && ((!(data.activeWord && data.phase === 2) ? data.currentWords : data.currentWords.concat([{
                     points: 1,
-                    word: data.activeWord
+                    word: data.activeWord,
+                    reported: data.activeWordReported
                 }])).map((word, index) => (
-                    <div className={"word" + (~data.reportedWords.indexOf(word.word) ? " reported" : "")}>{word.word}
+                    <div className={"word" + (word.reported ? " reported" : "")}>{word.word}
                         <input
                             className={word.points > 0 ? "positive" : (word.points === 0 ? "" : "negative")}
                             type="number" value={word.points} min="-2" max="1"
                             onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}
                         />
-                        {(data.level !== 0 && (data.activeWord !== word.word || ~data.reportedWords.indexOf(word.word))) ? (
+                        {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu">
-                                {!~data.reportedWords.indexOf(word.word) ? (<div className="report-word-list">
+                                {!word.reported ? (<div className="report-word-list">
                                     {data.level !== 1 ? (<div
                                         className="settings-button"
                                         onClick={() => game.handleClickReportWordLevel(word.word, data.level, 1)}><i
@@ -142,7 +143,7 @@ class Words extends React.Component {
                                     </div>) : ""}
                                 </div>) : ""}
                                 <i className="material-icons"
-                                   title={!~data.reportedWords.indexOf(word.word) ? "Report word" : "Reported"}>
+                                   title={!word.reported ? "Report word" : "Reported"}>
                                     report_problem
                                 </i>
                             </div>) : ""}
@@ -218,11 +219,13 @@ class Game extends React.Component {
         this.socket.on("state", state => this.setState(Object.assign({
             userId: this.userId,
             activeWord: this.state.activeWord,
+            activeWordReported: this.state.activeWordReported,
             wordReportData: this.state.wordReportData
         }, state)));
-        this.socket.on("active-word", word => {
+        this.socket.on("active-word", (data) => {
             this.setState(Object.assign({}, this.state, {
-                activeWord: word
+                activeWord: data.word,
+                activeWordReported: data.reported
             }));
         });
         this.socket.on("word-reports-data", (reportData) => {
@@ -369,10 +372,7 @@ class Game extends React.Component {
     handleToggleTheme() {
         localStorage.darkThemeAlias = !parseInt(localStorage.darkThemeAlias) ? 1 : 0;
         document.body.classList.toggle("dark-theme");
-        this.setState(Object.assign({
-            userId: this.userId,
-            activeWord: this.state.activeWord
-        }, this.state));
+        this.setState(Object.assign({}, this.state));
     }
 
     handleClickStop() {

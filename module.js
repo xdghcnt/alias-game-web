@@ -48,8 +48,7 @@ function init(wsServer, path, moderKey) {
                 teams: {},
                 wordIndex: 0,
                 wordsEnded: false,
-                level: 2,
-                reportedWords: reportedWords
+                level: 2
             };
             this.room = room;
             this.state = {
@@ -130,7 +129,11 @@ function init(wsServer, path, moderKey) {
                 },
                 endRound = () => {
                     if (this.state.activeWord)
-                        room.currentWords.push({points: 1, word: this.state.activeWord});
+                        room.currentWords.push({
+                            points: 1,
+                            word: this.state.activeWord,
+                            reported: !!~reportedWords.indexOf(this.state.activeWord)
+                        });
                     send(room.onlinePlayers, "active-word", null);
                     this.state.activeWord = undefined;
                     calcWordPoints();
@@ -231,7 +234,10 @@ function init(wsServer, path, moderKey) {
                     if (!this.state.roomWordsList)
                         selectWordSet(2);
                     if (room.currentPlayer === user && this.state.activeWord)
-                        send(user, "active-word", this.state.activeWord);
+                        send(user, "active-word", {
+                            word: this.state.activeWord,
+                            reported: !!~reportedWords.indexOf(this.state.activeWord)
+                        });
                     update();
                 },
                 userLeft = (user) => {
@@ -304,9 +310,16 @@ function init(wsServer, path, moderKey) {
                             if (room.wordIndex < this.state.roomWordsList.length) {
                                 const randomWord = this.state.roomWordsList[room.wordIndex++];
                                 if (this.state.activeWord)
-                                    room.currentWords.push({points: 1, word: this.state.activeWord});
+                                    room.currentWords.push({
+                                        points: 1,
+                                        word: this.state.activeWord,
+                                        reported: !!~reportedWords.indexOf(this.state.activeWord)
+                                    });
                                 this.state.activeWord = randomWord;
-                                send(user, "active-word", this.state.activeWord);
+                                send(user, "active-word", {
+                                    word: this.state.activeWord,
+                                    reported: !!~reportedWords.indexOf(this.state.activeWord)
+                                });
                             } else {
                                 endRound();
                                 room.wordsEnded = true;
@@ -443,6 +456,7 @@ function init(wsServer, path, moderKey) {
                             processed: false,
                             approved: null
                         };
+                        room.currentWords.filter((it) => it.word === word)[0].reported = true;
                         reportedWordsData.push(reportInfo);
                         reportedWords.push(word);
                         fs.appendFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
@@ -515,10 +529,8 @@ function init(wsServer, path, moderKey) {
         }
 
         setSnapshot(snapshot) {
-            delete snapshot.room.reportedWords;
             Object.assign(this.room, snapshot.room);
             this.state = snapshot.state;
-            this.room.reportedWords = reportedWords;
             this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level]]);
             this.room.phase = 0;
             this.room.currentBet = Infinity;
