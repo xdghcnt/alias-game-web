@@ -595,9 +595,8 @@ body.dark-theme {
 
 .word-report-modal-content {
     background: white;
-    width: 80%;
     margin: 0 auto;
-    max-width: 610px;
+    max-width: 620px;
     box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
 }
 
@@ -652,6 +651,7 @@ body.dark-theme {
 .word-report-list {
     width: 100%;
     overflow: auto;
+    overflow-x: hidden;
     height: calc(100% - 100px);
     background: #dedede;
 }

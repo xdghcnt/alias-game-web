@@ -487,7 +487,7 @@ function init(wsServer, path, moderKey) {
                         fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
                             if (!err) {
                                 fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
-                                    reportedWordsData.map((it) => JSON.stringify(it)).join("\n"),
+                                    reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
                                     () => {
                                     }
                                 );
