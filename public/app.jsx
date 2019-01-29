@@ -224,8 +224,8 @@ class Game extends React.Component {
         }, state)));
         this.socket.on("active-word", (data) => {
             this.setState(Object.assign({}, this.state, {
-                activeWord: data.word,
-                activeWordReported: data.reported
+                activeWord: data && data.word,
+                activeWordReported: data && data.reported
             }));
         });
         this.socket.on("word-reports-data", (reportData) => {
