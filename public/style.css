@@ -760,3 +760,8 @@ span.word-report-stat-num {
     margin: 0 7px;
     padding: 1px 4px;
 }
+
+.host-button.inactive {
+    cursor: default;
+    opacity: 1;
+}

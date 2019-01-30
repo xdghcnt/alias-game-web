@@ -156,8 +156,10 @@ class Words extends React.Component {
 
 class Player extends React.Component {
     render() {
-        const data = this.props.data,
-            id = this.props.id;
+        const
+            data = this.props.data,
+            id = this.props.id,
+            isHost = data.hostId === data.userId;
         return (
             <div className={
                 "player"
@@ -167,26 +169,32 @@ class Player extends React.Component {
                 + (id === data.currentPlayer ? " current" : "")
             }>
                 {data.playerNames[id]}
-                {(data.hostId === data.userId) ? (
+                {(isHost || data.hostId === id) ? (
                     <div className="player-host-controls">
-                        {!this.props.spectator ?
+                        {isHost && !this.props.spectator ?
                             (<i className="material-icons host-button"
                                 title="Give turn"
                                 onClick={(evt) => this.props.handleSetTurn(id, evt)}>
                                 reply
                             </i>) : ""}
-                        {data.userId !== id ?
+                        {isHost && data.userId !== id ?
                             (<i className="material-icons host-button"
                                 title="Give host"
                                 onClick={(evt) => this.props.handleGiveHost(id, evt)}>
                                 vpn_key
                             </i>) : ""}
-                        {data.userId !== id ?
+                        {isHost && data.userId !== id ?
                             (<i className="material-icons host-button"
                                 title="Remove"
                                 onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
                                 delete_forever
                             </i>) : ""}
+                        {(data.hostId === id) ? (
+                            <i className="material-icons host-button inactive"
+                               title="Game host">
+                                stars
+                            </i>
+                        ) : ""}
                     </div>
                 ) : ""}
             </div>

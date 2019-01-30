@@ -207,10 +207,14 @@ function init(wsServer, path, moderKey) {
                                 rotatePlayers(teamId);
                         }
                     });
-                    delete room.playerNames[playerId];
                     room.readyPlayers.delete(playerId);
-                    room.onlinePlayers.delete(playerId);
-                    room.spectators.delete(playerId);
+                    if (room.spectators.has(playerId) || !room.onlinePlayers.has(playerId)) {
+                        room.spectators.delete(playerId);
+                        delete room.playerNames[playerId];
+                        registry.disconnect(playerId, "You was removed");
+                    }
+                    else
+                        room.spectators.add(playerId);
                 },
                 setTurn = playerId => {
                     Object.keys(room.teams).forEach(teamId => {
@@ -269,7 +273,7 @@ function init(wsServer, path, moderKey) {
                         id = makeId();
                         room.teams[id] = {score: 0, players: new JSONSet()};
                     }
-                    if (room.teams[id]) {
+                    if (room.teams[id] && !room.teams[id].players.has(user)) {
                         leaveTeams(user, id);
                         room.spectators.delete(user);
                         room.teams[id].players.add(user);
@@ -535,7 +539,7 @@ function init(wsServer, path, moderKey) {
             this.room.phase = 0;
             this.room.currentBet = Infinity;
             this.room.timer = null;
-            this.room.onlinePlayers = new JSONSet(this.room.onlinePlayers);
+            this.room.onlinePlayers = new JSONSet();
             this.room.readyPlayers = new JSONSet(this.room.readyPlayers);
             this.room.spectators = new JSONSet(this.room.spectators);
             Object.keys(this.room.teams).forEach((teamId) => {
