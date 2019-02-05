@@ -660,10 +660,6 @@ body.dark-theme {
     background: #202020;
 }
 
-.word-report-item {
-    display: table-row;
-}
-
 .word-report-item > * {
     display: table-cell;
     vertical-align: middle;
@@ -755,10 +751,14 @@ input:checked + .word-report-approve.yes {
     margin-left: 15px;
 }
 
-span.word-report-stat-num {
+.word-report-stat-num {
     background: #f3f3f3;
     margin: 0 7px;
     padding: 1px 4px;
+}
+
+.dark-theme .word-report-stat-num {
+    background: #5a5a5a;
 }
 
 .host-button.inactive {
