@@ -654,6 +654,8 @@ body.dark-theme {
     overflow-x: hidden;
     height: calc(100% - 100px);
     background: #dedede;
+    border: 1px solid gainsboro;
+    box-sizing: border-box;
 }
 
 .dark-theme .word-report-list {
