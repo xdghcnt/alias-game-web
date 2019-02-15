@@ -94,7 +94,7 @@ function init(wsServer, path, moderKey) {
                 leaveTeams = (user, exceptId) => {
                     if (room.currentPlayer === user)
                         rotatePlayers();
-                    if (room.currentTeam && room.teams[room.currentTeam].players.size === 1)
+                    if (room.currentTeam && room.teams[room.currentTeam] && room.teams[room.currentTeam].players.size === 1)
                         rotateTeams();
                     Object.keys(room.teams).forEach(teamId => {
                         if (teamId !== exceptId && room.teams[teamId].players.delete(user) && room.teams[teamId].players.size === 0)
@@ -493,6 +493,15 @@ function init(wsServer, path, moderKey) {
                                 fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
                                     reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
                                     () => {
+                                        let aliasPlayers = [];
+                                        registry.roomManagers.forEach((roomManager, roomPath) => {
+                                            if (roomPath === path) {
+                                                roomManager.rooms.forEach((roomData) => {
+                                                    aliasPlayers = aliasPlayers.concat([...roomData.room.onlinePlayers]);
+                                                });
+                                            }
+                                        });
+                                        userRegistry.send(aliasPlayers, "word-report-notify", moderData);
                                     }
                                 );
                                 send(user, "word-reports-data", reportedWordsData);
@@ -540,8 +549,8 @@ function init(wsServer, path, moderKey) {
             this.room.currentBet = Infinity;
             this.room.timer = null;
             this.room.onlinePlayers = new JSONSet();
+            this.room.spectators = new JSONSet();
             this.room.readyPlayers = new JSONSet(this.room.readyPlayers);
-            this.room.spectators = new JSONSet(this.room.spectators);
             Object.keys(this.room.teams).forEach((teamId) => {
                 this.room.teams[teamId].players = new JSONSet(this.room.teams[teamId].players);
             });

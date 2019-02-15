@@ -228,7 +228,9 @@ class Game extends React.Component {
             userId: this.userId,
             activeWord: this.state.activeWord,
             activeWordReported: this.state.activeWordReported,
-            wordReportData: this.state.wordReportData
+            wordReportData: this.state.wordReportData,
+            wordReportNotify: this.state.wordReportNotify,
+            notificationPinned: this.state.notificationPinned
         }, state)));
         this.socket.on("active-word", (data) => {
             this.setState(Object.assign({}, this.state, {
@@ -238,7 +240,13 @@ class Game extends React.Component {
         });
         this.socket.on("word-reports-data", (reportData) => {
             this.setState(Object.assign({}, this.state, {
-                wordReportData: reportData.reverse()
+                wordReportData: {
+                    words: reportData.reverse().filter((it, index) => !it.processed || index < 250),
+                    wordsFull: reportData,
+                    total: reportData.length,
+                    approved: reportData.filter((it) => it.approved).length,
+                    processed: reportData.filter((it) => it.processed).length
+                }
             }));
         });
         this.socket.on("timer-end", () => {
@@ -274,6 +282,19 @@ class Game extends React.Component {
         });
         this.socket.on("reload", () => {
             setTimeout(() => window.location.reload(), 3000);
+        });
+        this.socket.on("word-report-notify", (reportList) => {
+            this.setState(Object.assign({}, this.state, {
+                wordReportNotify: {
+                    approved: reportList.filter((it) => it.approved),
+                    denied: reportList.filter((it) => !it.approved)
+                }
+            }));
+            document.getElementById("snackbar").classList.add("show");
+            clearTimeout(this.wordReportNotifyTimeout);
+            this.wordReportNotifyTimeout = setTimeout(() => {
+                document.getElementById("snackbar").classList.remove("show");
+            }, (reportList.filter((it) => it.approved).length * 500) + 3000);
         });
         this.socket.on("ping", (id) => {
             this.socket.emit("pong", id);
@@ -323,10 +344,10 @@ class Game extends React.Component {
     }
 
     handleClickChangeName() {
-        popup.prompt({content: "New name"}, (evt) => {
+        popup.prompt({content: "New name", value: this.state.playerNames[this.state.userId] || ""}, (evt) => {
             if (evt.proceed && evt.input_value.trim()) {
-                this.socket.emit("change-name", evt.input_value);
-                localStorage.userName = evt.input_value;
+                this.socket.emit("change-name", evt.input_value.trim());
+                localStorage.userName = evt.input_value.trim();
             }
         });
     }
@@ -360,14 +381,23 @@ class Game extends React.Component {
         }));
     }
 
+    handleClickShowAllReports() {
+        this.state.wordReportData.words = this.state.wordReportData.wordsFull;
+        this.setState(Object.assign({}, this.state));
+    }
+
     handleClickSubmitReports() {
-        this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, this.state.wordReportData.filter(
+        this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, this.state.wordReportData.words.filter(
             (it) => !it.processed && it.approved !== null
         ));
     }
 
+    toggleNotificationPinned() {
+        this.setState(Object.assign({}, this.state, {notificationPinned: !this.state.notificationPinned}));
+    }
+
     handleWordReportApprove(index, state) {
-        const wordData = this.state.wordReportData[index];
+        const wordData = this.state.wordReportData.words[index];
         if (wordData.approved == null || wordData.approved !== state)
             wordData.approved = state;
         else
@@ -408,7 +438,10 @@ class Game extends React.Component {
 
     handleSetScore(id, evt) {
         evt.stopPropagation();
-        popup.prompt({content: "Score"}, (evt) => evt.proceed && this.socket.emit("set-score", {
+        popup.prompt({
+            content: "Score",
+            value: this.state.teams[id].score
+        }, (evt) => evt.proceed && this.socket.emit("set-score", {
             teamId: id,
             score: evt.input_value
         }));
@@ -669,46 +702,52 @@ class Game extends React.Component {
                             <div className="word-report-modal-content">
                                 <div className="word-report-title">Word reports
                                     <div className="word-report-modal-stats">
-                                        Total<span className="word-report-stat-num">{data.wordReportData.length}</span>
+                                        Total<span className="word-report-stat-num">{data.wordReportData.total}</span>
                                         Processed<span
-                                        className="word-report-stat-num">{data.wordReportData.filter((it) => it.processed).length}</span>
+                                        className="word-report-stat-num">{data.wordReportData.processed}</span>
                                         Approved<span
-                                        className="word-report-stat-num">{data.wordReportData.filter((it) => it.approved).length}</span>
+                                        className="word-report-stat-num">{data.wordReportData.approved}</span>
                                     </div>
                                     <div className="word-report-modal-close"
                                          onClick={() => this.handleClickCloseReports()}>✕
                                     </div>
                                 </div>
                                 <div className="word-report-list">{
-                                    data.wordReportData.length ? data.wordReportData.map((it, index) => (
-                                        <div className={"word-report-item"}>
-                                            <div
-                                                className="word-report-item-name">{it.playerName}</div>
-                                            <div
-                                                className="word-report-item-word">{it.word}</div>
-                                            <div
-                                                className="word-report-item-transfer">
-                                                {["", "Easy", "Normal", "Hard"][it.currentLevel]} → {["", "Easy", "Normal", "Hard"][it.level]}
-                                            </div>
-                                            <div
-                                                className="word-report-item-status">
-                                                {it.processed ? (it.approved ? (
-                                                    <span className="approved">Approved</span>) : (
-                                                    <span className="denied">Denied</span>)) : (
-                                                    <div className="word-report-approve-controls">
-                                                        <input id={`word-report-approve-no-${index}`} type="checkbox"
-                                                               checked={it.approved === false}
-                                                               onChange={() => this.handleWordReportApprove(index, false)}/>
-                                                        <label htmlFor={`word-report-approve-no-${index}`}
-                                                               className="word-report-approve no">✖</label>
-                                                        <input id={`word-report-approve-yes-${index}`}
-                                                               type="checkbox" checked={it.approved}
-                                                               onChange={() => this.handleWordReportApprove(index, true)}/>
-                                                        <label htmlFor={`word-report-approve-yes-${index}`}
-                                                               className="word-report-approve yes">✔</label>
-                                                    </div>)}
-                                            </div>
-                                        </div>)) : (<div className="word-report-no-data">No words reported yet</div>)
+                                    data.wordReportData.words.length ? (<div>
+                                            {data.wordReportData.words.map((it, index) => (
+                                                <div className={"word-report-item"}>
+                                                    <div
+                                                        className="word-report-item-name">{it.playerName}</div>
+                                                    <div
+                                                        className="word-report-item-word">{it.word}</div>
+                                                    <div
+                                                        className="word-report-item-transfer">
+                                                        {["", "Easy", "Normal", "Hard"][it.currentLevel]} → {["", "Easy", "Normal", "Hard"][it.level]}
+                                                    </div>
+                                                    <div
+                                                        className="word-report-item-status">
+                                                        {it.processed ? (it.approved ? (
+                                                            <span className="approved">Approved</span>) : (
+                                                            <span className="denied">Denied</span>)) : (
+                                                            <div className="word-report-approve-controls">
+                                                                <input id={`word-report-approve-no-${index}`}
+                                                                       type="checkbox"
+                                                                       checked={it.approved === false}
+                                                                       onChange={() => this.handleWordReportApprove(index, false)}/>
+                                                                <label htmlFor={`word-report-approve-no-${index}`}
+                                                                       className="word-report-approve no">✖</label>
+                                                                <input id={`word-report-approve-yes-${index}`}
+                                                                       type="checkbox" checked={it.approved}
+                                                                       onChange={() => this.handleWordReportApprove(index, true)}/>
+                                                                <label htmlFor={`word-report-approve-yes-${index}`}
+                                                                       className="word-report-approve yes">✔</label>
+                                                            </div>)}
+                                                    </div>
+                                                </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
+                                            <div className="word-report-show-all"
+                                                 onClick={() => this.handleClickShowAllReports()}>Show all</div>) : ""}
+                                        </div>)
+                                        : (<div className="word-report-no-data">No words reported yet</div>)
                                 }</div>
                                 <div className="word-report-manage-buttons">
                                     <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"/>
@@ -718,10 +757,33 @@ class Game extends React.Component {
                                 </div>
                             </div>
                         </div>) : ""}
+                        <div id="snackbar" className={`${this.state.notificationPinned ? "pinned" : ""}`}>
+                            {data.wordReportNotify ? (<div>
+                                {data.wordReportNotify.approved.length ? (<div>
+                                    Word reports approved
+                                    <i onClick={() => this.toggleNotificationPinned()}
+                                       className="material-icons pin-notification-button">attach_file</i>
+                                    <div className="word-report-notify-list">
+                                        {data.wordReportNotify.approved.map((it) => (<div
+                                            className="word-report-notify-item">
+                                            {it.word} <span className="word-report-notify-transfer">
+                                        ({["", "Easy", "Normal", "Hard"][it.currentLevel]} → {["", "Easy", "Normal", "Hard"][it.level]})
+                                    </span></div>))}
+                                    </div>
+                                </div>) : ""}
+                                {data.wordReportNotify.denied.length ? (<div>
+                                    {data.wordReportNotify.approved.length ? "And " : ""} {data.wordReportNotify.denied.length}
+                                    {data.wordReportNotify.approved.length ? "" : " word"} report{data.wordReportNotify.denied.length > 1 ? "s " : " "}
+                                    denied
+                                </div>) : ""}
+                            </div>) : ""}
+                        </div>
                     </div>
                 </div>
             );
-        } else return (<div/>);
+        } else return (
+            <div/>
+        );
     }
 }
 
