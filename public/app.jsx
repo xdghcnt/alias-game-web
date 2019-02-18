@@ -23,18 +23,14 @@ class Teams extends React.Component {
             };
         return (
             <div
-                className={
-                    "team-list"
-                    + (data.phase !== 0 ? " started" : " not-started")
-                }>
+                className={cs("team-list", {started: data.phase !== 0, "not-started": data.phase === 0})}>
                 {data.teams && Object.keys(data.teams).map((teamId, index) =>
-                    (<div onClick={() => handleTeamClick(teamId)} className={
-                        "team"
-                        + (teamId !== "new" || data.phase !== 0 ? "" : " join")
-                        + (data.currentTeam === teamId ? " current" : "")
-                        + (data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal ? " goal-reached" : "")
-                        + (data.teams[teamId].winner ? " winner" : "")
-                    } key={index}>
+                    (<div onClick={() => handleTeamClick(teamId)} className={cs("team", {
+                        join: !(teamId !== "new" || data.phase !== 0),
+                        current: data.currentTeam === teamId,
+                        "goal-reached": data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal,
+                        winner: data.teams[teamId].winner
+                    })} key={index}>
                         <div className="score">
                             {data.hostId === data.userId ?
                                 (<i className="material-icons host-button change-score"
@@ -43,12 +39,11 @@ class Teams extends React.Component {
                                     edit
                                 </i>) : ""}
                             Score: {data.teams[teamId].score}
-                            <span className={
-                                "word-points"
-                                + (data.teams[teamId].wordPoints ? " active" : "")
-                                + (data.teams[teamId].wordPoints > 0 ? " positive" : "")
-                                + (data.teams[teamId].wordPoints < 0 ? " negative" : "")
-                            }>{Math.abs(data.teams[teamId].wordPoints)}</span>
+                            <span className={cs("word-points", {
+                                active: data.teams[teamId].wordPoints,
+                                positive: data.teams[teamId].wordPoints > 0,
+                                negative: data.teams[teamId].wordPoints < 0
+                            })}>{Math.abs(data.teams[teamId].wordPoints)}</span>
                         </div>
                         <div className="players-container">
                             {
@@ -74,10 +69,7 @@ class Spectators extends React.Component {
         return (
             <div
                 onClick={handleSpectatorsClick}
-                className={
-                    "spectators"
-                    + (data.phase !== 0 ? " started" : " not-started")
-                }>
+                className={cs("spectators", data.phase !== 0 ? " started" : " not-started")}>
                 {
                     data.spectators && data.spectators.map(
                         (player, index) => (<Player key={index} data={data} id={player} spectator={true}
@@ -108,18 +100,15 @@ class Words extends React.Component {
             game = this.props.game,
             handleChange = this.props.handleChange;
         return (
-            <div className={
-                "words"
-                + (data.phase === 1 ? " counting" : "")
-            }>
+            <div className={cs("words", data.phase === 1 ? " counting" : "")}>
                 {data.currentWords && ((!(data.activeWord && data.phase === 2) ? data.currentWords : data.currentWords.concat([{
                     points: 1,
                     word: data.activeWord,
                     reported: data.activeWordReported
                 }])).map((word, index) => (
-                    <div className={"word" + (word.reported ? " reported" : "")}>{word.word}
+                    <div className={cs("word", {reported: word.reported})}>{word.word}
                         <input
-                            className={word.points > 0 ? "positive" : (word.points === 0 ? "" : "negative")}
+                            className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"
                             onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}
                         />
@@ -161,13 +150,12 @@ class Player extends React.Component {
             id = this.props.id,
             isHost = data.hostId === data.userId;
         return (
-            <div className={
-                "player"
-                + (~data.readyPlayers.indexOf(id) ? " ready" : "")
-                + (!~data.onlinePlayers.indexOf(id) ? " offline" : "")
-                + (id === data.userId ? " self" : "")
-                + (id === data.currentPlayer ? " current" : "")
-            }>
+            <div className={cs("player", {
+                ready: ~data.readyPlayers.indexOf(id),
+                offline: !~data.onlinePlayers.indexOf(id),
+                self: id === data.userId,
+                current: id === data.currentPlayer
+            })}>
                 {data.playerNames[id]}
                 {(isHost || data.hostId === id) ? (
                     <div className="player-host-controls">
@@ -472,6 +460,7 @@ class Game extends React.Component {
                 isTurn = data.currentPlayer === data.userId,
                 isTeamTurn = data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
                 currentTeam = data.teams[data.currentTeam],
+                settingsMode = isHost && this.state.phase === 0,
                 parentDir = location.pathname.match(/(.+?)\//)[1];
             let actionText, statusText,
                 showWordsBet = false,
@@ -554,17 +543,10 @@ class Game extends React.Component {
             showWordsBet = false;
             return (
                 <div className="game">
-                    <div className={
-                        "game-board"
-                        + (this.state.inited ? " active" : "")
-                        + (gameIsOver ? " game-over" : "")
-                    }>
+                    <div className={cs("game-board", {active: this.state.inited, "game-over": gameIsOver})}>
                         <div
                             title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
-                            className={
-                                "dict-progress"
-                                + (this.state.dictMode ? " active" : "")
-                            }
+                            className={cs("dict-progress", {active: this.state.dictMode})}
                         >
                             <div className="dict-progress-bar"
                                  style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
@@ -576,10 +558,8 @@ class Game extends React.Component {
                                handleSetScore={(id, evt) => this.handleSetScore(id, evt)}
                                handleSetTurn={(id, evt) => this.handleSetTurn(id, evt)}/>
                         <br/>
-                        <div className={
-                            "spectators-section"
-                            + ((this.state.phase === 0 || this.state.spectators && this.state.spectators.length) ? " active" : "")
-                        }>
+                        <div className={cs(
+                            "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
                             Spectators:
                             <br/>
                             <Spectators data={this.state}
@@ -597,25 +577,20 @@ class Game extends React.Component {
                             <div className="action-pane">
                                 <div className="status-text">
                                     {statusText}
-                                    <span className={
-                                        "words-bet-label"
-                                        + ((showWordsBet) ? " active" : "")
-                                    }> Words: </span>
+                                    <span className={cs("words-bet-label", {active: showWordsBet})}> Words: </span>
                                     <input
-                                        className={
-                                            "words-bet-input"
-                                            + ((showWordsBet) ? " active" : "")
-                                        }
+                                        className={cs("words-bet-input", {active: showWordsBet})}
                                         disabled={!(isTurn && this.state.phase === 1)}
                                         type="number" min="1" max="99" value={data.currentBet}
                                         onChange={(evt) => !isNaN(evt.target.valueAsNumber)
                                             && this.handleChangeBet(evt.target.valueAsNumber)}/>
                                 </div>
                                 <div onClick={() => this.handleAction()}
-                                     className={
-                                         "button-action"
-                                         + (data.readyPlayers && ~data.readyPlayers.indexOf(data.userId) ? " pressed" : "")
-                                         + (!!actionText ? " active" : "")
+                                     className={cs(
+                                         "button-action", {
+                                             pressed: data.readyPlayers && ~data.readyPlayers.indexOf(data.userId),
+                                             active: !!actionText
+                                         })
                                      }>{actionText}</div>
                             </div>
                         </div>
@@ -626,24 +601,24 @@ class Game extends React.Component {
                                         <div className="game-settings">
                                             <div className="set-goal"><i title="goal"
                                                                          className="material-icons">flag</i>
-                                                {(isHost && this.state.phase === 0) ? (<input id="goal"
-                                                                                              type="number"
-                                                                                              defaultValue="20" min="0"
-                                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                                  && this.handleChangeGoal(evt.target.valueAsNumber)}
+                                                {(settingsMode) ? (<input id="goal"
+                                                                          type="number"
+                                                                          defaultValue="20" min="0"
+                                                                          onChange={evt => !isNaN(evt.target.valueAsNumber)
+                                                                              && this.handleChangeGoal(evt.target.valueAsNumber)}
                                                 />) : (<span className="value">{this.state.goal}</span>)}
                                             </div>
                                             <div className="set-round-time"><i title="time"
                                                                                className="material-icons">timer</i>
-                                                {(isHost && this.state.phase === 0) ? (<input id="round-time"
-                                                                                              type="number"
-                                                                                              defaultValue="60" min="0"
-                                                                                              onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                                  && this.handleChangeRoundTime(evt.target.valueAsNumber)}
+                                                {(settingsMode) ? (<input id="round-time"
+                                                                          type="number"
+                                                                          defaultValue="60" min="0"
+                                                                          onChange={evt => !isNaN(evt.target.valueAsNumber)
+                                                                              && this.handleChangeRoundTime(evt.target.valueAsNumber)}
                                                 />) : (<span className="value">{this.state.roundTime}</span>)}
                                             </div>
                                         </div>
-                                        {(isHost && this.state.phase === 0) ? (
+                                        {(settingsMode) ? (
                                             <div className="shuffle-players settings-button"
                                                  onClick={() => this.handleClickShuffle()}>shuffle players<i
                                                 className="material-icons">casino</i>
@@ -651,25 +626,36 @@ class Game extends React.Component {
                                     </div>
                                     <div className="start-game-buttons">
                                         <div
-                                            className={((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 1 ? " level-selected" : "")}
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": data.level === 1
+                                            })}
                                             onClick={() => this.handleClickLevel(1)}><i
                                             className="material-icons">pets</i>Easy
                                         </div>
                                         <div
-                                            className={((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 2 ? " level-selected" : "")}
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": this.state.level === 2
+                                            })}
                                             onClick={() => this.handleClickLevel(2)}><i
                                             className="material-icons">child_friendly</i>Normal
                                         </div>
                                         <div
-                                            className={((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 3 ? " level-selected" : "")}
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": this.state.level === 3
+                                            })}
                                             onClick={() => this.handleClickLevel(3)}><i
                                             className="material-icons">school</i>Hard
                                         </div>
                                     </div>
                                     <div
-                                        className={"custom-game-button" +
-                                        ((isHost && this.state.phase === 0) ? " settings-button" : "") + (this.state.level === 0 ? " level-selected" : "")}
-                                        onClick={() => (isHost && this.state.phase === 0) && this.handleClickCustom()}>
+                                        className={cs("custom-game-button", {
+                                            "settings-button": settingsMode,
+                                            "level-selected": this.state.level === 0
+                                        })}
+                                        onClick={() => (settingsMode) && this.handleClickCustom()}>
                                         <i
                                             className="material-icons">accessible</i>Custom
                                     </div>
@@ -757,7 +743,7 @@ class Game extends React.Component {
                                 </div>
                             </div>
                         </div>) : ""}
-                        <div id="snackbar" className={`${this.state.notificationPinned ? "pinned" : ""}`}>
+                        <div id="snackbar" className={cs({pinned: this.state.notificationPinned})}>
                             {data.wordReportNotify ? (<div>
                                 {data.wordReportNotify.approved.length ? (<div>
                                     Word reports approved
