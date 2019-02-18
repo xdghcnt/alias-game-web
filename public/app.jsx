@@ -296,12 +296,12 @@ class Game extends React.Component {
                 denied: this.reportListToShow.filter((it) => !it.approved)
             }
         }));
-        this.reportListToShow = [];
         document.getElementById("snackbar").classList.add("show");
         clearTimeout(this.wordReportNotifyTimeout);
         this.wordReportNotifyTimeout = setTimeout(() => {
             document.getElementById("snackbar").classList.remove("show");
-        }, (this.state.wordReportNotify.approved.filter((it) => it.approved).length * 500) + 3000);
+        }, (this.reportListToShow.filter((it) => it.approved).length * 500) + 3000);
+        this.reportListToShow = [];
     }
 
     debouncedEmit(event, data) {
