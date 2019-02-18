@@ -212,14 +212,18 @@ class Game extends React.Component {
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.userToken;
         this.socket = window.socket.of("alias");
-        this.socket.on("state", state => this.setState(Object.assign({
-            userId: this.userId,
-            activeWord: this.state.activeWord,
-            activeWordReported: this.state.activeWordReported,
-            wordReportData: this.state.wordReportData,
-            wordReportNotify: this.state.wordReportNotify,
-            notificationPinned: this.state.notificationPinned
-        }, state)));
+        this.socket.on("state", (state) => {
+            if (this.state && this.state.phase === 2 && state.phase !== 2 && this.reportListToShow.length)
+                setTimeout(() => this.showReportNotify(), 1000);
+            this.setState(Object.assign({
+                userId: this.userId,
+                activeWord: this.state.activeWord,
+                activeWordReported: this.state.activeWordReported,
+                wordReportData: this.state.wordReportData,
+                wordReportNotify: this.state.wordReportNotify,
+                notificationPinned: this.state.notificationPinned
+            }, state));
+        });
         this.socket.on("active-word", (data) => {
             this.setState(Object.assign({}, this.state, {
                 activeWord: data && data.word,
@@ -272,17 +276,9 @@ class Game extends React.Component {
             setTimeout(() => window.location.reload(), 3000);
         });
         this.socket.on("word-report-notify", (reportList) => {
-            this.setState(Object.assign({}, this.state, {
-                wordReportNotify: {
-                    approved: reportList.filter((it) => it.approved),
-                    denied: reportList.filter((it) => !it.approved)
-                }
-            }));
-            document.getElementById("snackbar").classList.add("show");
-            clearTimeout(this.wordReportNotifyTimeout);
-            this.wordReportNotifyTimeout = setTimeout(() => {
-                document.getElementById("snackbar").classList.remove("show");
-            }, (reportList.filter((it) => it.approved).length * 500) + 3000);
+            this.reportListToShow = this.reportListToShow.concat(reportList);
+            if (this.state.phase !== 2)
+                this.showReportNotify();
         });
         this.socket.on("ping", (id) => {
             this.socket.emit("pong", id);
@@ -290,6 +286,22 @@ class Game extends React.Component {
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("/alias/beep.mp3");
+        this.reportListToShow = [];
+    }
+
+    showReportNotify() {
+        this.setState(Object.assign({}, this.state, {
+            wordReportNotify: {
+                approved: this.reportListToShow.filter((it) => it.approved),
+                denied: this.reportListToShow.filter((it) => !it.approved)
+            }
+        }));
+        this.reportListToShow = [];
+        document.getElementById("snackbar").classList.add("show");
+        clearTimeout(this.wordReportNotifyTimeout);
+        this.wordReportNotifyTimeout = setTimeout(() => {
+            document.getElementById("snackbar").classList.remove("show");
+        }, (this.state.wordReportNotify.approved.filter((it) => it.approved).length * 500) + 3000);
     }
 
     debouncedEmit(event, data) {
