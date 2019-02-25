@@ -300,7 +300,7 @@ class Game extends React.Component {
         clearTimeout(this.wordReportNotifyTimeout);
         this.wordReportNotifyTimeout = setTimeout(() => {
             document.getElementById("snackbar").classList.remove("show");
-        }, (this.reportListToShow.filter((it) => it.approved).length * 500) + 3000);
+        }, (this.reportListToShow.filter((it) => it.approved).length * 1000) + 3000);
         this.reportListToShow = [];
     }
 
