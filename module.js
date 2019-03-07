@@ -523,11 +523,13 @@ function init(wsServer, path, moderKey) {
                     if (words && words.length < 2500) {
                         let wordList = [...(new Set(words.split("\n")))];
                         if (wordList.length <= 50) {
-                            wordList = wordList.filter((word) => word.toLowerCase
+                            wordList = wordList.map((word) => word && word.toLowerCase && word.toLowerCase());
+                            wordList = wordList.filter((word) =>
+                                word
                                 && word.length <= 50 && word.trim().length > 0
                                 && !~defaultWords[1].indexOf(word)
                                 && !~defaultWords[2].indexOf(word)
-                                && !~defaultWords[3].indexOf(word)).map((word) => word.toLowerCase());
+                                && !~defaultWords[3].indexOf(word));
                             if (wordList.length > 0) {
                                 const reportInfo = {
                                     datetime: +new Date(),
