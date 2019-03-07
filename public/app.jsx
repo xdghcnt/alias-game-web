@@ -221,7 +221,10 @@ class Game extends React.Component {
                 activeWordReported: this.state.activeWordReported,
                 wordReportData: this.state.wordReportData,
                 wordReportNotify: this.state.wordReportNotify,
-                notificationPinned: this.state.notificationPinned
+                notificationPinned: this.state.notificationPinned,
+                wordAddCount: this.state.wordAddCount,
+                wordAddLevel: this.state.wordAddLevel,
+                wordReportSent: this.state.wordReportSent
             }, state));
         });
         this.socket.on("active-word", (data) => {
@@ -231,13 +234,18 @@ class Game extends React.Component {
             }));
         });
         this.socket.on("word-reports-data", (reportData) => {
+            let newWordsCount = 0;
+            reportData.forEach((it) => {
+                if (it.newWord && it.approved) newWordsCount += it.wordList.length;
+            });
             this.setState(Object.assign({}, this.state, {
                 wordReportData: {
                     words: reportData.reverse().filter((it, index) => !it.processed || index < 250),
                     wordsFull: reportData,
                     total: reportData.length,
                     approved: reportData.filter((it) => it.approved).length,
-                    processed: reportData.filter((it) => it.processed).length
+                    processed: reportData.filter((it) => it.processed).length,
+                    new: newWordsCount
                 }
             }));
         });
@@ -245,6 +253,12 @@ class Game extends React.Component {
             this.timerSound.play();
         });
         this.socket.on("message", text => {
+            popup.alert({content: text});
+        });
+        this.socket.on("word-reports-request-status", text => {
+            this.setState(Object.assign({}, this.state, {
+                wordReportSent: false
+            }));
             popup.alert({content: text});
         });
         window.socket.on("disconnect", (event) => {
@@ -290,10 +304,20 @@ class Game extends React.Component {
     }
 
     showReportNotify() {
+        let newWordsCount = 0, newWordsCountDenied = 0;
+        this.reportListToShow.forEach((it) => {
+            if (it.newWord)
+                if (it.approved)
+                    newWordsCount += it.wordList.length;
+                else
+                    newWordsCountDenied += it.wordList.length;
+        });
         this.setState(Object.assign({}, this.state, {
             wordReportNotify: {
-                approved: this.reportListToShow.filter((it) => it.approved),
-                denied: this.reportListToShow.filter((it) => !it.approved)
+                approved: this.reportListToShow.filter((it) => it.approved && !it.newWord),
+                denied: this.reportListToShow.filter((it) => !it.approved && !it.newWord),
+                added: newWordsCount,
+                addDenied: newWordsCountDenied
             }
         }));
         document.getElementById("snackbar").classList.add("show");
@@ -381,15 +405,58 @@ class Game extends React.Component {
         }));
     }
 
+    handleClickCloseWordAdd() {
+        this.setState(Object.assign({}, this.state, {
+            wordAddCount: null,
+            wordAddLevel: 2
+        }));
+    }
+
+    handleClickSubmitNewWords() {
+        const words = document.getElementById("word-add-area").value;
+        if (this.state.wordAddCount > 0 && this.state.wordAddCount <= 50 && words.length < 2500) {
+            this.socket.emit("add-words", words, this.state.wordAddLevel);
+            this.handleClickCloseWordAdd();
+        }
+    }
+
+    handleWordAddChange(value) {
+        this.setState(Object.assign({}, this.state, {
+            wordAddCount: (value && value.split("\n").length) || 0
+        }));
+    }
+
+    handleWordAddLevel(value) {
+        this.setState(Object.assign({}, this.state, {
+            wordAddLevel: value
+        }));
+    }
+
+    handleClickOpenWordAdd() {
+        this.setState(Object.assign({}, this.state, {
+            wordAddCount: 0,
+            wordAddLevel: 2
+        }), () => {
+            document.getElementById("word-add-area").value = "";
+            document.getElementById("word-add-area").focus()
+        });
+    }
+
     handleClickShowAllReports() {
         this.state.wordReportData.words = this.state.wordReportData.wordsFull;
         this.setState(Object.assign({}, this.state));
     }
 
     handleClickSubmitReports() {
-        this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, this.state.wordReportData.words.filter(
+        const submitData = this.state.wordReportData.words.filter(
             (it) => !it.processed && it.approved !== null
-        ));
+        ).map((it) => ({datetime: it.datetime, approved: it.approved}));
+        if (!this.state.wordReportSent && submitData.length) {
+            this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, submitData);
+            this.setState(Object.assign({}, this.state, {
+                wordReportSent: true
+            }));
+        }
     }
 
     toggleNotificationPinned() {
@@ -678,6 +745,8 @@ class Game extends React.Component {
                                    className="material-icons exit settings-button">exit_to_app</i>
                                 <i onClick={() => this.handleClickGetReports()}
                                    className="material-icons get-reports settings-button">assignment_late</i>
+                                <i onClick={() => this.handleClickOpenWordAdd()}
+                                   className="material-icons get-reports settings-button">add_box</i>
                                 {(isHost && hasPlayers && (data.phase === 0 || this.gameIsOver)) ?
                                     (<i onClick={() => this.handleClickRestart()}
                                         className="material-icons start-game settings-button">sync</i>) : ""}
@@ -698,13 +767,15 @@ class Game extends React.Component {
                         </div>
                         {data.wordReportData ? (<div className="word-report-modal">
                             <div className="word-report-modal-content">
-                                <div className="word-report-title">Word reports
+                                <div className="word-report-title">Words moderation
                                     <div className="word-report-modal-stats">
                                         Total<span className="word-report-stat-num">{data.wordReportData.total}</span>
                                         Processed<span
                                         className="word-report-stat-num">{data.wordReportData.processed}</span>
                                         Approved<span
                                         className="word-report-stat-num">{data.wordReportData.approved}</span>
+                                        New<span
+                                        className="word-report-stat-num">{data.wordReportData.new}</span>
                                     </div>
                                     <div className="word-report-modal-close"
                                          onClick={() => this.handleClickCloseReports()}>✕
@@ -717,10 +788,13 @@ class Game extends React.Component {
                                                     <div
                                                         className="word-report-item-name">{it.playerName}</div>
                                                     <div
-                                                        className="word-report-item-word">{it.word}</div>
+                                                        className="word-report-item-word">{!it.newWord ? it.word : (
+                                                        <div className="word-report-item-word-list">
+                                                            {it.wordList.map((word) => (<div>{word}</div>))}
+                                                        </div>)}</div>
                                                     <div
                                                         className="word-report-item-transfer">
-                                                        {["", "Easy", "Normal", "Hard"][it.currentLevel]} → {["", "Easy", "Normal", "Hard"][it.level]}
+                                                        {!it.newWord ? ["", "Easy", "Normal", "Hard"][it.currentLevel] : "New"} → {["", "Easy", "Normal", "Hard"][it.level]}
                                                     </div>
                                                     <div
                                                         className="word-report-item-status">
@@ -748,9 +822,44 @@ class Game extends React.Component {
                                         : (<div className="word-report-no-data">No words reported yet</div>)
                                 }</div>
                                 <div className="word-report-manage-buttons">
-                                    <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"/>
-                                    <div className="word-report-save-button"
+                                    <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
+                                           type="password"/>
+                                    <div className={cs("word-report-save-button", {inactive: data.wordReportSent})}
                                          onClick={() => this.handleClickSubmitReports()}>Submit
+                                    </div>
+                                </div>
+                            </div>
+                        </div>) : ""}
+                        {data.wordAddCount != null ? (<div className="word-report-modal">
+                            <div className="word-report-modal-content add">
+                                <div className="word-report-title">Add new words
+                                    <div className="word-report-modal-close"
+                                         onClick={() => this.handleClickCloseWordAdd()}>✕
+                                    </div>
+                                </div>
+                                <textarea
+                                    id="word-add-area"
+                                    onChange={((event) => this.handleWordAddChange(event.target.value))}
+                                    className="word-add-textarea"/>
+                                <div className="word-report-manage-buttons">
+                                    <div
+                                        className="word-add-level-select">
+                                        <span
+                                            onClick={() => this.handleWordAddLevel(1)}
+                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 1})}>Easy</span>
+                                        <span
+                                            onClick={() => this.handleWordAddLevel(2)}
+                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 2})}>Normal</span>
+                                        <span
+                                            onClick={() => this.handleWordAddLevel(3)}
+                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 3})}>Hard</span>
+                                    </div>
+                                    <div
+                                        className={cs("word-add-count", {overflow: data.wordAddCount > 50})}>{data.wordAddCount}/50
+                                    </div>
+                                    <div
+                                        className={cs("word-report-save-button", {inactive: !(data.wordAddCount > 0 && data.wordAddCount <= 50)})}
+                                        onClick={() => this.handleClickSubmitNewWords()}>Submit
                                     </div>
                                 </div>
                             </div>
@@ -773,6 +882,14 @@ class Game extends React.Component {
                                     {data.wordReportNotify.approved.length ? "And " : ""} {data.wordReportNotify.denied.length}
                                     {data.wordReportNotify.approved.length ? "" : " word"} report{data.wordReportNotify.denied.length > 1 ? "s " : " "}
                                     denied
+                                </div>) : ""}
+                                {data.wordReportNotify.added ? (<div>
+                                    {data.wordReportNotify.approved.length || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.added} new
+                                    words added
+                                </div>) : ""}
+                                {data.wordReportNotify.addDenied ? (<div>
+                                    {data.wordReportNotify.added || data.wordReportNotify.approved.length || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.addDenied} new
+                                    words declined
                                 </div>) : ""}
                             </div>) : ""}
                         </div>

@@ -473,47 +473,84 @@ function init(wsServer, path, moderKey) {
                 },
                 "apply-words-moderation": (user, sentModerKey, moderData) => {
                     if (moderData && moderData[0] && sentModerKey === moderKey) {
+                        let hasChanges = false;
                         moderData.forEach((moderData) => {
-                            if (!moderData.processed && moderData.approved !== null)
-                                reportedWordsData.some((reportData) => {
-                                    if (reportData.datetime === moderData.datetime && !reportData.processed) {
-                                        reportData.processed = true;
-                                        reportData.approved = moderData.approved;
-                                        reportedWords.splice(reportedWords.indexOf(moderData.word), 1);
-                                        if (reportData.approved) {
-                                            defaultWords[moderData.currentLevel].splice(defaultWords[moderData.currentLevel].indexOf(moderData.word), 1);
-                                            defaultWords[moderData.level].push(moderData.word);
+                            reportedWordsData.some((reportData) => {
+                                if (reportData.datetime === moderData.datetime && !reportData.processed) {
+                                    hasChanges = true;
+                                    reportData.processed = true;
+                                    reportData.approved = moderData.approved;
+                                    Object.assign(moderData, reportData);
+                                    reportedWords.splice(reportedWords.indexOf(moderData.word), 1);
+                                    if (reportData.approved) {
+                                        if (!reportData.newWord) {
+                                            defaultWords[reportData.currentLevel].splice(defaultWords[reportData.currentLevel].indexOf(reportData.word), 1);
+                                            defaultWords[reportData.level].push(reportData.word);
+                                        } else {
+                                            reportData.wordList.filter((word) =>
+                                                !~defaultWords[1].indexOf(word)
+                                                && !~defaultWords[2].indexOf(word)
+                                                && !~defaultWords[3].indexOf(word)).forEach((word) => defaultWords[reportData.level].push(word));
                                         }
-                                        return true;
                                     }
-                                });
+                                    return true;
+                                }
+                            });
                         });
-                        fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
-                            if (!err) {
-                                fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
-                                    reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
-                                    () => {
-                                        let aliasPlayers = [];
-                                        registry.roomManagers.forEach((roomManager, roomPath) => {
-                                            if (roomPath === path) {
-                                                roomManager.rooms.forEach((roomData) => {
-                                                    aliasPlayers = aliasPlayers.concat([...roomData.room.onlinePlayers]);
-                                                });
-                                            }
-                                        });
-                                        userRegistry.send(aliasPlayers, "word-report-notify", moderData);
-                                    }
-                                );
-                                send(user, "word-reports-data", reportedWordsData);
-                                send(user, "message", "Success");
-                            }
-                            else
-                                send(user, err.message)
-                        });
-                        update();
+                        if (!hasChanges)
+                            send(user, "word-reports-request-status", "Success");
+                        else
+                            fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
+                                if (!err) {
+                                    fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
+                                        reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
+                                        () => {
+                                            let aliasPlayers = [];
+                                            registry.roomManagers.forEach((roomManager, roomPath) => {
+                                                if (roomPath === path) {
+                                                    roomManager.rooms.forEach((roomData) => {
+                                                        aliasPlayers = aliasPlayers.concat([...roomData.room.onlinePlayers]);
+                                                    });
+                                                }
+                                            });
+                                            userRegistry.send(aliasPlayers, "word-report-notify", moderData);
+                                        }
+                                    );
+                                    send(user, "word-reports-data", reportedWordsData);
+                                    send(user, "word-reports-request-status", "Success");
+                                }
+                                else
+                                    send(user, "word-reports-request-status", err.message)
+                            });
                     }
                     else
-                        send(user, "message", "Wrong key");
+                        send(user, "word-reports-request-status", "Wrong key");
+                },
+                "add-words": (user, words, level) => {
+                    if (words && words.length < 2500) {
+                        let wordList = [...(new Set(words.split("\n")))];
+                        if (wordList.length <= 50) {
+                            wordList = wordList.filter((word) => word.length <= 50 && word.trim().length > 0
+                                && !~defaultWords[1].indexOf(word)
+                                && !~defaultWords[2].indexOf(word)
+                                && !~defaultWords[3].indexOf(word));
+                            if (wordList.length > 0) {
+                                const reportInfo = {
+                                    datetime: +new Date(),
+                                    user: user,
+                                    playerName: room.playerNames[user],
+                                    newWord: true,
+                                    wordList,
+                                    level: level,
+                                    processed: false,
+                                    approved: null
+                                };
+                                reportedWordsData.push(reportInfo);
+                                fs.appendFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                                });
+                            }
+                        }
+                    }
                 }
             };
         }

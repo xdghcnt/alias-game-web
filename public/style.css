@@ -395,7 +395,7 @@ body.dark-theme {
 
 .start-game-buttons div {
     display: inline-block;
-    padding: 17px;
+    padding: 17px 20px;
 }
 
 .little-controls div {
@@ -820,4 +820,45 @@ input:checked + .word-report-approve.yes {
 .word-report-show-all {
     cursor: pointer;
     padding: 4px;
+}
+
+.word-report-save-button.inactive {
+    color: #8e8e8e;
+}
+
+.word-report-modal-content.add {
+    max-width: 300px;
+}
+
+.word-add-textarea {
+    width: 100%;
+    padding: 10px;
+    background: #f1f1f1;
+    height: 40%;
+    white-space: nowrap;
+    resize: none;
+}
+
+.word-add-count {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+.word-add-count.overflow {
+    color: #f3306b;
+}
+
+.word-add-level-select {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 46px;
+}
+
+.word-add-level-select > span {
+    padding: 2px 4px;
+}
+
+.word-report-item > div {
+    vertical-align: top;
 }
