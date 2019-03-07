@@ -184,8 +184,7 @@ function init(wsServer, path, moderKey) {
                         if (!~[1, 2, 3].indexOf(difficulty) > 0) {
                             if (user)
                                 send(user, "message", "You did something wrong");
-                        }
-                        else {
+                        } else {
                             room.level = difficulty;
                             this.state.roomWordsList = shuffleArray([...defaultWords[difficulty]]);
                             room.wordIndex = 0;
@@ -202,8 +201,7 @@ function init(wsServer, path, moderKey) {
                                 if (room.currentTeam === teamId)
                                     rotateTeams();
                                 delete room.teams[teamId];
-                            }
-                            else if (team.currentPlayer === playerId)
+                            } else if (team.currentPlayer === playerId)
                                 rotatePlayers(teamId);
                         }
                     });
@@ -212,8 +210,7 @@ function init(wsServer, path, moderKey) {
                         room.spectators.delete(playerId);
                         delete room.playerNames[playerId];
                         registry.disconnect(playerId, "You was removed");
-                    }
-                    else
+                    } else
                         room.spectators.add(playerId);
                 },
                 setTurn = playerId => {
@@ -328,8 +325,7 @@ function init(wsServer, path, moderKey) {
                                 endRound();
                                 room.wordsEnded = true;
                             }
-                        }
-                        else
+                        } else
                             endRound();
                     }
                     update();
@@ -435,8 +431,7 @@ function init(wsServer, path, moderKey) {
                                             room.wordsEnded = false;
                                             room.level = 0;
                                             update();
-                                        }
-                                        else
+                                        } else
                                             send(user, "message", `You did something wrong`);
                                     });
                                 },
@@ -518,22 +513,21 @@ function init(wsServer, path, moderKey) {
                                     );
                                     send(user, "word-reports-data", reportedWordsData);
                                     send(user, "word-reports-request-status", "Success");
-                                }
-                                else
+                                } else
                                     send(user, "word-reports-request-status", err.message)
                             });
-                    }
-                    else
+                    } else
                         send(user, "word-reports-request-status", "Wrong key");
                 },
                 "add-words": (user, words, level) => {
                     if (words && words.length < 2500) {
                         let wordList = [...(new Set(words.split("\n")))];
                         if (wordList.length <= 50) {
-                            wordList = wordList.filter((word) => word.length <= 50 && word.trim().length > 0
+                            wordList = wordList.filter((word) => word.toLowerCase
+                                && word.length <= 50 && word.trim().length > 0
                                 && !~defaultWords[1].indexOf(word)
                                 && !~defaultWords[2].indexOf(word)
-                                && !~defaultWords[3].indexOf(word));
+                                && !~defaultWords[3].indexOf(word)).map((word) => word.toLowerCase());
                             if (wordList.length > 0) {
                                 const reportInfo = {
                                     datetime: +new Date(),
