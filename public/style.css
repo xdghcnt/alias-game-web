@@ -395,7 +395,7 @@ body.dark-theme {
 
 .start-game-buttons div {
     display: inline-block;
-    padding: 17px 20px;
+    padding: 17px 11px;
 }
 
 .little-controls div {
@@ -696,7 +696,7 @@ body.dark-theme {
 
 .word-report-item-transfer {
     width: 107px;
-    min-width: 110px;
+    min-width: 115px;
 }
 
 .word-report-item-name {

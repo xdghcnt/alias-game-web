@@ -12,13 +12,13 @@ function init(wsServer, path, moderKey) {
 
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
         defaultWords = JSON.parse(words);
-        fs.readFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, "utf8", function (err, words) {
+        fs.readFile(`${registry.config.appDir || __dirname}/moderated-words.json`, "utf8", function (err, words) {
             if (words)
                 defaultWords = JSON.parse(words);
         });
     });
 
-    fs.readFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
+    fs.readFile(`${registry.config.appDir || __dirname}/reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
         if (data) {
             data.split("\n").forEach((row) => row && reportedWordsData.push(JSON.parse(row)));
             reportedWordsData.forEach((it) => !it.processed && reportedWords.push(it.word));
@@ -181,7 +181,7 @@ function init(wsServer, path, moderKey) {
                     if (!isNaN(parseFloat(wordSet))) {
                         room.currentWords = [];
                         const difficulty = parseFloat(wordSet);
-                        if (!~[1, 2, 3].indexOf(difficulty) > 0) {
+                        if (!~[1, 2, 3, 4].indexOf(difficulty) > 0) {
                             if (user)
                                 send(user, "message", "You did something wrong");
                         } else {
@@ -458,7 +458,7 @@ function init(wsServer, path, moderKey) {
                         room.currentWords.filter((it) => it.word === word)[0].reported = true;
                         reportedWordsData.push(reportInfo);
                         reportedWords.push(word);
-                        fs.appendFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                        fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                         });
                         update();
                     }
@@ -480,12 +480,14 @@ function init(wsServer, path, moderKey) {
                                     if (reportData.approved) {
                                         if (!reportData.newWord) {
                                             defaultWords[reportData.currentLevel].splice(defaultWords[reportData.currentLevel].indexOf(reportData.word), 1);
-                                            defaultWords[reportData.level].push(reportData.word);
+                                            if (reportData.level !== 0)
+                                                defaultWords[reportData.level].push(reportData.word);
                                         } else {
                                             reportData.wordList.filter((word) =>
                                                 !~defaultWords[1].indexOf(word)
                                                 && !~defaultWords[2].indexOf(word)
-                                                && !~defaultWords[3].indexOf(word)).forEach((word) => defaultWords[reportData.level].push(word));
+                                                && !~defaultWords[3].indexOf(word)
+                                                && !~defaultWords[4].indexOf(word)).forEach((word) => defaultWords[reportData.level].push(word));
                                         }
                                     }
                                     return true;
@@ -495,9 +497,9 @@ function init(wsServer, path, moderKey) {
                         if (!hasChanges)
                             send(user, "word-reports-request-status", "Success");
                         else
-                            fs.writeFile(`${registry.config.appDir || __dirname}/alias-moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
+                            fs.writeFile(`${registry.config.appDir || __dirname}/moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
                                 if (!err) {
-                                    fs.writeFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`,
+                                    fs.writeFile(`${registry.config.appDir || __dirname}/reported-words.txt`,
                                         reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
                                         () => {
                                             let aliasPlayers = [];
@@ -529,7 +531,8 @@ function init(wsServer, path, moderKey) {
                                 && word.length <= 50 && word.trim().length > 0
                                 && !~defaultWords[1].indexOf(word)
                                 && !~defaultWords[2].indexOf(word)
-                                && !~defaultWords[3].indexOf(word));
+                                && !~defaultWords[3].indexOf(word)
+                                && !~defaultWords[4].indexOf(word));
                             if (wordList.length > 0) {
                                 const reportInfo = {
                                     datetime: +new Date(),
@@ -542,7 +545,7 @@ function init(wsServer, path, moderKey) {
                                     approved: null
                                 };
                                 reportedWordsData.push(reportInfo);
-                                fs.appendFile(`${registry.config.appDir || __dirname}/alias-reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                                fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                                 });
                             }
                         }

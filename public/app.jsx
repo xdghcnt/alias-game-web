@@ -130,6 +130,16 @@ class Words extends React.Component {
                                         onClick={() => game.handleClickReportWordLevel(word.word, data.level, 3)}><i
                                         className="material-icons">school</i> Hard ←
                                     </div>) : ""}
+                                    {data.level !== 4 ? (<div
+                                        className="settings-button"
+                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 4)}><i
+                                        className="material-icons">whatshot</i> Insane ←
+                                    </div>) : ""}
+                                    <div
+                                        className="settings-button"
+                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 0)}><i
+                                        className="material-icons">delete_forever</i> Remove ←
+                                    </div>
                                 </div>) : ""}
                                 <i className="material-icons"
                                    title={!word.reported ? "Report word" : "Reported"}>
@@ -314,10 +324,11 @@ class Game extends React.Component {
         });
         this.setState(Object.assign({}, this.state, {
             wordReportNotify: {
-                approved: this.reportListToShow.filter((it) => it.approved && !it.newWord),
+                approved: this.reportListToShow.filter((it) => it.approved && !it.newWord && it.level !== 0),
                 denied: this.reportListToShow.filter((it) => !it.approved && !it.newWord),
                 added: newWordsCount,
-                addDenied: newWordsCountDenied
+                addDenied: newWordsCountDenied,
+                deleted: this.reportListToShow.filter((it) => it.approved && it.level === 0)
             }
         }));
         document.getElementById("snackbar").classList.add("show");
@@ -728,6 +739,14 @@ class Game extends React.Component {
                                             onClick={() => this.handleClickLevel(3)}><i
                                             className="material-icons">school</i>Hard
                                         </div>
+                                        <div
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": this.state.level === 4
+                                            })}
+                                            onClick={() => this.handleClickLevel(4)}><i
+                                            className="material-icons">whatshot</i>Insane
+                                        </div>
                                     </div>
                                     <div
                                         className={cs("custom-game-button", {
@@ -794,7 +813,7 @@ class Game extends React.Component {
                                                         </div>)}</div>
                                                     <div
                                                         className="word-report-item-transfer">
-                                                        {!it.newWord ? ["", "Easy", "Normal", "Hard"][it.currentLevel] : "New"} → {["", "Easy", "Normal", "Hard"][it.level]}
+                                                        {!it.newWord ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]}
                                                     </div>
                                                     <div
                                                         className="word-report-item-status">
@@ -853,6 +872,9 @@ class Game extends React.Component {
                                         <span
                                             onClick={() => this.handleWordAddLevel(3)}
                                             className={cs("settings-button", {"level-selected": data.wordAddLevel === 3})}>Hard</span>
+                                        <span
+                                            onClick={() => this.handleWordAddLevel(4)}
+                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 4})}>Insane</span>
                                     </div>
                                     <div
                                         className={cs("word-add-count", {overflow: data.wordAddCount > 50})}>{data.wordAddCount}/50
@@ -874,22 +896,30 @@ class Game extends React.Component {
                                         {data.wordReportNotify.approved.map((it) => (<div
                                             className="word-report-notify-item">
                                             {it.word} <span className="word-report-notify-transfer">
-                                        ({["", "Easy", "Normal", "Hard"][it.currentLevel]} → {["", "Easy", "Normal", "Hard"][it.level]})
+                                        ({["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel]} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]})
                                     </span></div>))}
                                     </div>
                                 </div>) : ""}
                                 {data.wordReportNotify.denied.length ? (<div>
                                     {data.wordReportNotify.approved.length ? "And " : ""} {data.wordReportNotify.denied.length}
-                                    {data.wordReportNotify.approved.length ? "" : " word"} report{data.wordReportNotify.denied.length > 1 ? "s " : " "}
-                                    denied
+                                    {data.wordReportNotify.approved.length ? "" : " word"} report{data.wordReportNotify.denied.length > 1 ? "s" : ""} denied
                                 </div>) : ""}
                                 {data.wordReportNotify.added ? (<div>
                                     {data.wordReportNotify.approved.length || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.added} new
-                                    words added
+                                    word{data.wordReportNotify.added > 1 ? "s" : ""} added
                                 </div>) : ""}
                                 {data.wordReportNotify.addDenied ? (<div>
-                                    {data.wordReportNotify.added || data.wordReportNotify.approved.length || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.addDenied} new
-                                    words declined
+                                    {data.wordReportNotify.added
+                                    || data.wordReportNotify.approved.length
+                                    || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.addDenied} new
+                                    word{data.wordReportNotify.addDenied > 1 ? "s" : ""} declined
+                                </div>) : ""}
+                                {data.wordReportNotify.deleted.length ? (<div>
+                                    {data.wordReportNotify.added
+                                    || data.wordReportNotify.approved.length
+                                    || data.wordReportNotify.denied.length
+                                    || data.wordReportNotify.addDenied ? "Also " : ""}
+                                    {data.wordReportNotify.deleted.length} word{data.wordReportNotify.deleted.length > 1 ? "s" : ""} deleted
                                 </div>) : ""}
                             </div>) : ""}
                         </div>
