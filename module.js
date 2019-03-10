@@ -351,6 +351,7 @@ function init(wsServer, path, moderKey) {
                         room.readyPlayers.delete(room.currentPlayer);
                         calcWordPoints();
                         update();
+                        send(room.onlinePlayers, "highlight-user", user);
                     }
                 },
                 "change-name": (user, value) => {

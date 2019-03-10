@@ -165,7 +165,7 @@ class Player extends React.Component {
                 offline: !~data.onlinePlayers.indexOf(id),
                 self: id === data.userId,
                 current: id === data.currentPlayer
-            })}>
+            })} data-userId={id}>
                 {data.playerNames[id]}
                 {(isHost || data.hostId === id) ? (
                     <div className="player-host-controls">
@@ -306,6 +306,13 @@ class Game extends React.Component {
         });
         this.socket.on("ping", (id) => {
             this.socket.emit("pong", id);
+        });
+        this.socket.on("highlight-user", (userId) => {
+            const playerNode = document.querySelector(`[data-userId='${userId}']`);
+            if (playerNode) {
+                playerNode.classList.add("highlight-anim");
+                setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 100);
+            }
         });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);

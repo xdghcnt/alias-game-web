@@ -122,6 +122,12 @@ body.dark-theme {
 .player {
     margin-bottom: 3px;
     min-height: 18px;
+    transition: margin-left 0.5s ease-out;
+}
+
+.player.highlight-anim {
+    margin-left: 3px;
+    transition: none;
 }
 
 .player.self {
