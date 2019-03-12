@@ -477,12 +477,17 @@ function init(wsServer, path, moderKey) {
                                     reportData.processed = true;
                                     reportData.approved = moderData.approved;
                                     Object.assign(moderData, reportData);
-                                    reportedWords.splice(reportedWords.indexOf(moderData.word), 1);
+                                    const reportedWordIndex = reportedWords.indexOf(moderData.word);
+                                    if (reportedWordIndex !== -1)
+                                        reportedWords.splice(reportedWordIndex, 1);
                                     if (reportData.approved) {
                                         if (!reportData.newWord) {
-                                            defaultWords[reportData.currentLevel].splice(defaultWords[reportData.currentLevel].indexOf(reportData.word), 1);
-                                            if (reportData.level !== 0)
-                                                defaultWords[reportData.level].push(reportData.word);
+                                            const wordIndexToRemove = defaultWords[reportData.currentLevel].indexOf(reportData.word);
+                                            if (wordIndexToRemove !== -1) {
+                                                defaultWords[reportData.currentLevel].splice(wordIndexToRemove, 1);
+                                                if (reportData.level !== 0)
+                                                    defaultWords[reportData.level].push(reportData.word);
+                                            }
                                         } else {
                                             reportData.wordList.filter((word) =>
                                                 !~defaultWords[1].indexOf(word)
@@ -525,7 +530,40 @@ function init(wsServer, path, moderKey) {
                 "add-words": (user, words, level) => {
                     if (words && words.length < 2500) {
                         let wordList = [...(new Set(words.split("\n")))];
-                        if (wordList.length <= 50) {
+                        if ((wordList[0] === "!edit" || wordList[0] === "!remove") && wordList[1] === moderKey) {
+                            const
+                                reportList = [],
+                                newLevel = wordList[0] === "!remove" ? 0 : level;
+                            wordList.splice(0, 2);
+                            wordList.forEach((word) => {
+                                let currentLevel = null;
+                                [1, 2, 3, 4].some((level) => {
+                                    if (level !== newLevel && ~defaultWords[level].indexOf(word)) {
+                                        currentLevel = level;
+                                        return true;
+                                    }
+                                });
+                                if (currentLevel !== null) {
+                                    const reportInfo = {
+                                        datetime: +new Date(),
+                                        user: user,
+                                        playerName: room.playerNames[user],
+                                        word: word,
+                                        currentLevel: currentLevel,
+                                        level: newLevel,
+                                        processed: false,
+                                        approved: null
+                                    };
+                                    reportList.push(reportInfo);
+                                    reportedWordsData.push(reportInfo);
+                                    reportedWords.push(word);
+                                }
+                            });
+                            if (reportList.length)
+                                fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`,
+                                    `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
+                                    });
+                        } else if (wordList.length <= 50) {
                             wordList = wordList.map((word) => word && word.toLowerCase && word.toLowerCase());
                             wordList = wordList.filter((word) =>
                                 word
