@@ -529,7 +529,7 @@ function init(wsServer, path, moderKey) {
                 },
                 "add-words": (user, words, level) => {
                     if (words && words.length < 2500) {
-                        let wordList = [...(new Set(words.split("\n")))];
+                        let wordList = [...(new Set(words.split("\n").map((word) => word.trim().toLowerCase())))];
                         if ((wordList[0] === "!edit" || wordList[0] === "!remove") && wordList[1] === moderKey) {
                             const
                                 reportList = [],
@@ -564,7 +564,6 @@ function init(wsServer, path, moderKey) {
                                     `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
                                     });
                         } else if (wordList.length <= 50) {
-                            wordList = wordList.map((word) => word && word.toLowerCase && word.toLowerCase());
                             wordList = wordList.filter((word) =>
                                 word
                                 && word.length <= 50 && word.trim().length > 0
