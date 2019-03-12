@@ -321,7 +321,9 @@ class Game extends React.Component {
     }
 
     showReportNotify() {
-        let newWordsCount = 0, newWordsCountDenied = 0;
+        let
+            newWordsCount = 0, newWordsCountDenied = 0,
+            approvedList = this.reportListToShow.filter((it) => it.approved && !it.newWord && it.level !== 0);
         this.reportListToShow.forEach((it) => {
             if (it.newWord)
                 if (it.approved)
@@ -331,7 +333,7 @@ class Game extends React.Component {
         });
         this.setState(Object.assign({}, this.state, {
             wordReportNotify: {
-                approved: this.reportListToShow.filter((it) => it.approved && !it.newWord && it.level !== 0),
+                approved: approvedList,
                 denied: this.reportListToShow.filter((it) => !it.approved && !it.newWord),
                 added: newWordsCount,
                 addDenied: newWordsCountDenied,
@@ -342,7 +344,7 @@ class Game extends React.Component {
         clearTimeout(this.wordReportNotifyTimeout);
         this.wordReportNotifyTimeout = setTimeout(() => {
             document.getElementById("snackbar").classList.remove("show");
-        }, (this.reportListToShow.filter((it) => it.approved).length * 1000) + 3000);
+        }, (approvedList.length * 1000) + 3000);
         this.reportListToShow = [];
     }
 
