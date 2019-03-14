@@ -310,7 +310,7 @@ body.dark-theme {
     display: none;
 }
 
-.host-controls:hover .host-controls-menu {
+.host-controls:hover .host-controls-menu, .host-controls:focus .host-controls-menu {
     display: block;
 }
 
@@ -368,7 +368,7 @@ body.dark-theme {
     display: none;
 }
 
-.player:hover .player-host-controls {
+.player:hover .player-host-controls, .player:focus .player-host-controls {
     display: inline-block;
 }
 
@@ -450,7 +450,7 @@ body.dark-theme {
     display: none;
 }
 
-.host-controls:hover .side-buttons {
+.host-controls:hover .side-buttons, .host-controls:focus .side-buttons {
     display: inline-block;
 }
 
@@ -504,7 +504,7 @@ body.dark-theme {
     display: none;
 }
 
-.score:hover .change-score {
+.score:hover .change-score, .score:focus .change-score {
     display: inline-block;
 }
 
@@ -520,7 +520,7 @@ body.dark-theme {
     display: none;
 }
 
-.word:hover .report-word-menu {
+.word:hover .report-word-menu, .word:focus .report-word-menu {
     display: block;
 }
 
@@ -540,7 +540,7 @@ body.dark-theme {
     margin-left: 3px;
 }
 
-.report-word-menu:hover > i {
+.report-word-menu:hover > i, .report-word-menu:focus > i {
     opacity: 1;
 }
 
@@ -566,7 +566,7 @@ body.dark-theme {
     background: #40403f;
 }
 
-.report-word-menu:hover .report-word-list {
+.report-word-menu:hover .report-word-list, .report-word-menu:focus .report-word-list {
     display: block;
 }
 

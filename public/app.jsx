@@ -31,7 +31,7 @@ class Teams extends React.Component {
                         "goal-reached": data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal,
                         winner: data.teams[teamId].winner
                     })} key={index}>
-                        <div className="score">
+                        <div className="score" onTouchStart={(e) => e.target.focus()}>
                             {data.hostId === data.userId ?
                                 (<i className="material-icons host-button change-score"
                                     title="Change"
@@ -106,14 +106,14 @@ class Words extends React.Component {
                     word: data.activeWord,
                     reported: data.activeWordReported
                 }])).map((word, index) => (
-                    <div className={cs("word", {reported: word.reported})}>{word.word}
+                    <div className={cs("word", {reported: word.reported})} onTouchStart={(e) => e.target.focus()}>{word.word}
                         <input
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"
                             onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}
                         />
                         {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
-                            <div className="report-word-menu">
+                            <div className="report-word-menu" onTouchStart={(e) => e.target.focus()}>
                                 {!word.reported ? (<div className="report-word-list">
                                     {data.level !== 1 ? (<div
                                         className="settings-button"
@@ -165,7 +165,7 @@ class Player extends React.Component {
                 offline: !~data.onlinePlayers.indexOf(id),
                 self: id === data.userId,
                 current: id === data.currentPlayer
-            })} data-userId={id}>
+            })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
                 {data.playerNames[id]}
                 {(isHost || data.hostId === id) ? (
                     <div className="player-host-controls">
@@ -693,7 +693,7 @@ class Game extends React.Component {
                                      }>{actionText}</div>
                             </div>
                         </div>
-                        <div className="host-controls">
+                        <div className="host-controls" onTouchStart={(e) => e.target.focus()}>
                             <div className="host-controls-menu">
                                 <div>
                                     <div className="little-controls">
