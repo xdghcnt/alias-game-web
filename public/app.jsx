@@ -106,7 +106,8 @@ class Words extends React.Component {
                     word: data.activeWord,
                     reported: data.activeWordReported
                 }])).map((word, index) => (
-                    <div className={cs("word", {reported: word.reported})} onTouchStart={(e) => e.target.focus()}>{word.word}
+                    <div className={cs("word", {reported: word.reported})}
+                         onTouchStart={(e) => e.target.focus()}>{word.word}
                         <input
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"
@@ -223,6 +224,9 @@ class Game extends React.Component {
         initArgs.token = localStorage.userToken;
         this.socket = window.socket.of("alias");
         this.socket.on("state", (state) => {
+            let initDrawMode;
+            if (!this.state.drawMode && state.drawMode)
+                initDrawMode = true;
             if (this.state && this.state.phase === 2 && state.phase !== 2 && this.reportListToShow.length)
                 setTimeout(() => this.showReportNotify(), 1000);
             this.setState(Object.assign({
@@ -235,7 +239,15 @@ class Game extends React.Component {
                 wordAddCount: this.state.wordAddCount,
                 wordAddLevel: this.state.wordAddLevel,
                 wordReportSent: this.state.wordReportSent
-            }, state));
+            }, state), () => {
+                if (initDrawMode) this.initDrawMode();
+            });
+            if (!state.drawMode && this.sketcher)
+                this.sketcher = null;
+            if (this.sketcher) {
+                this.sketcher.setActive(this.state.currentPlayer === this.state.userId);
+                this.sketcher.updateState(state);
+            }
         });
         this.socket.on("active-word", (data) => {
             this.setState(Object.assign({}, this.state, {
@@ -318,6 +330,17 @@ class Game extends React.Component {
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("/alias/beep.mp3");
         this.reportListToShow = [];
+        window.addEventListener("resize", () => {
+            if (this.sketcher)
+                this.sketcher.reallign_width_parent_div();
+        });
+    }
+
+    initDrawMode() {
+        this.sketcher = new Sketcher(document.getElementById("draw-pane"), this.socket, this.state);
+        this.sketcher.setInvert(!!parseInt(localStorage.darkThemeAlias));
+        if (this.state.currentPlayer === this.state.userId)
+            this.sketcher.setActive(true);
     }
 
     showReportNotify() {
@@ -498,6 +521,8 @@ class Game extends React.Component {
         localStorage.darkThemeAlias = !parseInt(localStorage.darkThemeAlias) ? 1 : 0;
         document.body.classList.toggle("dark-theme");
         this.setState(Object.assign({}, this.state));
+        if (this.sketcher)
+            this.sketcher.setInvert(!!parseInt(localStorage.darkThemeAlias));
     }
 
     handleClickStop() {
@@ -544,6 +569,15 @@ class Game extends React.Component {
 
     handleClickReportWordLevel(word, currentLevel, level) {
         this.socket.emit("report-word", word, currentLevel, level);
+    }
+
+    handleClickDrawClear(evt) {
+        evt.stopPropagation();
+        this.socket.emit("draw-clear");
+    }
+
+    handleClickToggleDrawMode(state) {
+        this.socket.emit("toggle-draw-mode", state);
     }
 
     render() {
@@ -650,6 +684,9 @@ class Game extends React.Component {
                             <div className="dict-progress-bar"
                                  style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
                         </div>
+                        {data.drawMode ? (<div id="draw-pane">
+                            <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
+                               onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
                         Teams:
                         <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}
                                handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
@@ -722,6 +759,24 @@ class Game extends React.Component {
                                                  onClick={() => this.handleClickShuffle()}>shuffle players<i
                                                 className="material-icons">casino</i>
                                             </div>) : ""}
+                                    </div>
+                                    <div className="draw-mode-buttons">
+                                        <div
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": !data.drawMode
+                                            })}
+                                            onClick={() => this.handleClickToggleDrawMode(false)}><i
+                                            className="material-icons">record_voice_over</i>Explain
+                                        </div>
+                                        <div
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": data.drawMode
+                                            })}
+                                            onClick={() => this.handleClickToggleDrawMode(true)}><i
+                                            className="material-icons">gesture</i>Draw
+                                        </div>
                                     </div>
                                     <div className="start-game-buttons">
                                         <div

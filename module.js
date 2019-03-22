@@ -48,12 +48,16 @@ function init(wsServer, path, moderKey) {
                 teams: {},
                 wordIndex: 0,
                 wordsEnded: false,
-                level: 2
+                level: 2,
+                drawMode: false,
+                drawCommitOnly: false
             };
             this.room = room;
             this.state = {
                 activeWord: null,
-                roomWordsList: null
+                roomWordsList: null,
+                drawList: [],
+                drawTempList: []
             };
             this.lastInteraction = new Date();
             let timer;
@@ -226,6 +230,10 @@ function init(wsServer, path, moderKey) {
                         })
                     });
                 },
+                checkDrawData = (data) => data && data.dots
+                    && data.dots.length > 0
+                    && data.thickness > 0
+                    && data.thickness < 10,
                 userJoin = (data) => {
                     const user = data.userId;
                     if (!room.playerNames[user])
@@ -240,6 +248,8 @@ function init(wsServer, path, moderKey) {
                             reported: !!~reportedWords.indexOf(this.state.activeWord)
                         });
                     update();
+                    if (room.drawMode && this.state.drawList.length)
+                        send(user, "draw-commit", this.state.drawList);
                 },
                 userLeft = (user) => {
                     room.onlinePlayers.delete(user);
@@ -297,6 +307,9 @@ function init(wsServer, path, moderKey) {
                                 room.readyPlayers.add(user);
                         else {
                             room.phase = 2;
+                            this.state.drawList = [];
+                            this.state.drawTempList = [];
+                            send(room.onlinePlayers, "draw-clear");
                             room.readyPlayers.clear();
                             addWordPoints();
                             room.currentWords = [];
@@ -413,6 +426,31 @@ function init(wsServer, path, moderKey) {
                     if (room.hostId === user && playerId)
                         setTurn(playerId);
                     update();
+                },
+                "toggle-draw-mode": (user, state) => {
+                    if (room.phase === 0 && room.hostId === user)
+                        room.drawMode = state;
+                    update();
+                },
+                "draw-add": (user, data) => {
+                    if (!room.drawCommitOnly && room.drawMode && room.currentPlayer === user && checkDrawData(data)) {
+                        this.state.drawTempList.push(data);
+                        send([...room.onlinePlayers].filter((id) => id !== user), "draw-add", data);
+                    }
+                },
+                "draw-commit": (user, data) => {
+                    if (room.drawMode && room.currentPlayer === user && checkDrawData(data)) {
+                        this.state.drawTempList = [];
+                        this.state.drawList.push(data);
+                        send([...room.onlinePlayers].filter((id) => id !== user), "draw-commit", [data]);
+                    }
+                },
+                "draw-clear": (user) => {
+                    if (room.drawMode && room.currentPlayer === user) {
+                        this.state.drawTempList = [];
+                        this.state.drawList = [];
+                        send(room.onlinePlayers, "draw-clear");
+                    }
                 },
                 "setup-words": (user, wordsURL) => {
                     if (room.hostId === user && wordsURL && wordsURL.substr(0, 4) === "http")

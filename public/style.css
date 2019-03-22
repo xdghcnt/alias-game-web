@@ -1,6 +1,7 @@
 body {
     margin: 20px;
     background: #f1f1f1;
+    min-width: 340px;
 }
 
 body.dark-theme {
@@ -401,7 +402,7 @@ body.dark-theme {
 
 .start-game-buttons div {
     display: inline-block;
-    padding: 17px 11px;
+    padding: 17px 13px;
 }
 
 .little-controls div {
@@ -873,4 +874,46 @@ input:checked + .word-report-approve.yes {
     .word-report-list {
         height: 88%;
     }
+}
+
+#draw-pane {
+    width: 320px;
+    height: 320px;
+    min-width: 320px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    margin: auto;
+    margin-bottom: 14px;
+    background: white;
+}
+
+.dark-theme #draw-pane {
+    background: rgb(64, 64, 63);
+}
+
+.button-clear-draw {
+    z-index: 105;
+    cursor: pointer;
+    user-select: none;
+    float: right;
+    position: relative;
+    display: none;
+}
+
+.button-clear-draw.active {
+    display: block;
+}
+
+.draw-mode-buttons > div {
+    display: inline-block;
+    padding: 3px 57px;
+}
+
+.draw-mode-buttons i {
+    vertical-align: bottom;
+    margin-right: 3px;
+    margin-bottom: -2px;
+}
+
+.draw-mode-buttons {
+    border-bottom: 1px solid gainsboro;
 }
