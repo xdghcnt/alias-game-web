@@ -107,7 +107,7 @@ class Words extends React.Component {
                     reported: data.activeWordReported
                 }])).map((word, index) => (
                     <div className={cs("word", {reported: word.reported})}
-                         onTouchStart={(e) => e.target.focus()}>{word.word}
+                         onTouchStart={(e) => e.target.focus()}>{word.word}&nbsp;
                         <input
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"

@@ -6,7 +6,10 @@ function init(wsServer, path, moderKey) {
         app = wsServer.app,
         registry = wsServer.users,
         EventEmitter = require("events"),
-        channel = "alias";
+        channel = "alias",
+        autoDenialRules = [
+            [1, 3], [1, 4], [1, 0], [2, 4]
+        ];
 
     let defaultWords, reportedWordsData = [], reportedWords = [];
 
@@ -496,7 +499,10 @@ function init(wsServer, path, moderKey) {
                         };
                         room.currentWords.filter((it) => it.word === word)[0].reported = true;
                         reportedWordsData.push(reportInfo);
-                        reportedWords.push(word);
+                        if (autoDenialRules.some((it) => it[0] === currentLevel && it[1] === level)) {
+                            reportInfo.processed = true;
+                            reportInfo.approved = false;
+                        } else reportedWords.push(word);
                         fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                         });
                         update();

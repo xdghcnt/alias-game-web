@@ -917,3 +917,7 @@ input:checked + .word-report-approve.yes {
 .draw-mode-buttons {
     border-bottom: 1px solid gainsboro;
 }
+
+.draw-mode-buttons {
+    display: none;
+}
