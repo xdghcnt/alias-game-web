@@ -153,8 +153,10 @@ function init(wsServer, path, moderKey) {
                 },
                 startTimer = () => {
                     room.timer = room.roundTime * 1000;
+                    let time = new Date();
                     timer = setInterval(() => {
-                        room.timer -= 100;
+                        room.time -= new Date() - time;
+                        time = new Date();
                         if (room.timer <= 0) {
                             endRound();
                             send(room.onlinePlayers, "timer-end");
