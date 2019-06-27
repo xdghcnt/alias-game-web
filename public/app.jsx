@@ -622,13 +622,9 @@ class Game extends React.Component {
                                 mostPointsTeam = teamId;
                             }
                             return points >= data.goal;
-                        });
-                    if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoal.filter(teamId => {
-                        const
-                            team = data.teams[teamId],
-                            firstTeam = data.teams[teamsReachedGoal[0]];
-                        return (team.score + (team.wordPoints || 0)) === (firstTeam.score + (firstTeam.wordPoints || 0));
-                    }).length === 1)) {
+                        }),
+                        teamsReachedGoalScores = teamsReachedGoal.map((teamId) => data.teams[teamId].score).sort((a, b) => b - a);
+                    if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoalScores[0] !== teamsReachedGoalScores[1])) {
                         gameIsOver = true;
                         data.teams[mostPointsTeam].winner = true;
                         statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
