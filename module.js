@@ -155,7 +155,7 @@ function init(wsServer, path, moderKey) {
                     room.timer = room.roundTime * 1000;
                     let time = new Date();
                     timer = setInterval(() => {
-                        room.time -= new Date() - time;
+                        room.timer -= new Date() - time;
                         time = new Date();
                         if (room.timer <= 0) {
                             endRound();
