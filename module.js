@@ -42,6 +42,8 @@ function init(wsServer, path, moderKey) {
                 phase: 0,
                 spectators: new JSONSet(),
                 playerNames: {},
+                playerScores: {},
+                playerWordPoints: {},
                 readyPlayers: new JSONSet(),
                 onlinePlayers: new JSONSet(),
                 roundTime: 60,
@@ -53,7 +55,8 @@ function init(wsServer, path, moderKey) {
                 wordsEnded: false,
                 level: 2,
                 drawMode: false,
-                drawCommitOnly: false
+                drawCommitOnly: false,
+                soloMode: false
             };
             this.room = room;
             this.state = {
@@ -75,16 +78,30 @@ function init(wsServer, path, moderKey) {
                             currentPlayer = currentTeam.currentPlayer,
                             currentPlayerKeys = [...currentTeam.players],
                             indexOfCurrentPlayer = currentPlayerKeys.indexOf(currentTeam.currentPlayer);
-                        if (indexOfCurrentPlayer === currentTeam.players.size - 1)
-                            currentTeam.currentPlayer = currentPlayerKeys[0];
-                        else
-                            currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
-                        if (room.currentPlayer === currentPlayer)
-                            room.currentPlayer = currentTeam.currentPlayer;
+                        if (room.soloMode) {
+                            const indexOfCurrentAssistant = currentPlayerKeys.indexOf(room.currentAssistant);
+                            if (indexOfCurrentAssistant === currentTeam.players.size - 1)
+                                room.currentAssistant = currentPlayerKeys[0];
+                            else
+                                room.currentAssistant = currentPlayerKeys[indexOfCurrentAssistant + 1];
+                        }
+                        if (!room.soloMode || room.currentAssistant === room.currentPlayer) {
+                            if (indexOfCurrentPlayer === currentTeam.players.size - 1) {
+                                currentTeam.currentPlayer = currentPlayerKeys[0];
+                                if (room.soloMode)
+                                    room.currentAssistant = currentPlayerKeys[1];
+                            } else {
+                                currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
+                                if (room.soloMode)
+                                    room.currentAssistant = currentPlayerKeys[indexOfCurrentPlayer + 2];
+                            }
+                            if (room.currentPlayer === currentPlayer)
+                                room.currentPlayer = currentTeam.currentPlayer;
+                        }
                     }
                 },
                 rotateTeams = () => {
-                    if (room.currentTeam) {
+                    if (room.currentTeam && room.soloMode) {
                         const
                             teamKeys = Object.keys(room.teams),
                             indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
@@ -116,17 +133,30 @@ function init(wsServer, path, moderKey) {
                 calcWordPoints = () => {
                     let wordPoints = 0;
                     room.currentWords.forEach(word => wordPoints += word.points);
-                    Object.keys(room.teams).forEach(teamId => {
-                        if (room.teams[teamId].wordPoints !== undefined)
-                            room.teams[teamId].wordPoints = wordPoints < 0 ? 0 : wordPoints;
-                    });
+                    if (!room.soloMode)
+                        Object.keys(room.teams).forEach(teamId => {
+                            if (room.teams[teamId].wordPoints !== undefined)
+                                room.teams[teamId].wordPoints = wordPoints < 0 ? 0 : wordPoints;
+                        });
+                    else {
+                        room.playerWordPoints[room.currentPlayer] = wordPoints < 0 ? 0 : wordPoints;
+                        room.playerWordPoints[room.currentAssistant] = wordPoints < 0 ? 0 : wordPoints;
+                    }
                 },
                 addWordPoints = () => {
-                    Object.keys(room.teams).forEach(teamId => {
-                        const team = room.teams[teamId];
-                        if (team.wordPoints !== undefined) {
-                            team.score += team.wordPoints;
-                            delete team.wordPoints;
+                    if (!room.soloMode)
+                        Object.keys(room.teams).forEach(teamId => {
+                            const team = room.teams[teamId];
+                            if (team.wordPoints !== undefined) {
+                                team.score += team.wordPoints;
+                                delete team.wordPoints;
+                            }
+                        });
+                    else Object.keys(room.playerWordPoints).forEach(playerId => {
+                        if (room.playerWordPoints[playerId] != null) {
+                            room.playerScores[playerId] = room.playerScores[playerId] || 0;
+                            room.playerScores[playerId] += room.playerWordPoints[playerId];
+                            delete room.playerWordPoints[playerId];
                         }
                     });
                 },
@@ -171,6 +201,8 @@ function init(wsServer, path, moderKey) {
                     });
                     room.currentTeam = Object.keys(room.teams)[0];
                     room.currentPlayer = room.teams[room.currentTeam] && room.teams[room.currentTeam].currentPlayer;
+                    if (room.soloMode)
+                        setAssistant([...room.teams[room.currentTeam].players][1]);
                 },
                 restartGame = () => {
                     addWordPoints();
@@ -183,6 +215,10 @@ function init(wsServer, path, moderKey) {
                         const team = room.teams[teamId];
                         delete team.wordPoints;
                         team.score = 0;
+                    });
+                    Object.keys(room.playerScores).forEach(playerId => {
+                        delete room.playerScores[playerId];
+                        delete room.playerWordPoints[playerId];
                     });
                     resetOrder();
                 },
@@ -234,6 +270,10 @@ function init(wsServer, path, moderKey) {
                             }
                         })
                     });
+                },
+                setAssistant = playerId => {
+                    room.currentAssistant = playerId;
+                    room.readyPlayers.clear();
                 },
                 checkDrawData = (data) => data && data.dots
                     && data.dots.length > 0
@@ -298,14 +338,22 @@ function init(wsServer, path, moderKey) {
                     update();
                 },
                 "action": (user) => {
-                    if (room.phase === 0 && room.hostId === user && Object.keys(room.teams).length > 0) {
+                    if (room.phase === 0 && room.hostId === user && Object.keys(room.teams).length > 0
+                        && (!room.soloMode || room.teams[Object.keys(room.teams)[0]].players.size > 1)) {
                         room.phase = 1;
                         room.currentTeam = room.currentTeam || Object.keys(room.teams)[0];
                         const currentTeam = room.teams[room.currentTeam];
                         currentTeam.currentPlayer = currentTeam.currentPlayer || [...currentTeam.players][0];
                         room.currentPlayer = currentTeam.currentPlayer;
-                    } else if (room.phase === 1) {
-                        if (room.currentPlayer !== user || room.readyPlayers.size !== room.teams[room.currentTeam].players.size)
+                        if (room.soloMode)
+                            room.currentAssistant = room.currentAssistant || [...currentTeam.players][1];
+                    } else if (room.phase === 1
+                        && (!room.soloMode
+                            ? (room.teams[room.currentTeam].players.has(user))
+                            : (room.currentPlayer === user || room.currentAssistant === user))) {
+                        if (room.currentPlayer !== user || (!room.soloMode
+                            ? room.readyPlayers.size !== room.teams[room.currentTeam].players.size
+                            : room.readyPlayers.size !== 2))
                             if (room.readyPlayers.has(user))
                                 room.readyPlayers.delete(user);
                             else
@@ -430,6 +478,28 @@ function init(wsServer, path, moderKey) {
                 "set-turn": (user, playerId) => {
                     if (room.hostId === user && playerId)
                         setTurn(playerId);
+                    update();
+                },
+                "set-assistant": (user, playerId) => {
+                    if (room.hostId === user && playerId)
+                        setAssistant(playerId);
+                    update();
+                },
+                "toggle-solo-mode": (user, state) => {
+                    if (room.phase === 0 && room.hostId === user) {
+                        room.soloMode = state;
+                        if (room.soloMode) {
+                            const firstTeam = Object.keys(room.teams)[0];
+                            Object.keys(room.teams).forEach((teamId) => {
+                                if (firstTeam !== teamId && firstTeam) {
+                                    room.teams[teamId].players.forEach((playerId) =>
+                                        room.teams[firstTeam].players.add(playerId));
+                                    delete room.teams[teamId];
+                                }
+                            });
+                        } else room.currentAssistant = null;
+                        restartGame();
+                    }
                     update();
                 },
                 "toggle-draw-mode": (user, state) => {

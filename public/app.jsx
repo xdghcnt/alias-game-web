@@ -15,8 +15,8 @@ class Teams extends React.Component {
     render() {
         const
             data = this.props.data,
-            handleTeamClick = this.props.handleTeamClick;
-        if (data.phase === 0)
+            game = this.props.game;
+        if (data.phase === 0 && (!data.soloMode || Object.keys(data.teams).length === 0))
             data.teams["new"] = {
                 players: [],
                 score: 0
@@ -25,17 +25,17 @@ class Teams extends React.Component {
             <div
                 className={cs("team-list", {started: data.phase !== 0, "not-started": data.phase === 0})}>
                 {data.teams && Object.keys(data.teams).map((teamId, index) =>
-                    (<div onClick={() => handleTeamClick(teamId)} className={cs("team", {
+                    (<div onClick={() => game.handleTeamClick(teamId)} className={cs("team", {
                         join: !(teamId !== "new" || data.phase !== 0),
                         current: data.currentTeam === teamId,
                         "goal-reached": data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal,
                         winner: data.teams[teamId].winner
                     })} key={index}>
-                        <div className="score" onTouchStart={(e) => e.target.focus()}>
+                        {data.soloMode ? "" : (<div className="score" onTouchStart={(e) => e.target.focus()}>
                             {data.hostId === data.userId ?
                                 (<i className="material-icons host-button change-score"
                                     title="Change"
-                                    onClick={(evt) => this.props.handleSetScore(teamId, evt)}>
+                                    onClick={(evt) => this.handleSetScore(teamId, evt)}>
                                     edit
                                 </i>) : ""}
                             Score: {data.teams[teamId].score}
@@ -44,14 +44,11 @@ class Teams extends React.Component {
                                 positive: data.teams[teamId].wordPoints > 0,
                                 negative: data.teams[teamId].wordPoints < 0
                             })}>{Math.abs(data.teams[teamId].wordPoints)}</span>
-                        </div>
+                        </div>)}
                         <div className="players-container">
                             {
                                 data.teams[teamId].players && data.teams[teamId].players.map(
-                                    (player, index) => (<Player key={index} data={data} id={player}
-                                                                handleRemovePlayer={this.props.handleRemovePlayer}
-                                                                handleGiveHost={this.props.handleGiveHost}
-                                                                handleSetTurn={this.props.handleSetTurn}/>)
+                                    (player, index) => (<Player key={index} data={data} id={player} game={game}/>)
                                 )
                             }
                         </div>
@@ -64,18 +61,16 @@ class Teams extends React.Component {
 
 class Spectators extends React.Component {
     render() {
-        const data = this.props.data,
-            handleSpectatorsClick = this.props.handleSpectatorsClick;
+        const
+            data = this.props.data,
+            game = this.props.game;
         return (
             <div
-                onClick={handleSpectatorsClick}
+                onClick={() => game.handleSpectatorsClick()}
                 className={cs("spectators", data.phase !== 0 ? " started" : " not-started")}>
                 {
                     data.spectators && data.spectators.map(
-                        (player, index) => (<Player key={index} data={data} id={player} spectator={true}
-                                                    handleRemovePlayer={this.props.handleRemovePlayer}
-                                                    handleGiveHost={this.props.handleGiveHost}
-                                                    handleSetTurn={this.props.handleSetTurn}/>)
+                        (player, index) => (<Player key={index} data={data} id={player} spectator={true} game={game}/>)
                     )
                 }
             </div>
@@ -97,8 +92,7 @@ class Words extends React.Component {
     render() {
         const
             data = this.props.data,
-            game = this.props.game,
-            handleChange = this.props.handleChange;
+            game = this.props.game;
         return (
             <div className={cs("words", data.phase === 1 ? " counting" : "")}>
                 {data.currentWords && ((!(data.activeWord && data.phase === 2) ? data.currentWords : data.currentWords.concat([{
@@ -111,7 +105,7 @@ class Words extends React.Component {
                         <input
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"
-                            onChange={evt => !isNaN(evt.target.valueAsNumber) && handleChange(index, evt.target.valueAsNumber)}
+                            onChange={evt => !isNaN(evt.target.valueAsNumber) && game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
                         {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu" onTouchStart={(e) => e.target.focus()}>
@@ -158,6 +152,7 @@ class Player extends React.Component {
     render() {
         const
             data = this.props.data,
+            game = this.props.game,
             id = this.props.id,
             isHost = data.hostId === data.userId;
         return (
@@ -165,27 +160,41 @@ class Player extends React.Component {
                 ready: ~data.readyPlayers.indexOf(id),
                 offline: !~data.onlinePlayers.indexOf(id),
                 self: id === data.userId,
-                current: id === data.currentPlayer
+                current: id === data.currentPlayer,
+                assistant: id === data.currentAssistant
             })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
                 {data.playerNames[id]}
+                {data.soloMode && !this.props.spectator ? (
+                    <span className="player-score">&nbsp;({data.playerScores[id] || 0}<span
+                        className={cs("word-points", {
+                            active: data.playerWordPoints[id],
+                            positive: data.playerWordPoints[id] > 0,
+                            negative: data.playerWordPoints[id] < 0
+                        })}>{Math.abs(data.playerWordPoints[id])}</span>)</span>) : ""}
                 {(isHost || data.hostId === id) ? (
                     <div className="player-host-controls">
-                        {isHost && !this.props.spectator ?
+                        {isHost && !this.props.spectator && id !== data.currentPlayer && id !== data.currentAssistant ?
                             (<i className="material-icons host-button"
                                 title="Give turn"
-                                onClick={(evt) => this.props.handleSetTurn(id, evt)}>
+                                onClick={(evt) => game.handleSetTurn(id, evt)}>
                                 reply
+                            </i>) : ""}
+                        {isHost && !this.props.spectator && data.soloMode && id !== data.currentPlayer && id !== data.currentAssistant ?
+                            (<i className="material-icons host-button"
+                                title="Set assistant"
+                                onClick={(evt) => game.handleSetAssistant(id, evt)}>
+                                reply_all
                             </i>) : ""}
                         {isHost && data.userId !== id ?
                             (<i className="material-icons host-button"
                                 title="Give host"
-                                onClick={(evt) => this.props.handleGiveHost(id, evt)}>
+                                onClick={(evt) => game.handleGiveHost(id, evt)}>
                                 vpn_key
                             </i>) : ""}
                         {isHost && data.userId !== id ?
                             (<i className="material-icons host-button"
                                 title="Remove"
-                                onClick={(evt) => this.props.handleRemovePlayer(id, evt)}>
+                                onClick={(evt) => game.handleRemovePlayer(id, evt)}>
                                 delete_forever
                             </i>) : ""}
                         {(data.hostId === id) ? (
@@ -548,6 +557,11 @@ class Game extends React.Component {
         this.socket.emit("set-turn", id);
     }
 
+    handleSetAssistant(id, evt) {
+        evt.stopPropagation();
+        this.socket.emit("set-assistant", id);
+    }
+
     handleSetScore(id, evt) {
         evt.stopPropagation();
         popup.prompt({
@@ -580,6 +594,10 @@ class Game extends React.Component {
         this.socket.emit("toggle-draw-mode", state);
     }
 
+    handleClickToggleSoloMode(state) {
+        this.socket.emit("toggle-solo-mode", state);
+    }
+
     render() {
         clearTimeout(this.timeOut);
         if (this.state.disconnected)
@@ -591,7 +609,9 @@ class Game extends React.Component {
                 data = this.state,
                 isHost = data.hostId === data.userId,
                 isTurn = data.currentPlayer === data.userId,
-                isTeamTurn = data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId),
+                isTeamTurn = !data.soloMode
+                    ? data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId)
+                    : data.currentPlayer === data.userId || data.currentAssistant === data.userId,
                 currentTeam = data.teams[data.currentTeam],
                 settingsMode = isHost && this.state.phase === 0,
                 parentDir = location.pathname.match(/(.+?)\//)[1];
@@ -600,7 +620,8 @@ class Game extends React.Component {
                 gameIsOver,
                 hasPlayers = data.phase !== 0;
             if (data.phase === 0) {
-                hasPlayers = Object.keys(data.teams).length > 0 || Object.keys(data.teams).filter(teamId => data.teams[teamId].players.length > 1).length > 1;
+                const firstTeam = data.teams[Object.keys(data.teams)[0]];
+                hasPlayers = firstTeam && (!data.soloMode ? firstTeam.players.length > 0 : firstTeam.players.length > 1);
                 if (hasPlayers) {
                     if (isHost) {
                         statusText = "You can start the game";
@@ -632,7 +653,7 @@ class Game extends React.Component {
                 }
                 //showWordsBet = true;
                 if (!gameIsOver) {
-                    if (isTurn && data.readyPlayers.length === currentTeam.players.length) {
+                    if (isTurn && (!data.soloMode ? data.readyPlayers.length === currentTeam.players.length : data.readyPlayers.length === 2)) {
                         actionText = "Start!";
                         statusText = "Prepare to explain things";
                     } else if (isTeamTurn) {
@@ -672,7 +693,11 @@ class Game extends React.Component {
             showWordsBet = false;
             return (
                 <div className="game">
-                    <div className={cs("game-board", {active: this.state.inited, "game-over": gameIsOver})}>
+                    <div className={cs("game-board", {
+                        active: this.state.inited,
+                        "game-over": gameIsOver,
+                        "solo-mode": this.state.soloMode
+                    })}>
                         <div
                             title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
                             className={cs("dict-progress", {active: this.state.dictMode})}
@@ -683,22 +708,14 @@ class Game extends React.Component {
                         {data.drawMode ? (<div id="draw-pane">
                             <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
                                onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
-                        Teams:
-                        <Teams data={this.state} handleTeamClick={id => this.handleTeamClick(id)}
-                               handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
-                               handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
-                               handleSetScore={(id, evt) => this.handleSetScore(id, evt)}
-                               handleSetTurn={(id, evt) => this.handleSetTurn(id, evt)}/>
+                        {data.soloMode ? "Players" : "Teams"}:
+                        <Teams data={this.state} game={this}/>
                         <br/>
                         <div className={cs(
                             "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
                             Spectators:
                             <br/>
-                            <Spectators data={this.state}
-                                        handleSpectatorsClick={() => this.handleSpectatorsClick()}
-                                        handleRemovePlayer={(id, evt) => this.handleRemovePlayer(id, evt)}
-                                        handleGiveHost={(id, evt) => this.handleGiveHost(id, evt)}
-                                        handleSetTurn={(id, evt) => this.handleSetTurn(id, evt)}/>
+                            <Spectators data={this.state} game={this}/>
                         </div>
                         <div className="control-pane">
                             <Timer data={this.state}/>
@@ -733,12 +750,15 @@ class Game extends React.Component {
                                         <div className="game-settings">
                                             <div className="set-goal"><i title="goal"
                                                                          className="material-icons">flag</i>
-                                                {(settingsMode) ? (<input id="goal"
-                                                                          type="number"
-                                                                          defaultValue="20" min="0"
-                                                                          onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                              && this.handleChangeGoal(evt.target.valueAsNumber)}
-                                                />) : (<span className="value">{this.state.goal}</span>)}
+                                                {(settingsMode && !this.state.soloMode) ? (<input id="goal"
+                                                                                                  type="number"
+                                                                                                  defaultValue="20"
+                                                                                                  min="0"
+                                                                                                  disabled={this.state.soloMode}
+                                                                                                  onChange={evt => !isNaN(evt.target.valueAsNumber)
+                                                                                                      && this.handleChangeGoal(evt.target.valueAsNumber)}
+                                                />) : (<span
+                                                    className="value">{this.state.soloMode ? "∞" : this.state.goal}</span>)}
                                             </div>
                                             <div className="set-round-time"><i title="time"
                                                                                className="material-icons">timer</i>
@@ -749,6 +769,18 @@ class Game extends React.Component {
                                                                               && this.handleChangeRoundTime(evt.target.valueAsNumber)}
                                                 />) : (<span className="value">{this.state.roundTime}</span>)}
                                             </div>
+                                        </div>
+                                        <div className={cs("team-mode", {
+                                            "settings-button": settingsMode,
+                                            "level-selected": !this.state.soloMode
+                                        })}
+                                             onClick={() => this.handleClickToggleSoloMode(false)}>team
+                                        </div>
+                                        <div className={cs("team-mode", {
+                                            "settings-button": settingsMode,
+                                            "level-selected": this.state.soloMode
+                                        })}
+                                             onClick={() => this.handleClickToggleSoloMode(true)}>solo
                                         </div>
                                         {(settingsMode) ? (
                                             <div className="shuffle-players settings-button"

@@ -144,6 +144,14 @@ body.dark-theme {
     line-height: 0;
 }
 
+.player.assistant:after {
+    content: "➜";
+    line-height: 0;
+    display: inline-block;
+    transform: scaleX(-1);
+    margin-left: 4px;
+}
+
 .player.offline {
     color: #adadad;
 }
@@ -709,6 +717,7 @@ body.dark-theme {
 .word-report-item-name {
     width: 180px;
     padding-left: 10px;
+    word-break: break-word;
 }
 
 .word-report-item-word {
@@ -920,4 +929,14 @@ input:checked + .word-report-approve.yes {
 
 .draw-mode-buttons {
     display: none;
+}
+
+.team-mode {
+    margin: 3px;
+    padding: 0 2px;
+}
+
+.solo-mode .team {
+    height: auto;
+    min-height: 130px;
 }
