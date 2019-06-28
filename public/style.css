@@ -939,6 +939,10 @@ input:checked + .word-report-approve.yes {
     min-height: 130px;
 }
 
+.solo-mode .team.join {
+    height: 130px;
+}
+
 .player-score {
     font-weight: normal;
 }
