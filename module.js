@@ -108,7 +108,7 @@ function init(wsServer, path, moderKey) {
                     }
                 },
                 rotateTeams = () => {
-                    if (room.currentTeam && room.soloMode) {
+                    if (room.currentTeam && !room.soloMode) {
                         const
                             teamKeys = Object.keys(room.teams),
                             indexOfCurrentTeam = teamKeys.indexOf(room.currentTeam);
