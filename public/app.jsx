@@ -170,7 +170,12 @@ class Player extends React.Component {
                             active: data.playerWordPoints[id],
                             positive: data.playerWordPoints[id] > 0,
                             negative: data.playerWordPoints[id] < 0
-                        })}>{Math.abs(data.playerWordPoints[id])}</span>)</span>) : ""}
+                        })}>{Math.abs(data.playerWordPoints[id])}</span>{data.hostId === data.userId ?
+                        (<i className="material-icons host-button change-player-score"
+                            title="Change"
+                            onClick={(evt) => game.handleSetPlayerScore(id, evt)}>
+                            edit
+                        </i>) : ""})</span>) : ""}
                 {(isHost || data.hostId === id) ? (
                     <div className="player-host-controls">
                         {isHost && !this.props.spectator && id !== data.currentPlayer && id !== data.currentAssistant ?
@@ -573,6 +578,17 @@ class Game extends React.Component {
         }));
     }
 
+    handleSetPlayerScore(id, evt) {
+        evt.stopPropagation();
+        popup.prompt({
+            content: "Score",
+            value: this.state.playerScores[id] && this.state.playerScores[id].score || "0"
+        }, (evt) => evt.proceed && this.socket.emit("set-player-score", {
+            playerId: id,
+            score: evt.input_value
+        }));
+    }
+
     handleChangeGoal(value) {
         this.debouncedEmit("set-goal", value);
     }
@@ -631,6 +647,12 @@ class Game extends React.Component {
                 } else
                     statusText = "Waiting for players";
             } else if (data.phase === 1) {
+                if (data.soloModeOver) {
+                    gameIsOver = true;
+                    const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
+                        (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
+                    statusText = `Player ${data.playerNames[playerWin]} wins!`;
+                }
                 if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
                     let mostPoints = 0,
                         mostPointsTeam,

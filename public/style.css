@@ -507,13 +507,11 @@ body.dark-theme {
     display: none;
 }
 
-.change-score {
-    margin-top: -2px;
-    margin-left: 3px;
+.change-player-score {
     display: none;
 }
 
-.score:hover .change-score, .score:focus .change-score {
+.score:hover .change-score, .score:focus .change-score, .player-score:hover .change-player-score, .player-score:focus .change-player-score  {
     display: inline-block;
 }
 
@@ -939,4 +937,8 @@ input:checked + .word-report-approve.yes {
 .solo-mode .team {
     height: auto;
     min-height: 130px;
+}
+
+.player-score {
+    font-weight: normal;
 }

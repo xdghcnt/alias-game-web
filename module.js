@@ -56,7 +56,8 @@ function init(wsServer, path, moderKey) {
                 level: 2,
                 drawMode: false,
                 drawCommitOnly: false,
-                soloMode: false
+                soloMode: false,
+                soloModeOver: false
             };
             this.room = room;
             this.state = {
@@ -88,12 +89,18 @@ function init(wsServer, path, moderKey) {
                         if (!room.soloMode || room.currentAssistant === room.currentPlayer) {
                             if (indexOfCurrentPlayer === currentTeam.players.size - 1) {
                                 currentTeam.currentPlayer = currentPlayerKeys[0];
-                                if (room.soloMode)
+                                if (room.soloMode) {
+                                    room.soloModeOver = true;
                                     room.currentAssistant = currentPlayerKeys[1];
+                                }
                             } else {
                                 currentTeam.currentPlayer = currentPlayerKeys[indexOfCurrentPlayer + 1];
-                                if (room.soloMode)
-                                    room.currentAssistant = currentPlayerKeys[indexOfCurrentPlayer + 2];
+                                if (room.soloMode) {
+                                    if (indexOfCurrentPlayer + 1 === currentTeam.players.size - 1)
+                                        room.currentAssistant = currentPlayerKeys[0];
+                                    else
+                                        room.currentAssistant = currentPlayerKeys[indexOfCurrentPlayer + 2];
+                                }
                             }
                             if (room.currentPlayer === currentPlayer)
                                 room.currentPlayer = currentTeam.currentPlayer;
@@ -139,8 +146,10 @@ function init(wsServer, path, moderKey) {
                                 room.teams[teamId].wordPoints = wordPoints < 0 ? 0 : wordPoints;
                         });
                     else {
-                        room.playerWordPoints[room.currentPlayer] = wordPoints < 0 ? 0 : wordPoints;
-                        room.playerWordPoints[room.currentAssistant] = wordPoints < 0 ? 0 : wordPoints;
+                        Object.keys(room.playerWordPoints).forEach(playerId => {
+                            if (room.playerWordPoints[playerId] !== undefined)
+                                room.playerWordPoints[playerId] = wordPoints < 0 ? 0 : wordPoints;
+                        });
                     }
                 },
                 addWordPoints = () => {
@@ -201,7 +210,7 @@ function init(wsServer, path, moderKey) {
                     });
                     room.currentTeam = Object.keys(room.teams)[0];
                     room.currentPlayer = room.teams[room.currentTeam] && room.teams[room.currentTeam].currentPlayer;
-                    if (room.soloMode)
+                    if (room.soloMode && room.teams[room.currentTeam])
                         setAssistant([...room.teams[room.currentTeam].players][1]);
                 },
                 restartGame = () => {
@@ -211,6 +220,7 @@ function init(wsServer, path, moderKey) {
                     room.readyPlayers.clear();
                     //room.wordIndex = 0;
                     room.wordsEnded = false;
+                    room.soloModeOver = false;
                     Object.keys(room.teams).forEach(teamId => {
                         const team = room.teams[teamId];
                         delete team.wordPoints;
@@ -366,13 +376,18 @@ function init(wsServer, path, moderKey) {
                             room.readyPlayers.clear();
                             addWordPoints();
                             room.currentWords = [];
+                            if (!room.soloMode)
+                                room.teams[room.currentTeam].wordPoints = 0;
+                            else {
+                                room.playerWordPoints[room.currentPlayer] = 0;
+                                room.playerWordPoints[room.currentAssistant] = 0;
+                            }
                             startTimer();
                         }
                     }
                     if (room.phase === 2 && room.currentPlayer === user) {
                         if (room.currentWords.length > 99)
                             endRound();
-                        room.teams[room.currentTeam].wordPoints = 0;
                         if (room.currentBet > room.currentWords.length + 1) {
                             if (room.wordIndex < this.state.roomWordsList.length) {
                                 const randomWord = this.state.roomWordsList[room.wordIndex++];
@@ -401,6 +416,12 @@ function init(wsServer, path, moderKey) {
                         const team = room.teams[data.teamId];
                         if (team && !isNaN(parseInt(data.score)))
                             team.score = parseInt(data.score);
+                        update();
+                    }
+                },
+                "set-player-score": (user, data) => {
+                    if (room.hostId === user && room.playerNames[data.playerId] && !isNaN(parseInt(data.score))) {
+                        room.playerScores[data.playerId] = data.score;
                         update();
                     }
                 },
