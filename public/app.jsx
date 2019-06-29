@@ -254,7 +254,7 @@ class Game extends React.Component {
                 wordCustomCount: this.state.wordCustomCount,
                 wordAddLevel: this.state.wordAddLevel,
                 wordReportSent: this.state.wordReportSent,
-                wordPacks: {}
+                wordPacks: this.state.wordPacks || {}
             }, state), () => {
                 if (initDrawMode) this.initDrawMode();
             });
