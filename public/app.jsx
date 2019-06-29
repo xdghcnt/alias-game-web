@@ -251,8 +251,10 @@ class Game extends React.Component {
                 wordReportNotify: this.state.wordReportNotify,
                 notificationPinned: this.state.notificationPinned,
                 wordAddCount: this.state.wordAddCount,
+                wordCustomCount: this.state.wordCustomCount,
                 wordAddLevel: this.state.wordAddLevel,
-                wordReportSent: this.state.wordReportSent
+                wordReportSent: this.state.wordReportSent,
+                wordPacks: {}
             }, state), () => {
                 if (initDrawMode) this.initDrawMode();
             });
@@ -340,6 +342,21 @@ class Game extends React.Component {
                 setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 100);
             }
         });
+        this.socket.on("words-pack", (data) => {
+            if (data.index != null) {
+                const wordReport = this.state.wordReportData.words[data.index];
+                wordReport.wordList = data.wordList;
+                wordReport.loading = false;
+            } else
+                this.state.wordPacks[data.packName] = data;
+            this.setState(Object.assign({}, this.state));
+        });
+        this.socket.on("words-pack-list", (list) => {
+            list.forEach((packName) => {
+                this.state.wordPacks[packName] = this.state.wordPacks[packName] || null;
+            });
+            this.setState(Object.assign({}, this.state));
+        });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
         this.timerSound = new Audio("/alias/beep.mp3");
@@ -360,7 +377,7 @@ class Game extends React.Component {
     showReportNotify() {
         let
             newWordsCount = 0, newWordsCountDenied = 0,
-            approvedList = this.reportListToShow.filter((it) => it.approved && !it.newWord && it.level !== 0);
+            approvedList = this.reportListToShow.filter((it) => it.approved && !it.newWord && !it.custom && it.level !== 0);
         this.reportListToShow.forEach((it) => {
             if (it.newWord)
                 if (it.approved)
@@ -371,10 +388,12 @@ class Game extends React.Component {
         this.setState(Object.assign({}, this.state, {
             wordReportNotify: {
                 approved: approvedList,
-                denied: this.reportListToShow.filter((it) => !it.approved && !it.newWord),
+                denied: this.reportListToShow.filter((it) => !it.approved && !it.newWord && !it.custom),
                 added: newWordsCount,
                 addDenied: newWordsCountDenied,
-                deleted: this.reportListToShow.filter((it) => it.approved && it.level === 0)
+                deleted: this.reportListToShow.filter((it) => it.approved && it.level === 0),
+                packsAdded: this.reportListToShow.filter((it) => it.custom && it.approved).length,
+                packsDenied: this.reportListToShow.filter((it) => it.custom && !it.approved).length
             }
         }));
         document.getElementById("snackbar").classList.add("show");
@@ -462,6 +481,18 @@ class Game extends React.Component {
         }));
     }
 
+    handleClickShowPack(index) {
+        const wordReport = this.state.wordReportData.words[index];
+        if (!wordReport.wordList) {
+            wordReport.loading = true;
+            this.socket.emit("view-words-pack",
+                wordReport.processed ? wordReport.packName : wordReport.datetime,
+                index,
+                !wordReport.processed);
+        } else wordReport.wordList = null;
+        this.setState(Object.assign({}, this.state));
+    }
+
     handleClickCloseWordAdd() {
         this.setState(Object.assign({}, this.state, {
             wordAddCount: null,
@@ -470,9 +501,12 @@ class Game extends React.Component {
     }
 
     handleClickSubmitNewWords() {
-        const words = document.getElementById("word-add-area").value;
-        if (this.state.wordAddCount > 0 && this.state.wordAddCount <= 50 && words.length < 2500) {
-            this.socket.emit("add-words", words, this.state.wordAddLevel);
+        const
+            words = document.getElementById("word-add-area").value,
+            wordsPackName = document.getElementById("word-add-pack-name").value;
+        if (this.state.wordAddCount > 0
+            && (this.state.wordAddCount <= (this.state.wordAddLevel === "custom" ? this.state.customWordsLimit : 50))) {
+            this.socket.emit("add-words", words, this.state.wordAddLevel, wordsPackName);
             this.handleClickCloseWordAdd();
         }
     }
@@ -494,8 +528,9 @@ class Game extends React.Component {
             wordAddCount: 0,
             wordAddLevel: 2
         }), () => {
+            document.getElementById("word-add-pack-name").value = "";
             document.getElementById("word-add-area").value = "";
-            document.getElementById("word-add-area").focus()
+            document.getElementById("word-add-area").focus();
         });
     }
 
@@ -612,6 +647,52 @@ class Game extends React.Component {
 
     handleClickToggleSoloMode(state) {
         this.socket.emit("toggle-solo-mode", state);
+    }
+
+    handleClickCloseCustom() {
+        this.setState(Object.assign({}, this.state, {
+            customModalActive: false,
+            customPackSelected: null
+        }));
+    }
+
+    handleClickOpenCustom() {
+        this.socket.emit("words-pack-list");
+        this.setState(Object.assign({}, this.state, {
+            customModalActive: true,
+            wordCustomCount: 0
+        }), () => {
+            if (!name && document.getElementById("custom-word-area"))
+                document.getElementById("custom-word-area").focus();
+        });
+    }
+
+    handleSelectCustom(name) {
+        if (name && !this.state.wordPacks[name])
+            this.socket.emit("view-words-pack", name);
+        this.setState(Object.assign({}, this.state, {
+            customPackSelected: name
+        }), () => {
+            if (!name && document.getElementById("custom-word-area"))
+                document.getElementById("custom-word-area").focus();
+        });
+    }
+
+    handleCustomWordsChange(value) {
+        this.setState(Object.assign({}, this.state, {
+            wordCustomCount: (value && value.split("\n").length) || 0
+        }));
+    }
+
+    handleClickSetCustomWords() {
+        if (this.state.customPackSelected
+            || (this.state.wordCustomCount > 0 && this.state.wordCustomCount <= this.state.customWordsLimit)) {
+            if (this.state.customPackSelected)
+                this.socket.emit("setup-words", this.state.customPackSelected, this.state.wordPacks[this.state.customPackSelected].wordList);
+            else
+                this.socket.emit("setup-words", document.getElementById("custom-words-pack-name").value, document.getElementById("custom-word-area").value.split("\n"));
+            this.handleClickCloseCustom();
+        }
     }
 
     render() {
@@ -864,12 +945,14 @@ class Game extends React.Component {
                                     </div>
                                     <div
                                         className={cs("custom-game-button", {
-                                            "settings-button": settingsMode,
-                                            "level-selected": this.state.level === 0
+                                            "settings-button": true,
+                                            "level-selected": this.state.level === 0,
+                                            "has-pack-name": this.state.packName
                                         })}
-                                        onClick={() => (settingsMode) && this.handleClickCustom()}>
+                                        onClick={() => this.handleClickOpenCustom()}>
                                         <i
-                                            className="material-icons">accessible</i>Custom
+                                            className="material-icons">accessible</i>Custom{this.state.packName
+                                        ? `: ${this.state.packName}` : ""}
                                     </div>
                                 </div>
                             </div>
@@ -921,13 +1004,29 @@ class Game extends React.Component {
                                                     <div
                                                         className="word-report-item-name">{it.playerName}</div>
                                                     <div
-                                                        className="word-report-item-word">{!it.newWord ? it.word : (
-                                                        <div className="word-report-item-word-list">
-                                                            {it.wordList.map((word) => (<div>{word}</div>))}
-                                                        </div>)}</div>
+                                                        className="word-report-item-word">{!it.custom
+                                                        ? (!it.newWord
+                                                            ? it.word
+                                                            : (<div className="word-report-item-word-list">
+                                                                {it.wordList.map((word) => (<div>{word}</div>))}
+                                                            </div>))
+                                                        : (
+                                                            <span>{it.packName}&nbsp;
+                                                                {!(it.processed && !it.approved)
+                                                                    ? (<span
+                                                                        onClick={() => !it.loading && this.handleClickShowPack(index)}
+                                                                        className={cs({"custom-view-link": !it.loading})}>
+                                                                        ({it.loading ? "Loading" : (it.wordList ? "Hide" : "Show")})</span>)
+                                                                    : ""}
+                                                                {it.wordList
+                                                                    ? (<div className="word-report-item-word-list">
+                                                                        {it.wordList.map((word) => (<div>{word}</div>))}
+                                                                    </div>)
+                                                                    : ""}</span>)}</div>
                                                     <div
                                                         className="word-report-item-transfer">
-                                                        {!it.newWord ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]}
+                                                        {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
+                                                        !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
                                                     </div>
                                                     <div
                                                         className="word-report-item-status">
@@ -970,6 +1069,13 @@ class Game extends React.Component {
                                          onClick={() => this.handleClickCloseWordAdd()}>✕
                                     </div>
                                 </div>
+                                <input
+                                    style={{display: data.wordAddLevel === "custom" ? "block" : "none"}}
+                                    className="word-add-pack-name"
+                                    maxLength="40"
+                                    id="word-add-pack-name"
+                                    placeholder="Pack name"
+                                />
                                 <textarea
                                     id="word-add-area"
                                     onChange={((event) => this.handleWordAddChange(event.target.value))}
@@ -989,14 +1095,87 @@ class Game extends React.Component {
                                         <span
                                             onClick={() => this.handleWordAddLevel(4)}
                                             className={cs("settings-button", {"level-selected": data.wordAddLevel === 4})}>Insane</span>
+                                        <span
+                                            onClick={() => this.handleWordAddLevel("custom")}
+                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === "custom"})}>Custom</span>
                                     </div>
                                     <div
-                                        className={cs("word-add-count", {overflow: data.wordAddCount > 50})}>{data.wordAddCount}/50
+                                        className={cs("word-add-count", {
+                                            overflow: data.wordAddCount > (data.wordAddLevel === "custom" ? data.customWordsLimit : 50)
+                                        })}>{data.wordAddCount}/{data.wordAddLevel === "custom" ? data.customWordsLimit : 50}
                                     </div>
                                     <div
-                                        className={cs("word-report-save-button", {inactive: !(data.wordAddCount > 0 && data.wordAddCount <= 50)})}
+                                        className={cs("word-report-save-button", {
+                                            inactive:
+                                                !(data.wordAddCount > 0 && data.wordAddCount <= (data.wordAddLevel === "custom" ? data.customWordsLimit : 50))
+                                        })}
                                         onClick={() => this.handleClickSubmitNewWords()}>Submit
                                     </div>
+                                </div>
+                            </div>
+                        </div>) : ""}
+                        {data.customModalActive ? (<div className="word-report-modal custom">
+                            <div className="word-report-modal-content custom">
+                                <div className="word-report-title">Custom word packs
+                                    {data.wordPacks[data.customPackSelected] ? (
+                                        <div className="word-report-modal-stats">
+                                            Words<span
+                                            className="word-report-stat-num">{data.wordPacks[data.customPackSelected].wordList.length}</span>
+                                            Author<span
+                                            className="word-report-stat-num">{data.wordPacks[data.customPackSelected].author}</span>
+                                        </div>) : ""}
+                                    {settingsMode && !data.wordPacks[data.customPackSelected] ? (
+                                        <input
+                                            className="custom-words-pack-name"
+                                            maxLength="40"
+                                            id="custom-words-pack-name"
+                                            placeholder="Pack name"
+                                        />) : ""}
+                                    <div className="word-report-modal-close"
+                                         onClick={() => this.handleClickCloseCustom()}>✕
+                                    </div>
+                                </div>
+                                <div className="custom-packs">
+                                    <div className="custom-pack-list">
+                                        {settingsMode ? (
+                                            <div
+                                                onClick={() => this.handleSelectCustom()}
+                                                className={cs("custom-pack-list-item", {selected: data.customPackSelected == null})}>
+                                                &lt;Custom&gt;</div>) : ""}
+                                        {Object.keys(data.wordPacks).map((name) => (
+                                            <div onClick={() => this.handleSelectCustom(name)}
+                                                 className={cs("custom-pack-list-item", {selected: data.customPackSelected === name})}>
+                                                {name}</div>))}
+                                    </div>
+                                    <div className="custom-pack-pane">
+                                        {(settingsMode && data.customPackSelected == null)
+                                            ? (<textarea
+                                                id="custom-word-area"
+                                                onChange={((event) => this.handleCustomWordsChange(event.target.value))}
+                                                className="custom-word-textarea"/>)
+                                            : data.customPackSelected != null
+                                                ? (<div className="custom-pack-word-list">
+                                                    {data.wordPacks[data.customPackSelected] != null
+                                                        ? data.wordPacks[data.customPackSelected].wordList.map((word) => (
+                                                            <div className="custom-pack-word-list-item">{word}</div>))
+                                                        : "Loading"}
+                                                </div>) : ""}
+                                    </div>
+                                </div>
+                                <div className="word-report-manage-buttons">
+                                    {settingsMode && data.customPackSelected == null ? (<div
+                                        className={cs("word-add-count", {
+                                            overflow: data.wordCustomCount > data.customWordsLimit
+                                        })}>{data.wordCustomCount}/{data.customWordsLimit}
+                                    </div>) : ""}
+                                    {settingsMode ? <div
+                                        className={cs("word-report-save-button", {
+                                            inactive: !(data.customPackSelected != null
+                                                || (data.wordCustomCount > 0
+                                                    && data.wordCustomCount <= data.customWordsLimit))
+                                        })}
+                                        onClick={() => this.handleClickSetCustomWords()}>Select
+                                    </div> : ""}
                                 </div>
                             </div>
                         </div>) : ""}
@@ -1034,6 +1213,25 @@ class Game extends React.Component {
                                     || data.wordReportNotify.denied.length
                                     || data.wordReportNotify.addDenied ? "Also " : ""}
                                     {data.wordReportNotify.deleted.length} word{data.wordReportNotify.deleted.length > 1 ? "s" : ""} deleted
+                                </div>) : ""}
+                                {data.wordReportNotify.packsAdded ? (<div>
+                                    {data.wordReportNotify.added
+                                    || data.wordReportNotify.approved.length
+                                    || data.wordReportNotify.denied.length
+                                    || data.wordReportNotify.addDenied
+                                    || data.wordReportNotify.deleted.length ? "Also " : ""}
+                                    {data.wordReportNotify.packsAdded} custom words
+                                    pack{data.wordReportNotify.packsAdded > 1 ? "s" : ""} added
+                                </div>) : ""}
+                                {data.wordReportNotify.packsDenied ? (<div>
+                                    {data.wordReportNotify.added
+                                    || data.wordReportNotify.approved.length
+                                    || data.wordReportNotify.denied.length
+                                    || data.wordReportNotify.addDenied
+                                    || data.wordReportNotify.deleted.length
+                                    || data.wordReportNotify.packsAdded ? "Also " : ""}
+                                    {data.wordReportNotify.packsDenied} custom words
+                                    pack{data.wordReportNotify.packsDenied > 1 ? "s" : ""} denied
                                 </div>) : ""}
                             </div>) : ""}
                         </div>

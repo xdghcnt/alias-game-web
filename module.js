@@ -1,7 +1,6 @@
 function init(wsServer, path, moderKey) {
     const
         fs = require('fs'),
-        http = require("http"),
         express = require('express'),
         app = wsServer.app,
         registry = wsServer.users,
@@ -11,21 +10,27 @@ function init(wsServer, path, moderKey) {
             [1, 3], [1, 4], [1, 0], [2, 4]
         ];
 
+    const appDir = registry.config.appDir || __dirname;
     let defaultWords, reportedWordsData = [], reportedWords = [];
 
     fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
         defaultWords = JSON.parse(words);
-        fs.readFile(`${registry.config.appDir || __dirname}/moderated-words.json`, "utf8", function (err, words) {
+        fs.readFile(`${appDir}/moderated-words.json`, "utf8", function (err, words) {
             if (words)
                 defaultWords = JSON.parse(words);
         });
     });
 
-    fs.readFile(`${registry.config.appDir || __dirname}/reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
+    fs.readFile(`${appDir}/reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
         if (data) {
             data.split("\n").forEach((row) => row && reportedWordsData.push(JSON.parse(row)));
             reportedWordsData.forEach((it) => !it.processed && reportedWords.push(it.word));
         }
+    });
+
+    fs.mkdir(`${appDir}/custom`, () => {
+    });
+    fs.mkdir(`${appDir}/custom/new`, () => {
     });
 
     app.get(path, function (req, res) {
@@ -57,7 +62,9 @@ function init(wsServer, path, moderKey) {
                 drawMode: false,
                 drawCommitOnly: false,
                 soloMode: false,
-                soloModeOver: false
+                soloModeOver: false,
+                packName: null,
+                customWordsLimit: 1500
             };
             this.room = room;
             this.state = {
@@ -235,6 +242,7 @@ function init(wsServer, path, moderKey) {
                 selectWordSet = (wordSet, user) => {
                     if (!isNaN(parseFloat(wordSet))) {
                         room.currentWords = [];
+                        room.packName = null;
                         const difficulty = parseFloat(wordSet);
                         if (!~[1, 2, 3, 4].indexOf(difficulty) > 0) {
                             if (user)
@@ -548,35 +556,45 @@ function init(wsServer, path, moderKey) {
                         send(room.onlinePlayers, "draw-clear");
                     }
                 },
-                "setup-words": (user, wordsURL) => {
-                    if (room.hostId === user && wordsURL && wordsURL.substr(0, 4) === "http")
-                        try {
-                            http.get(wordsURL.replace("https", "http"),
-                                res => {
-                                    let str = "";
-                                    res.on("data", (chunk) => {
-                                        str += chunk;
-                                    });
+                "view-words-pack": (user, packName, index, isNew) => {
+                    if (!(packName.indexOf && ~packName.indexOf("..."))) {
+                        fs.readFile(`${appDir}/custom/${(isNew ? "new/" : "")}${packName}.json`, "utf8", function (err, str) {
+                            if (str) {
+                                const data = JSON.parse(str);
+                                send(user, "words-pack", {
+                                    wordList: data.wordList,
+                                    author: data.author,
+                                    packName,
+                                    index
+                                });
+                            }
+                            if (err)
+                                send(user, "message", JSON.stringify(err));
+                        });
 
-                                    res.on("end", () => {
-                                        const newWords = str.toString().split("\r\n");
-                                        if (newWords.length > 0) {
-                                            this.state.roomWordsList = shuffleArray(newWords);
-                                            room.wordIndex = 0;
-                                            room.wordsEnded = false;
-                                            room.level = 0;
-                                            update();
-                                        } else
-                                            send(user, "message", `You did something wrong`);
-                                    });
-                                },
-                                err => {
-                                    send(user, "message", `You did something wrong: ${err.message}`);
-                                }
-                            );
-                        } catch (err) {
-                            send(user, "message", `You did something wrong: ${err}`);
+                    }
+                },
+                "words-pack-list": (user) => {
+                    fs.readdir(`${appDir}/custom`, "utf8", function (err, files) {
+                        if (files)
+                            send(user, "words-pack-list", files
+                                .filter((name) => name.endsWith(".json"))
+                                .map((name) => name.replace(".json", "")));
+                        if (err)
+                            send(user, "message", err);
+                    });
+                },
+                "setup-words": (user, packName, words) => {
+                    if (room.hostId === user && words.length <= room.customWordsLimit) {
+                        if (words) {
+                            this.state.roomWordsList = shuffleArray(words);
+                            room.wordIndex = 0;
+                            room.wordsEnded = false;
+                            room.level = 0;
+                            room.packName = packName;
+                            update();
                         }
+                    }
                 },
                 "report-word": (user, word, currentLevel, level) => {
                     if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)) {
@@ -596,7 +614,7 @@ function init(wsServer, path, moderKey) {
                             reportInfo.processed = true;
                             reportInfo.approved = false;
                         } else reportedWords.push(word);
-                        fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                        fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                         });
                         update();
                     }
@@ -617,20 +635,32 @@ function init(wsServer, path, moderKey) {
                                     const reportedWordIndex = reportedWords.indexOf(moderData.word);
                                     if (reportedWordIndex !== -1)
                                         reportedWords.splice(reportedWordIndex, 1);
-                                    if (reportData.approved) {
-                                        if (!reportData.newWord) {
-                                            const wordIndexToRemove = defaultWords[reportData.currentLevel].indexOf(reportData.word);
-                                            if (wordIndexToRemove !== -1) {
-                                                defaultWords[reportData.currentLevel].splice(wordIndexToRemove, 1);
-                                                if (reportData.level !== 0)
-                                                    defaultWords[reportData.level].push(reportData.word);
+                                    if (reportData.custom) {
+                                        if (reportData.approved)
+                                            fs.rename(
+                                                `${appDir}/custom/new/${reportData.datetime}.json`,
+                                                `${appDir}/custom/${reportData.packName}.json`, () => {
+                                                }
+                                            );
+                                        else
+                                            fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
+                                            });
+                                    } else {
+                                        if (reportData.approved) {
+                                            if (!reportData.newWord) {
+                                                const wordIndexToRemove = defaultWords[reportData.currentLevel].indexOf(reportData.word);
+                                                if (wordIndexToRemove !== -1) {
+                                                    defaultWords[reportData.currentLevel].splice(wordIndexToRemove, 1);
+                                                    if (reportData.level !== 0)
+                                                        defaultWords[reportData.level].push(reportData.word);
+                                                }
+                                            } else {
+                                                reportData.wordList.filter((word) =>
+                                                    !~defaultWords[1].indexOf(word)
+                                                    && !~defaultWords[2].indexOf(word)
+                                                    && !~defaultWords[3].indexOf(word)
+                                                    && !~defaultWords[4].indexOf(word)).forEach((word) => defaultWords[reportData.level].push(word));
                                             }
-                                        } else {
-                                            reportData.wordList.filter((word) =>
-                                                !~defaultWords[1].indexOf(word)
-                                                && !~defaultWords[2].indexOf(word)
-                                                && !~defaultWords[3].indexOf(word)
-                                                && !~defaultWords[4].indexOf(word)).forEach((word) => defaultWords[reportData.level].push(word));
                                         }
                                     }
                                     return true;
@@ -640,9 +670,9 @@ function init(wsServer, path, moderKey) {
                         if (!hasChanges)
                             send(user, "word-reports-request-status", "Success");
                         else
-                            fs.writeFile(`${registry.config.appDir || __dirname}/moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
+                            fs.writeFile(`${appDir}/moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
                                 if (!err) {
-                                    fs.writeFile(`${registry.config.appDir || __dirname}/reported-words.txt`,
+                                    fs.writeFile(`${appDir}/reported-words.txt`,
                                         reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
                                         () => {
                                             let aliasPlayers = [];
@@ -664,8 +694,8 @@ function init(wsServer, path, moderKey) {
                     } else
                         send(user, "word-reports-request-status", "Wrong key");
                 },
-                "add-words": (user, words, level) => {
-                    if (words && words.length < 2500) {
+                "add-words": (user, words, level, packName) => {
+                    if (words && words.length) {
                         let wordList = [...(new Set(words.split("\n").map((word) => word.trim().toLowerCase())))];
                         if ((wordList[0] === "!edit" || wordList[0] === "!remove") && wordList[1] === moderKey) {
                             const
@@ -697,9 +727,32 @@ function init(wsServer, path, moderKey) {
                                 }
                             });
                             if (reportList.length)
-                                fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`,
+                                fs.appendFile(`${appDir}/reported-words.txt`,
                                     `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
                                     });
+                        } else if (level === "custom" && wordList.length <= room.customWordsLimit
+                            && packName && packName.length <= 40 && !~packName.indexOf("...")) {
+                            wordList = wordList.filter((word) => word
+                                && word.trim().length > 0);
+                            if (wordList.length > 0) {
+                                const reportInfo = {
+                                    datetime: +new Date(),
+                                    user: user,
+                                    playerName: room.playerNames[user],
+                                    custom: true,
+                                    packName: packName,
+                                    processed: false,
+                                    approved: null
+                                };
+                                fs.writeFile(`${appDir}/custom/new/${reportInfo.datetime}.json`, `${JSON.stringify({
+                                    wordList, author: reportInfo.playerName, packName
+                                }, null, true)}`, (err) => {
+                                    if (!err)
+                                        reportedWordsData.push(reportInfo);
+                                    else
+                                        send(user, err);
+                                });
+                            }
                         } else if (wordList.length <= 50) {
                             wordList = wordList.filter((word) =>
                                 word
@@ -720,7 +773,7 @@ function init(wsServer, path, moderKey) {
                                     approved: null
                                 };
                                 reportedWordsData.push(reportInfo);
-                                fs.appendFile(`${registry.config.appDir || __dirname}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                                fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                                 });
                             }
                         }
