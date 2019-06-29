@@ -29,8 +29,8 @@ function init(wsServer, path, moderKey) {
     });
 
     fs.mkdir(`${appDir}/custom`, () => {
-    });
-    fs.mkdir(`${appDir}/custom/new`, () => {
+        fs.mkdir(`${appDir}/custom/new`, () => {
+        });
     });
 
     app.get(path, function (req, res) {
@@ -696,7 +696,7 @@ function init(wsServer, path, moderKey) {
                 },
                 "add-words": (user, words, level, packName) => {
                     if (words && words.length) {
-                        let wordList = [...(new Set(words.split("\n").map((word) => word.trim().toLowerCase())))];
+                        let wordList = [...(new Set(words.split("\n").map((word) => word.trim())))];
                         if ((wordList[0] === "!edit" || wordList[0] === "!remove") && wordList[1] === moderKey) {
                             const
                                 reportList = [],
@@ -754,6 +754,7 @@ function init(wsServer, path, moderKey) {
                                 });
                             }
                         } else if (wordList.length <= 50) {
+                            wordList = [...new Set(wordList.map((word) => word.toLowerCase()))];
                             wordList = wordList.filter((word) =>
                                 word
                                 && word.length <= 50 && word.trim().length > 0
