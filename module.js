@@ -585,7 +585,7 @@ function init(wsServer, path, moderKey) {
                     });
                 },
                 "setup-words": (user, packName, words) => {
-                    if (room.hostId === user && words.length <= room.customWordsLimit) {
+                    if (room.hostId === user && words.length <= 10000) {
                         if (words) {
                             this.state.roomWordsList = shuffleArray(words);
                             room.wordIndex = 0;
