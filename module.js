@@ -62,7 +62,8 @@ function init(wsServer, path, moderKey) {
                 drawMode: false,
                 drawCommitOnly: false,
                 soloMode: false,
-                soloModeOver: false,
+                soloModeRound: 0,
+                soloModeGoal: 1,
                 packName: null,
                 customWordsLimit: 1500
             };
@@ -97,7 +98,7 @@ function init(wsServer, path, moderKey) {
                             if (indexOfCurrentPlayer === currentTeam.players.size - 1) {
                                 currentTeam.currentPlayer = currentPlayerKeys[0];
                                 if (room.soloMode) {
-                                    room.soloModeOver = true;
+                                    room.soloModeRound++;
                                     room.currentAssistant = currentPlayerKeys[1];
                                 }
                             } else {
@@ -227,7 +228,7 @@ function init(wsServer, path, moderKey) {
                     room.readyPlayers.clear();
                     //room.wordIndex = 0;
                     room.wordsEnded = false;
-                    room.soloModeOver = false;
+                    room.soloModeRound = 0;
                     Object.keys(room.teams).forEach(teamId => {
                         const team = room.teams[teamId];
                         delete team.wordPoints;
@@ -484,13 +485,17 @@ function init(wsServer, path, moderKey) {
                     update();
                 },
                 "set-round-time": (user, time) => {
-                    if (room.hostId === user)
-                        room.roundTime = time;
+                    if (room.hostId === user && !isNaN(time))
+                        room.roundTime = time || 0;
                     update();
                 },
                 "set-goal": (user, goal) => {
-                    if (room.hostId === user)
-                        room.goal = goal;
+                    if (room.hostId === user && !isNaN(time)) {
+                        if (!room.soloMode)
+                            room.goal = goal || 0;
+                        else
+                            room.soloModeGoal = goal || 0;
+                    }
                     update();
                 },
                 "select-word-set": (user, wordSet) => {

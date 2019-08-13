@@ -105,7 +105,7 @@ class Words extends React.Component {
                         <input
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"
-                            onChange={evt => !isNaN(evt.target.valueAsNumber) && game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
+                            onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
                         {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu" onTouchStart={(e) => e.target.focus()}>
@@ -625,11 +625,11 @@ class Game extends React.Component {
     }
 
     handleChangeGoal(value) {
-        this.debouncedEmit("set-goal", value);
+        this.socket.emit("set-goal", value);
     }
 
     handleChangeRoundTime(value) {
-        this.debouncedEmit("set-round-time", value)
+        this.socket.emit("set-round-time", value)
     }
 
     handleClickReportWordLevel(word, currentLevel, level) {
@@ -728,7 +728,7 @@ class Game extends React.Component {
                 } else
                     statusText = "Waiting for players";
             } else if (data.phase === 1) {
-                if (data.soloModeOver) {
+                if (data.soloModeRound >= data.soloModeGoal) {
                     gameIsOver = true;
                     const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
                         (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
@@ -853,23 +853,26 @@ class Game extends React.Component {
                                         <div className="game-settings">
                                             <div className="set-goal"><i title="goal"
                                                                          className="material-icons">flag</i>
-                                                {(settingsMode && !this.state.soloMode) ? (<input id="goal"
-                                                                                                  type="number"
-                                                                                                  defaultValue="20"
-                                                                                                  min="0"
-                                                                                                  disabled={this.state.soloMode}
-                                                                                                  onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                                                      && this.handleChangeGoal(evt.target.valueAsNumber)}
+                                                {settingsMode && this.state.soloMode ? `${this.state.soloModeRound}/` : ""}
+                                                {settingsMode ? (<input id="goal"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        value={!this.state.soloMode
+                                                                            ? this.state.goal
+                                                                            : this.state.soloModeGoal}
+                                                                        onChange={evt => this.handleChangeGoal(evt.target.valueAsNumber)}
                                                 />) : (<span
-                                                    className="value">{this.state.soloMode ? "∞" : this.state.goal}</span>)}
+                                                    className="value">{this.state.soloMode
+                                                    ? `${this.state.soloModeRound}/${this.state.soloModeGoal}`
+                                                    : this.state.goal}</span>)}
                                             </div>
                                             <div className="set-round-time"><i title="time"
                                                                                className="material-icons">timer</i>
                                                 {(settingsMode) ? (<input id="round-time"
                                                                           type="number"
-                                                                          defaultValue="60" min="0"
-                                                                          onChange={evt => !isNaN(evt.target.valueAsNumber)
-                                                                              && this.handleChangeRoundTime(evt.target.valueAsNumber)}
+                                                                          value={this.state.roundTime}
+                                                                          min="0"
+                                                                          onChange={evt => this.handleChangeRoundTime(evt.target.valueAsNumber)}
                                                 />) : (<span className="value">{this.state.roundTime}</span>)}
                                             </div>
                                         </div>
