@@ -273,7 +273,7 @@ function init(wsServer, path, moderKey) {
                     if (room.spectators.has(playerId) || !room.onlinePlayers.has(playerId)) {
                         room.spectators.delete(playerId);
                         delete room.playerNames[playerId];
-                        registry.disconnect(playerId, "You was removed");
+                        this.emit("user-kicked", playerId);
                     } else
                         room.spectators.add(playerId);
                 },
