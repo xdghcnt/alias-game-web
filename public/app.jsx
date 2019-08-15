@@ -35,7 +35,7 @@ class Teams extends React.Component {
                             {data.hostId === data.userId ?
                                 (<i className="material-icons host-button change-score"
                                     title="Change"
-                                    onClick={(evt) => this.handleSetScore(teamId, evt)}>
+                                    onClick={(evt) => game.handleSetScore(teamId, evt)}>
                                     edit
                                 </i>) : ""}
                             Score: {data.teams[teamId].score}
