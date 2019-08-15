@@ -490,7 +490,7 @@ function init(wsServer, path, moderKey) {
                     update();
                 },
                 "set-goal": (user, goal) => {
-                    if (room.hostId === user && !isNaN(time)) {
+                    if (room.hostId === user && !isNaN(goal)) {
                         if (!room.soloMode)
                             room.goal = goal || 0;
                         else
