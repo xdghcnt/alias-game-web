@@ -278,7 +278,7 @@ class Game extends React.Component {
                 if (it.newWord && it.approved) newWordsCount += it.wordList.length;
                 if (it.wordList)
                     it.wordList.forEach((word) => wordSet.add(word));
-                else if (it.word) {
+                else if (it.word && !(it.currentLevel === 1 && it.level === 0)) {
                     if (wordSet.has(it.word))
                         it.hasHistory = true;
                     else
