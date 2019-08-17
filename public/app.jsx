@@ -278,7 +278,7 @@ class Game extends React.Component {
                 if (it.newWord && it.approved) newWordsCount += it.wordList.length;
                 if (it.wordList)
                     it.wordList.forEach((word) => wordSet.add(word));
-                else if (it.word && !(it.currentLevel === 1 && it.level === 0)) {
+                else if (it.word && !this.isAutoDenied(it)) {
                     if (wordSet.has(it.word))
                         it.hasHistory = true;
                     else
@@ -705,13 +705,19 @@ class Game extends React.Component {
         }
     }
 
+    isAutoDenied(report) {
+        return [
+            [1, 3], [1, 4], [1, 0], [2, 4]
+        ].some((it) => it[0] === report.currentLevel && it[1] === report.level);
+    }
+
     toggleWordHistory(it) {
         if (it.wordHistory)
             it.wordHistory = null;
         else {
             it.wordHistory = [];
             this.reportData.forEach((report) => {
-                if (!(report.currentLevel === 1 && report.level === 0))
+                if (!this.isAutoDenied(report))
                     if (it.datetime > report.datetime)
                         if (!report.wordList && report.word === it.word)
                             it.wordHistory.push(report);
