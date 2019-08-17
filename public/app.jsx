@@ -711,7 +711,7 @@ class Game extends React.Component {
         else {
             it.wordHistory = [];
             this.reportData.forEach((report) => {
-                if (report.currentLevel === 1 && report.level === 0)
+                if (!(report.currentLevel === 1 && report.level === 0))
                     if (it.datetime > report.datetime)
                         if (!report.wordList && report.word === it.word)
                             it.wordHistory.push(report);
