@@ -711,13 +711,14 @@ class Game extends React.Component {
         else {
             it.wordHistory = [];
             this.reportData.forEach((report) => {
-                if (it.datetime > report.datetime)
-                    if (!report.wordList && report.word === it.word)
-                        it.wordHistory.push(report);
-                    else if (report.wordList && report.wordList.includes(it.word))
-                        it.wordHistory.push({
-                            ...report, word: it.word, wordList: undefined
-                        })
+                if (report.currentLevel === 1 && report.level === 0)
+                    if (it.datetime > report.datetime)
+                        if (!report.wordList && report.word === it.word)
+                            it.wordHistory.push(report);
+                        else if (report.wordList && report.wordList.includes(it.word))
+                            it.wordHistory.push({
+                                ...report, word: it.word, wordList: undefined
+                            })
             });
         }
         this.setState(this.state);
