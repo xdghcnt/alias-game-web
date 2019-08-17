@@ -273,8 +273,17 @@ class Game extends React.Component {
         });
         this.socket.on("word-reports-data", (reportData) => {
             let newWordsCount = 0;
+            const wordSet = new Set();
             reportData.forEach((it) => {
                 if (it.newWord && it.approved) newWordsCount += it.wordList.length;
+                if (it.wordList)
+                    it.wordList.forEach((word) => wordSet.add(word));
+                else if (it.word) {
+                    if (wordSet.has(it.word))
+                        it.hasHistory = true;
+                    else
+                        wordSet.add(it.word);
+                }
             });
             this.setState(Object.assign({}, this.state, {
                 wordReportData: {
@@ -286,6 +295,7 @@ class Game extends React.Component {
                     new: newWordsCount
                 }
             }));
+            this.reportData = reportData;
         });
         this.socket.on("timer-end", () => {
             this.timerSound.play();
@@ -695,6 +705,24 @@ class Game extends React.Component {
         }
     }
 
+    toggleWordHistory(it) {
+        if (it.wordHistory)
+            it.wordHistory = null;
+        else {
+            it.wordHistory = [];
+            this.reportData.forEach((report) => {
+                if (it.datetime > report.datetime)
+                    if (!report.wordList && report.word === it.word)
+                        it.wordHistory.push(report);
+                    else if (report.wordList && report.wordList.includes(it.word))
+                        it.wordHistory.push({
+                            ...report, word: it.word, wordList: undefined
+                        })
+            });
+        }
+        this.setState(this.state);
+    }
+
     render() {
         clearTimeout(this.timeOut);
         if (this.state.disconnected)
@@ -1009,7 +1037,12 @@ class Game extends React.Component {
                                                     <div
                                                         className="word-report-item-word">{!it.custom
                                                         ? (!it.newWord
-                                                            ? it.word
+                                                            ? <span>{it.word}{it.hasHistory ?
+                                                                <span> <i onClick={() => this.toggleWordHistory(it)}
+                                                                          className="material-icons history-button">
+                                                                    {!it.wordHistory ? "history" : "close"}
+                                                                </i>
+                                                                </span> : ""}</span>
                                                             : (<div className="word-report-item-word-list">
                                                                 {it.wordList.map((word) => (<div>{word}</div>))}
                                                             </div>))
@@ -1050,6 +1083,20 @@ class Game extends React.Component {
                                                                        className="word-report-approve yes">✔</label>
                                                             </div>)}
                                                     </div>
+                                                    {it.wordHistory ? <div className="word-history">
+                                                        {it.wordHistory.map((it) => <div className="word-report-item">
+                                                            <div className="word-report-item-name">{it.playerName}</div>
+                                                            <div className="word-report-item-transfer">
+                                                                {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
+                                                                !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
+                                                            </div>
+                                                            <div className="word-report-item-status">
+                                                                {it.approved ? (
+                                                                    <span className="approved">Approved</span>) : (
+                                                                    <span className="denied">Denied</span>)}
+                                                            </div>
+                                                        </div>)}
+                                                    </div> : ""}
                                                 </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
                                             <div className="word-report-show-all"
                                                  onClick={() => this.handleClickShowAllReports()}>Show all</div>) : ""}

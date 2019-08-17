@@ -1074,3 +1074,31 @@ input:checked + .word-report-approve.yes {
     margin-top: -3px;
     vertical-align: top;
 }
+
+.history-button {
+    font-size: 18px;
+    vertical-align: bottom;
+    color: grey;
+    cursor: pointer;
+    user-select: none;
+}
+
+.word-history {
+    display: block;
+    width: 400px;
+    margin: auto;
+    position: absolute;
+    z-index: 1;
+    box-shadow: 0 0 20px -4px black;
+    padding: 6px;
+    background: white;
+    left: 180px;
+}
+
+.dark-theme .word-history {
+    background: #40403f;
+}
+
+.word-report-item {
+    position: relative;
+}
