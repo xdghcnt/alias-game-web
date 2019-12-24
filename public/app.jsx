@@ -635,11 +635,11 @@ class Game extends React.Component {
     }
 
     handleChangeGoal(value) {
-        this.socket.emit("set-goal", value);
+        this.debouncedEmit("set-goal", value);
     }
 
     handleChangeRoundTime(value) {
-        this.socket.emit("set-round-time", value)
+        this.debouncedEmit("set-round-time", value);
     }
 
     handleClickReportWordLevel(word, currentLevel, level) {
