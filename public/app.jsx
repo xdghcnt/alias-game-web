@@ -227,7 +227,9 @@ class Game extends React.Component {
             localStorage.userToken = makeId();
         }
         if (!location.hash)
-            history.replaceState(undefined, undefined, "#" + makeId());
+            history.replaceState(undefined, undefined, location.origin + location.pathname + "#" + makeId());
+        else
+            history.replaceState(undefined, undefined, location.origin + location.pathname + location.hash);
         if (localStorage.acceptDelete) {
             initArgs.acceptDelete = localStorage.acceptDelete;
             delete localStorage.acceptDelete;
