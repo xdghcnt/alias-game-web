@@ -33,9 +33,8 @@ function init(wsServer, path, moderKey) {
         });
     });
 
-    app.get(path, function (req, res) {
-        res.sendFile(`${__dirname}/public/app.html`);
-    });
+    registry.handleAppPage(path, `${__dirname}/public/app.html`);
+
     app.use("/alias", express.static(`${__dirname}/public`));
 
     class GameState extends EventEmitter {

@@ -236,6 +236,7 @@ class Game extends React.Component {
         initArgs.userId = this.userId = localStorage.aliasUserId;
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.userToken;
+        initArgs.wssToken = window.wssToken;
         this.socket = window.socket.of("alias");
         this.socket.on("state", (state) => {
             let initDrawMode;
