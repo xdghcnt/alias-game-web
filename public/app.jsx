@@ -101,7 +101,7 @@ class Words extends React.Component {
                     reported: data.activeWordReported
                 }])).map((word, index) => (
                     <div className={cs("word", {reported: word.reported})}
-                         onTouchStart={(e) => e.target.focus()}>&nbsp;{word.word}&nbsp;
+                         onTouchStart={(e) => e.target.focus()}>&nbsp;{hyphenate(word.word)}&nbsp;
                         <input
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-2" max="1"
@@ -272,7 +272,11 @@ class Game extends React.Component {
             this.setState(Object.assign({}, this.state, {
                 activeWord: data && data.word,
                 activeWordReported: data && data.reported
-            }));
+            }), () => {
+                setTimeout(() => {
+                    window.scrollTo(0, document.body.scrollHeight);
+                });
+            });
         });
         this.socket.on("word-reports-data", (reportData) => {
             let newWordsCount = 0;
@@ -378,6 +382,8 @@ class Game extends React.Component {
             if (this.sketcher)
                 this.sketcher.reallign_width_parent_div();
         });
+        window.hyphenate = createHyphenator(hyphenationPatternsRu);
+        window.hyphenateEn = createHyphenator(hyphenationPatternsEnUs);
     }
 
     initDrawMode() {
@@ -839,24 +845,26 @@ class Game extends React.Component {
                         "game-over": gameIsOver,
                         "solo-mode": this.state.soloMode
                     })}>
-                        <div
-                            title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
-                            className={cs("dict-progress", {active: this.state.dictMode})}
-                        >
-                            <div className="dict-progress-bar"
-                                 style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
-                        </div>
-                        {data.drawMode ? (<div id="draw-pane">
-                            <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
-                               onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
-                        {data.soloMode ? "Players" : "Teams"}:
-                        <Teams data={this.state} game={this}/>
-                        <br/>
-                        <div className={cs(
-                            "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
-                            Spectators:
+                        <div className="teams-pane">
+                            <div
+                                title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
+                                className={cs("dict-progress", {active: this.state.dictMode})}
+                            >
+                                <div className="dict-progress-bar"
+                                     style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
+                            </div>
+                            {data.drawMode ? (<div id="draw-pane">
+                                <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
+                                   onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
+                            {data.soloMode ? "Players" : "Teams"}:
+                            <Teams data={this.state} game={this}/>
                             <br/>
-                            <Spectators data={this.state} game={this}/>
+                            <div className={cs(
+                                "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
+                                Spectators:
+                                <br/>
+                                <Spectators data={this.state} game={this}/>
+                            </div>
                         </div>
                         <div className="control-pane">
                             <Timer data={this.state}/>

@@ -1,5 +1,5 @@
 body {
-    margin: 20px;
+    margin: 0;
     background: #f1f1f1;
     min-width: 340px;
 }
@@ -74,6 +74,7 @@ body.dark-theme {
 .team-list {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
 }
 
 .team {
@@ -189,7 +190,6 @@ body.dark-theme {
 }
 
 .control-pane {
-    position: fixed;
     bottom: 0;
     width: 100%;
     text-align: center;
@@ -223,7 +223,10 @@ body.dark-theme {
 }
 
 .game-board.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
 }
 
 .words {
@@ -1101,4 +1104,12 @@ input:checked + .word-report-approve.yes {
 
 .word-report-item {
     position: relative;
+}
+
+.teams-pane {
+    margin: 20px;
+}
+
+.kicked {
+    margin: 20px;
 }
