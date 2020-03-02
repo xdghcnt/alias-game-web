@@ -384,6 +384,16 @@ class Game extends React.Component {
         });
         window.hyphenate = createHyphenator(hyphenationPatternsRu);
         window.hyphenateEn = createHyphenator(hyphenationPatternsEnUs);
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            const fixUserScale = (evt) => {
+                if (evt.originalEvent.scale !== 1) {
+                    evt.originalEvent.preventDefault();
+                    document.body.style.transform = "scale(1)";
+                }
+            };
+            document.addEventListener("gesturestart", fixUserScale);
+            document.addEventListener("touchmove", fixUserScale);
+        }
     }
 
     initDrawMode() {
@@ -869,8 +879,7 @@ class Game extends React.Component {
                         <div className="control-pane">
                             <Timer data={this.state}/>
                             <Words data={this.state}
-                                   game={this}
-                                   handleChange={(id, value) => this.handleChangeWordPoints(id, value)}/>
+                                   game={this}/>
                             <br/>
                             <div className="action-pane">
                                 <div className="status-text">
