@@ -717,7 +717,7 @@ class Game extends React.Component {
         if (this.state.customPackSelected
             || (this.state.wordCustomCount > 0 && this.state.wordCustomCount <= this.state.customWordsLimit)) {
             if (this.state.customPackSelected)
-                this.socket.emit("setup-words", this.state.customPackSelected, this.state.wordPacks[this.state.customPackSelected].wordList);
+                this.socket.emit("setup-words-preset", this.state.customPackSelected);
             else
                 this.socket.emit("setup-words", document.getElementById("custom-words-pack-name").value, document.getElementById("custom-word-area").value.split("\n"));
             this.handleClickCloseCustom();

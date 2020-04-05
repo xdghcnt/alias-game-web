@@ -600,6 +600,23 @@ function init(wsServer, path, moderKey) {
                         }
                     }
                 },
+                "setup-words-preset": (user, packName) => {
+                    if (room.hostId === user) {
+                        fs.readFile(`${appDir}/custom/${packName}.json`, "utf8", (err, str) => {
+                            if (str) {
+                                const data = JSON.parse(str);
+                                this.state.roomWordsList = shuffleArray(data.wordList);
+                                room.wordIndex = 0;
+                                room.wordsEnded = false;
+                                room.level = 0;
+                                room.packName = packName;
+                                update();
+                            }
+                            if (err)
+                                send(user, "message", JSON.stringify(err));
+                        });
+                    }
+                },
                 "report-word": (user, word, currentLevel, level) => {
                     if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)) {
                         const reportInfo = {
