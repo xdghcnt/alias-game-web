@@ -1113,3 +1113,34 @@ input:checked + .word-report-approve.yes {
 .kicked {
     margin: 20px;
 }
+
+.audio-elems {
+    display: none;
+}
+
+.player-circle {
+    width: 9px;
+    height: 9px;
+    display: inline-block;
+    background: gray;
+    border-radius: 25px;
+    margin-right: 6px;
+    background: #6d9342;
+}
+
+.player.offline .player-circle {
+    background: #a4a99d;
+}
+
+.room-main-link {
+    background: white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .room-main-link {
+    background: rgb(64, 64, 63);
+}
+
+.dark-theme .room-main-link a {
+    color: #cccaca;
+}

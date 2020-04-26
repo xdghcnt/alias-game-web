@@ -246,6 +246,7 @@ class Game extends React.Component {
                 initDrawMode = true;
             if (this.state && this.state.phase === 2 && state.phase !== 2 && this.reportListToShow.length)
                 setTimeout(() => this.showReportNotify(), 1000);
+            CommonRoom.processCommonRoom(state, this.state);
             this.setState(Object.assign({
                 userId: this.userId,
                 activeWord: this.state.activeWord,
@@ -1311,6 +1312,8 @@ class Game extends React.Component {
                                     pack{data.wordReportNotify.packsDenied > 1 ? "s" : ""} denied
                                 </div>) : ""}
                             </div>) : ""}
+                        </div>
+                        <CommonRoom state={this.state}/>
                         </div>
                     </div>
                 </div>
