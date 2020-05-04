@@ -1035,7 +1035,7 @@ class Game extends React.Component {
                             </div>
                             <div className="side-buttons">
                                 <i onClick={() => this.socket.emit("set-room-mode", false)}
-                                   className="material-icons exit settings-button">home</i>
+                                   className="material-icons exit settings-button">store</i>
                                 <i onClick={() => this.handleClickGetReports()}
                                    className="material-icons get-reports settings-button">assignment_late</i>
                                 <i onClick={() => this.handleClickOpenWordAdd()}
