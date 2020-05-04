@@ -4,7 +4,6 @@ function init(wsServer, path, moderKey) {
         express = require('express'),
         app = wsServer.app,
         registry = wsServer.users,
-        EventEmitter = require("events"),
         channel = "alias",
         autoDenialRules = [
             [1, 3], [1, 4], [1, 0], [2, 4]
@@ -37,9 +36,9 @@ function init(wsServer, path, moderKey) {
 
     app.use("/alias", express.static(`${__dirname}/public`));
 
-    class GameState extends EventEmitter {
+    class GameState extends wsServer.users.RoomState {
         constructor(hostId, hostData, userRegistry) {
-            super();
+            super(hostId, hostData, userRegistry);
             const room = {
                 inited: true,
                 hostId: hostId,
@@ -712,6 +711,26 @@ function init(wsServer, path, moderKey) {
                                 } else
                                     send(user, "word-reports-request-status", err.message)
                             });
+                    } else
+                        send(user, "word-reports-request-status", "Wrong key");
+                },
+                "remove-user-reports": (user, sentModerKey, removeUser) => {
+                    if (removeUser && sentModerKey === moderKey) {
+                        reportedWordsData.forEach((reportData) => {
+                            if (!reportData.processed && reportData.user === removeUser) {
+                                reportData.processed = true;
+                                reportData.approved = false;
+                                if (reportData.custom)
+                                    fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
+                                    });
+                            }
+                        });
+                        fs.writeFile(`${appDir}/reported-words.txt`,
+                            reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
+                            () => {
+                            }
+                        );
+                        send(user, "word-reports-request-status", "Success");
                     } else
                         send(user, "word-reports-request-status", "Wrong key");
                 },

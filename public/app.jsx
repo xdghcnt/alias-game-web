@@ -163,6 +163,9 @@ class Player extends React.Component {
                 current: id === data.currentPlayer,
                 assistant: id === data.currentAssistant
             })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
+                {data.voiceEnabled ? <div className={cs("player-circle", {
+                    "speaking": data.userSpeaking && data.userSpeaking[id]
+                })} data-userId={id}/> : ""}
                 {data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({data.playerScores[id] || 0}<span
@@ -244,7 +247,7 @@ class Game extends React.Component {
             let initDrawMode;
             if (!this.state.drawMode && state.drawMode)
                 initDrawMode = true;
-            if (this.state && this.state.phase === 2 && state.phase !== 2 && this.reportListToShow.length)
+            if (this.state && this.state.voiceEnabled === 2 && state.phase !== 2 && this.reportListToShow.length)
                 setTimeout(() => this.showReportNotify(), 1000);
             CommonRoom.processCommonRoom(state, this.state);
             this.setState(Object.assign({
@@ -258,7 +261,10 @@ class Game extends React.Component {
                 wordCustomCount: this.state.wordCustomCount,
                 wordAddLevel: this.state.wordAddLevel,
                 wordReportSent: this.state.wordReportSent,
-                wordPacks: this.state.wordPacks || {}
+                wordPacks: this.state.wordPacks || {},
+                media: this.state.media || {
+                    audioTracks: {}
+                }
             }, state), () => {
                 if (initDrawMode) this.initDrawMode();
             });
@@ -395,6 +401,10 @@ class Game extends React.Component {
             document.addEventListener("gesturestart", fixUserScale);
             document.addEventListener("touchmove", fixUserScale);
         }
+    }
+
+    updateState() {
+        this.setState(Object.assign({}, this.state));
     }
 
     initDrawMode() {
@@ -612,6 +622,11 @@ class Game extends React.Component {
         this.socket.emit("action");
     }
 
+    removeUserReports(user, name) {
+        popup.confirm({content: `Remove all ${name}'s reports?`}, (evt) => evt.proceed
+            && this.socket.emit("remove-user-reports", document.getElementById("word-moder-key").value, user));
+    }
+
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
         popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
@@ -771,6 +786,7 @@ class Game extends React.Component {
                 showWordsBet = false,
                 gameIsOver,
                 hasPlayers = data.phase !== 0;
+            data.showWatermark = false;
             if (data.phase === 0) {
                 const firstTeam = data.teams[Object.keys(data.teams)[0]];
                 hasPlayers = firstTeam && (!data.soloMode ? firstTeam.players.length > 0 : firstTeam.players.length > 1);
@@ -788,6 +804,7 @@ class Game extends React.Component {
                     const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
                         (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
                     statusText = `Player ${data.playerNames[playerWin]} wins!`;
+                    data.showWatermark = true;
                 }
                 if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
                     let mostPoints = 0,
@@ -807,6 +824,7 @@ class Game extends React.Component {
                         gameIsOver = true;
                         data.teams[mostPointsTeam].winner = true;
                         statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
+                        data.showWatermark = true;
                     }
                 }
                 //showWordsBet = true;
@@ -1016,8 +1034,8 @@ class Game extends React.Component {
                                 </div>
                             </div>
                             <div className="side-buttons">
-                                <i onClick={() => window.location = parentDir}
-                                   className="material-icons exit settings-button">exit_to_app</i>
+                                <i onClick={() => this.socket.emit("set-room-mode", false)}
+                                   className="material-icons exit settings-button">home</i>
                                 <i onClick={() => this.handleClickGetReports()}
                                    className="material-icons get-reports settings-button">assignment_late</i>
                                 <i onClick={() => this.handleClickOpenWordAdd()}
@@ -1061,7 +1079,10 @@ class Game extends React.Component {
                                             {data.wordReportData.words.map((it, index) => (
                                                 <div className={"word-report-item"}>
                                                     <div
-                                                        className="word-report-item-name">{it.playerName}</div>
+                                                        className="word-report-item-name">{it.playerName}
+                                                        <i className="material-icons remove-user-reports"
+                                                        onClick={() => this.removeUserReports(it.user, it.playerName)}>delete_forever</i>
+                                                    </div>
                                                     <div
                                                         className="word-report-item-word">{!it.custom
                                                         ? (!it.newWord
@@ -1313,9 +1334,9 @@ class Game extends React.Component {
                                 </div>) : ""}
                             </div>) : ""}
                         </div>
-                        <CommonRoom state={this.state}/>
-                        </div>
+                        <CommonRoom state={this.state} app={this}/>
                     </div>
+                </div>
             );
         } else return (
             <div/>

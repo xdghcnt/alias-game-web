@@ -1078,12 +1078,20 @@ input:checked + .word-report-approve.yes {
     vertical-align: top;
 }
 
-.history-button {
+.history-button, .remove-user-reports {
     font-size: 18px;
     vertical-align: bottom;
     color: grey;
     cursor: pointer;
     user-select: none;
+}
+
+.remove-user-reports {
+    display: none;
+}
+
+.word-report-item-name:hover .remove-user-reports {
+    display: inline-block;
 }
 
 .word-history {
@@ -1114,10 +1122,6 @@ input:checked + .word-report-approve.yes {
     margin: 20px;
 }
 
-.audio-elems {
-    display: none;
-}
-
 .player-circle {
     width: 9px;
     height: 9px;
@@ -1132,15 +1136,50 @@ input:checked + .word-report-approve.yes {
     background: #a4a99d;
 }
 
-.room-main-link {
+.panel {
     background: white;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-.dark-theme .room-main-link {
+.dark-theme .panel {
     background: rgb(64, 64, 63);
 }
 
-.dark-theme .room-main-link a {
+.panel-accent {
+    background: #9CCC65;
+}
+
+.dark-theme .panel-accent {
+    background: rgb(79, 109, 109);
+}
+
+.text-color {
+    color: black;
+}
+
+.dark-theme .text-color {
     color: #cccaca;
+}
+
+a {
+    color: black;
+}
+
+.dark-theme a {
+    color: #cccaca;
+}
+
+.player-circle.speaking {
+    box-shadow: 0 0 0 3px #9ccc65;
+}
+
+.dark-theme .player-circle.speaking {
+    box-shadow: 0 0 0 3px #8ca263;
+}
+
+.watermark {
+    top: 50%;
+    left: 0;
+    right: 0;
+    opacity: 0.3;
 }
