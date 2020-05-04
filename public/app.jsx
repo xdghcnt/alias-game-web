@@ -1034,8 +1034,9 @@ class Game extends React.Component {
                                 </div>
                             </div>
                             <div className="side-buttons">
-                                <i onClick={() => this.socket.emit("set-room-mode", false)}
-                                   className="material-icons exit settings-button">store</i>
+                                {this.state.userId === this.state.hostId ?
+                                    <i onClick={() => this.socket.emit("set-room-mode", false)}
+                                       className="material-icons exit settings-button">store</i> : ""}
                                 <i onClick={() => this.handleClickGetReports()}
                                    className="material-icons get-reports settings-button">assignment_late</i>
                                 <i onClick={() => this.handleClickOpenWordAdd()}
@@ -1081,7 +1082,7 @@ class Game extends React.Component {
                                                     <div
                                                         className="word-report-item-name">{it.playerName}
                                                         <i className="material-icons remove-user-reports"
-                                                        onClick={() => this.removeUserReports(it.user, it.playerName)}>delete_forever</i>
+                                                           onClick={() => this.removeUserReports(it.user, it.playerName)}>delete_forever</i>
                                                     </div>
                                                     <div
                                                         className="word-report-item-word">{!it.custom
