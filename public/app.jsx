@@ -628,8 +628,18 @@ class Game extends React.Component {
     }
 
     removeUserReports(user, name) {
-        popup.confirm({content: `Remove all ${name}'s reports?`}, (evt) => evt.proceed
-            && this.socket.emit("remove-user-reports", document.getElementById("word-moder-key").value, user));
+        popup.confirm({content: `Remove all ${name}'s reports?`}, (evt) => {
+            if (evt.proceed) {
+                this.socket.emit("remove-user-reports", document.getElementById("word-moder-key").value, user);
+                this.reportData.forEach((wordData) => {
+                    if (!wordData.processed && wordData.user === user) {
+                        wordData.approved = false;
+                        wordData.processed = true;
+                    }
+                });
+                this.setState(Object.assign({}, this.state));
+            }
+        });
     }
 
     handleRemovePlayer(id, evt) {
