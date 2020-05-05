@@ -591,6 +591,11 @@ class Game extends React.Component {
         }
     }
 
+    handleClickAllowReport() {
+        localStorage.aliasAllowReport = !parseInt(localStorage.aliasAllowReport) ? 1 : 0;
+        this.setState(Object.assign({}, this.state));
+    }
+
     toggleNotificationPinned() {
         this.setState(Object.assign({}, this.state, {notificationPinned: !this.state.notificationPinned}));
     }
@@ -678,7 +683,10 @@ class Game extends React.Component {
     }
 
     handleClickReportWordLevel(word, currentLevel, level) {
-        this.socket.emit("report-word", word, currentLevel, level);
+        if (!!parseInt(localStorage.aliasAllowReport))
+            this.socket.emit("report-word", word, currentLevel, level);
+        else
+            popup.alert({content: "Чтобы получить доступ к репорту слов, нужно включить его в окне просмотра репортов"});
     }
 
     handleClickDrawClear(evt) {
@@ -1154,6 +1162,12 @@ class Game extends React.Component {
                                         : (<div className="word-report-no-data">No words reported yet</div>)
                                 }</div>
                                 <div className="word-report-manage-buttons">
+                                    <span className="word-report-allow-report"
+                                          onClick={() => this.handleClickAllowReport()}><i
+                                        className="material-icons pin-notification-button">{parseInt(localStorage.aliasAllowReport)
+                                        ? "check_box" : "check_box_outline_blank"}</i> Разрешить
+                                        репорты
+                                    </span>
                                     <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
                                            type="password"/>
                                     <div className={cs("word-report-save-button", {inactive: data.wordReportSent})}

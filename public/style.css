@@ -1183,3 +1183,9 @@ a {
     right: 0;
     opacity: 0.3;
 }
+
+.word-report-allow-report {
+    float: left;
+    margin-top: 6px;
+    cursor: pointer;
+}
