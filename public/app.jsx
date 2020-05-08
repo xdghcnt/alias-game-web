@@ -541,14 +541,18 @@ class Game extends React.Component {
     }
 
     handleClickSubmitNewWords() {
-        const
-            words = document.getElementById("word-add-area").value,
-            wordsPackName = document.getElementById("word-add-pack-name").value;
-        if (this.state.wordAddCount > 0
-            && (this.state.wordAddCount <= (this.state.wordAddLevel === "custom" ? this.state.customWordsLimit : 50))) {
-            this.socket.emit("add-words", words, this.state.wordAddLevel, wordsPackName);
-            this.handleClickCloseWordAdd();
+        if (!!parseInt(localStorage.aliasAllowReport)) {
+            const
+                words = document.getElementById("word-add-area").value,
+                wordsPackName = document.getElementById("word-add-pack-name").value;
+            if (this.state.wordAddCount > 0
+                && (this.state.wordAddCount <= (this.state.wordAddLevel === "custom" ? this.state.customWordsLimit : 50))) {
+                this.socket.emit("add-words", words, this.state.wordAddLevel, wordsPackName);
+                this.handleClickCloseWordAdd();
+            }
         }
+        else
+            popup.alert({content: "Чтобы получить доступ к добавлению слов, нужно включить его в окне просмотра репортов"});
     }
 
     handleWordAddChange(value) {
@@ -1176,7 +1180,7 @@ class Game extends React.Component {
                                           onClick={() => this.handleClickAllowReport()}><i
                                         className="material-icons pin-notification-button">{parseInt(localStorage.aliasAllowReport)
                                         ? "check_box" : "check_box_outline_blank"}</i> Разрешить
-                                        репорты
+                                        репорты и добавление
                                     </span>
                                     <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
                                            type="password"/>
