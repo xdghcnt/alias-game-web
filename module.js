@@ -793,7 +793,7 @@ function init(wsServer, path, moderKey) {
                                         send(user, err);
                                 });
                             }
-                        } else if (wordList.length <= 50) {
+                        } else if (wordList.length <= 50 && [1, 2, 3, 4].includes(level)) {
                             wordList = [...new Set(wordList.map((word) => word.toLowerCase()))];
                             wordList = wordList.filter((word) =>
                                 word

@@ -547,8 +547,12 @@ class Game extends React.Component {
                 wordsPackName = document.getElementById("word-add-pack-name").value;
             if (this.state.wordAddCount > 0
                 && (this.state.wordAddCount <= (this.state.wordAddLevel === "custom" ? this.state.customWordsLimit : 50))) {
-                this.socket.emit("add-words", words, this.state.wordAddLevel, wordsPackName);
-                this.handleClickCloseWordAdd();
+                if (!wordsPackName)
+                    popup.alert({content: "Укажите название пака"});
+                else {
+                    this.socket.emit("add-words", words, this.state.wordAddLevel, wordsPackName);
+                    this.handleClickCloseWordAdd();
+                }
             }
         }
         else
