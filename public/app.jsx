@@ -1136,7 +1136,7 @@ class Game extends React.Component {
                                                                     : ""}</span>)}</div>
                                                     <div
                                                         className="word-report-item-transfer">
-                                                        {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
+                                                        {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Unsorted"][it.currentLevel] : "New"} → {
                                                         !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
                                                     </div>
                                                     <div
