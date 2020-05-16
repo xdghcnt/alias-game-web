@@ -1282,9 +1282,8 @@ class Game extends React.Component {
                                         {(settingsMode && data.customPackSelected == null)
                                             ? (<textarea
                                                 id="custom-word-area"
-                                                class="text-color"
                                                 onChange={((event) => this.handleCustomWordsChange(event.target.value))}
-                                                className="custom-word-textarea"/>)
+                                                className="custom-word-textarea text-color"/>)
                                             : data.customPackSelected != null
                                                 ? (<div className="custom-pack-word-list">
                                                     {data.wordPacks[data.customPackSelected] != null
