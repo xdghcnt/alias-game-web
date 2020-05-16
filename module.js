@@ -5,9 +5,7 @@ function init(wsServer, path, moderKey) {
         app = wsServer.app,
         registry = wsServer.users,
         channel = "alias",
-        autoDenialRules = [
-            [1, 3], [1, 4], [1, 0], [2, 4]
-        ];
+        autoDenialRules = [];
 
     const appDir = registry.config.appDir || __dirname;
     let defaultWords, reportedWordsData = [], reportedWords = [];
@@ -56,7 +54,7 @@ function init(wsServer, path, moderKey) {
                 teams: {},
                 wordIndex: 0,
                 wordsEnded: false,
-                level: 2,
+                level: 4,
                 drawMode: false,
                 drawCommitOnly: false,
                 soloMode: false,
@@ -303,7 +301,7 @@ function init(wsServer, path, moderKey) {
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
                     if (!this.state.roomWordsList)
-                        selectWordSet(2);
+                        selectWordSet(4);
                     if (room.currentPlayer === user && this.state.activeWord)
                         send(user, "active-word", {
                             word: this.state.activeWord,
@@ -625,17 +623,23 @@ function init(wsServer, path, moderKey) {
                             word: word,
                             currentLevel: currentLevel,
                             level: level,
-                            processed: false,
-                            approved: null
+                            processed: true,
+                            approved: true
                         };
                         room.currentWords.filter((it) => it.word === word)[0].reported = true;
                         reportedWordsData.push(reportInfo);
-                        if (autoDenialRules.some((it) => it[0] === currentLevel && it[1] === level)) {
-                            reportInfo.processed = true;
-                            reportInfo.approved = false;
-                        } else reportedWords.push(word);
                         fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                         });
+                        const wordIndexToRemove = defaultWords[reportInfo.currentLevel].indexOf(reportInfo.word);
+                        if (wordIndexToRemove !== -1) {
+                            defaultWords[reportInfo.currentLevel].splice(wordIndexToRemove, 1);
+                            if (reportInfo.level !== 0)
+                                defaultWords[reportInfo.level].push(reportInfo.word);
+                            fs.writeFile(`${appDir}/moderated-words.json`, JSON.stringify(defaultWords, null, 4), (err) => {
+                                if (err)
+                                    send(user, "word-reports-request-status", err.message)
+                            })
+                        }
                         update();
                     }
                 },

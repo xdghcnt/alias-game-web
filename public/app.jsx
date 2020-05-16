@@ -138,7 +138,7 @@ class Words extends React.Component {
                                 </div>) : ""}
                                 <i className="material-icons"
                                    title={!word.reported ? "Report word" : "Reported"}>
-                                    report_problem
+                                    check_circle
                                 </i>
                             </div>) : ""}
                     </div>
@@ -469,7 +469,11 @@ class Game extends React.Component {
     }
 
     handleAction() {
-        this.socket.emit("action");
+        if (this.state.currentPlayer === this.state.userId && this.state.phase === 1
+            && this.state.currentWords.some((word) => !word.reported))
+            popup.alert({content: "Отсортированы не все слова"});
+        else
+            this.socket.emit("action");
     }
 
     handleChangeWordPoints(id, value) {
@@ -550,8 +554,7 @@ class Game extends React.Component {
                 this.socket.emit("add-words", words, this.state.wordAddLevel, wordsPackName);
                 this.handleClickCloseWordAdd();
             }
-        }
-        else
+        } else
             popup.alert({content: "Чтобы получить доступ к добавлению слов, нужно включить его в окне просмотра репортов"});
     }
 
@@ -1012,7 +1015,15 @@ class Game extends React.Component {
                                         <div
                                             className={cs({
                                                 "settings-button": settingsMode,
-                                                "level-selected": data.level === 1
+                                                "level-selected": data.level === 4
+                                            })}
+                                            onClick={() => this.handleClickLevel(4)}><i
+                                            className="material-icons">bug_report</i>Unsorted
+                                        </div>
+                                        <div
+                                            className={cs({
+                                                "settings-button": settingsMode,
+                                                "level-selected": this.state.level === 1
                                             })}
                                             onClick={() => this.handleClickLevel(1)}><i
                                             className="material-icons">pets</i>Easy
@@ -1032,14 +1043,6 @@ class Game extends React.Component {
                                             })}
                                             onClick={() => this.handleClickLevel(3)}><i
                                             className="material-icons">school</i>Hard
-                                        </div>
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": this.state.level === 4
-                                            })}
-                                            onClick={() => this.handleClickLevel(4)}><i
-                                            className="material-icons">whatshot</i>Insane
                                         </div>
                                     </div>
                                     <div
@@ -1317,7 +1320,7 @@ class Game extends React.Component {
                                         {data.wordReportNotify.approved.map((it) => (<div
                                             className="word-report-notify-item">
                                             {it.word} <span className="word-report-notify-transfer">
-                                        ({["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel]} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]})
+                                        ({["", "Easy", "Normal", "Hard", "Unsorted"][it.currentLevel]} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]})
                                     </span></div>))}
                                     </div>
                                 </div>) : ""}
