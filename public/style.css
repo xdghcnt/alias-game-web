@@ -1178,7 +1178,7 @@ a {
 }
 
 .watermark {
-    top: 50%;
+    top: 30%;
     left: 0;
     right: 0;
     opacity: 0.3;
