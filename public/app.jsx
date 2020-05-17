@@ -244,7 +244,9 @@ class Game extends React.Component {
         initArgs.wssToken = window.wssToken;
         this.socket = window.socket.of("alias");
         this.socket.on("state", (state) => {
-            let initDrawMode;
+            let initDrawMode, needScroll;
+            if (this.state.inited && this.state.currentWords.length < state.currentWords.length)
+                needScroll = true;
             if (!this.state.drawMode && state.drawMode)
                 initDrawMode = true;
             if (this.state && this.state.voiceEnabled === 2 && state.phase !== 2 && this.reportListToShow.length)
@@ -267,6 +269,8 @@ class Game extends React.Component {
                 }
             }, state), () => {
                 if (initDrawMode) this.initDrawMode();
+                if (needScroll)
+                    window.scrollTo(0, document.body.scrollHeight);
             });
             if (!state.drawMode && this.sketcher)
                 this.sketcher = null;
@@ -279,11 +283,7 @@ class Game extends React.Component {
             this.setState(Object.assign({}, this.state, {
                 activeWord: data && data.word,
                 activeWordReported: data && data.reported
-            }), () => {
-                setTimeout(() => {
-                    window.scrollTo(0, document.body.scrollHeight);
-                });
-            });
+            }));
         });
         this.socket.on("word-reports-data", (reportData) => {
             let newWordsCount = 0;
@@ -554,8 +554,7 @@ class Game extends React.Component {
                     this.handleClickCloseWordAdd();
                 }
             }
-        }
-        else
+        } else
             popup.alert({content: "Чтобы получить доступ к добавлению слов, нужно включить его в окне просмотра репортов"});
     }
 
