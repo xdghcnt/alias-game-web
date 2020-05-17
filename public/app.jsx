@@ -1071,9 +1071,11 @@ class Game extends React.Component {
                                         className="material-icons start-game settings-button">sync</i>) : ""}
                                 {(isHost && hasPlayers) ? (data.phase === 0
                                     ? (<i onClick={() => this.handleClickResume()}
-                                          className="material-icons start-game settings-button">play_arrow</i>)
+                                          className="material-icons start-game settings-button">lock_open</i>)
                                     : (<i onClick={() => this.handleClickStop()}
-                                          className="material-icons start-game settings-button">pause</i>)) : ""}
+                                          className="material-icons start-game settings-button">{
+                                              this.state.phase === 2 ? "pause" : "lock_outline"
+                                    }</i>)) : ""}
                                 <i onClick={() => this.handleClickChangeName()}
                                    className="toggle-theme material-icons settings-button">edit</i>
                                 {!parseInt(localStorage.darkThemeAlias)
