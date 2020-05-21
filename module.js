@@ -428,7 +428,7 @@ function init(wsServer, path, moderKey) {
                 },
                 "set-player-score": (user, data) => {
                     if (room.hostId === user && room.playerNames[data.playerId] && !isNaN(parseInt(data.score))) {
-                        room.playerScores[data.playerId] = data.score;
+                        room.playerScores[data.playerId] = parseInt(data.score);
                         update();
                     }
                 },
