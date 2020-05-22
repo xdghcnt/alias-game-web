@@ -581,8 +581,8 @@ class Game extends React.Component {
         });
     }
 
-    handleClickShowAllReports() {
-        this.state.wordReportData.words = this.state.wordReportData.wordsFull;
+    handleClickShowMoreReports() {
+        this.state.wordReportData.words = this.state.wordReportData.wordsFull.slice(0, this.state.wordReportData.words.length + 1000);
         this.setState(Object.assign({}, this.state));
     }
 
@@ -1074,7 +1074,7 @@ class Game extends React.Component {
                                           className="material-icons start-game settings-button">lock_open</i>)
                                     : (<i onClick={() => this.handleClickStop()}
                                           className="material-icons start-game settings-button">{
-                                              this.state.phase === 2 ? "pause" : "lock_outline"
+                                        this.state.phase === 2 ? "pause" : "lock_outline"
                                     }</i>)) : ""}
                                 <i onClick={() => this.handleClickChangeName()}
                                    className="toggle-theme material-icons settings-button">edit</i>
@@ -1176,7 +1176,7 @@ class Game extends React.Component {
                                                     </div> : ""}
                                                 </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
                                             <div className="word-report-show-all"
-                                                 onClick={() => this.handleClickShowAllReports()}>Show all</div>) : ""}
+                                                 onClick={() => this.handleClickShowMoreReports()}>Show more</div>) : ""}
                                         </div>)
                                         : (<div className="word-report-no-data">No words reported yet</div>)
                                 }</div>
