@@ -736,7 +736,7 @@ function init(wsServer, path, moderKey) {
                 },
                 "add-words": (user, words, level, packName) => {
                     if (words && words.length) {
-                        let wordList = [...(new Set(words.split("\n").map((word) => word.trim())))];
+                        let wordList = [...(new Set(words.split("\n").map((word) => word.trim().replace(/­/g, ""))))];
                         if ((wordList[0] === "!edit" || wordList[0] === "!remove") && wordList[1] === moderKey) {
                             const
                                 reportList = [],
