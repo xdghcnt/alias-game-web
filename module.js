@@ -10,15 +10,9 @@ function init(wsServer, path, moderKey) {
         ];
 
     const appDir = registry.config.appDir || __dirname;
-    let defaultWords, reportedWordsData = [], reportedWords = [];
+    let reportedWordsData = [], reportedWords = [];
 
-    fs.readFile(`${__dirname}/words.json`, "utf8", function (err, words) {
-        defaultWords = JSON.parse(words);
-        fs.readFile(`${appDir}/moderated-words.json`, "utf8", function (err, words) {
-            if (words)
-                defaultWords = JSON.parse(words);
-        });
-    });
+    const defaultWords = JSON.parse(fs.readFileSync(`${appDir}/moderated-words.json`));
 
     fs.readFile(`${appDir}/reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
         if (data) {
