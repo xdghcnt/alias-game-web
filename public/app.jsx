@@ -844,7 +844,7 @@ class Game extends React.Component {
                             }
                             return points >= data.goal;
                         }),
-                        teamsReachedGoalScores = teamsReachedGoal.map((teamId) => data.teams[teamId].score).sort((a, b) => b - a);
+                        teamsReachedGoalScores = teamsReachedGoal.map((teamId) => data.teams[teamId].score + (data.teams[teamId].wordPoints || 0)).sort((a, b) => b - a);
                     if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoalScores[0] !== teamsReachedGoalScores[1])) {
                         gameIsOver = true;
                         data.teams[mostPointsTeam].winner = true;
