@@ -843,6 +843,8 @@ function init(wsServer, path, moderKey) {
         setSnapshot(snapshot) {
             Object.assign(this.room, snapshot.room);
             this.state = snapshot.state;
+            if (this.room.level === 0)
+                this.room.level = 2;
             this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level]]);
             this.room.phase = 0;
             this.room.currentBet = Infinity;
