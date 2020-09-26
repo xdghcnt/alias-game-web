@@ -1,7 +1,6 @@
 function init(wsServer, path, moderKey) {
     const
         fs = require('fs'),
-        express = require('express'),
         app = wsServer.app,
         registry = wsServer.users,
         channel = "alias",
@@ -28,7 +27,7 @@ function init(wsServer, path, moderKey) {
 
     registry.handleAppPage(path, `${__dirname}/public/app.html`);
 
-    app.use("/alias", express.static(`${__dirname}/public`));
+    app.use("/alias", wsServer.static(`${__dirname}/public`));
 
     class GameState extends wsServer.users.RoomState {
         constructor(hostId, hostData, userRegistry) {
