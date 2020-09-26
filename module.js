@@ -34,6 +34,7 @@ function init(wsServer, path, moderKey) {
         constructor(hostId, hostData, userRegistry) {
             super(hostId, hostData, userRegistry);
             const room = {
+                roomId: hostData.roomId,
                 inited: true,
                 hostId: hostId,
                 phase: 0,
@@ -57,7 +58,8 @@ function init(wsServer, path, moderKey) {
                 soloModeRound: 0,
                 soloModeGoal: 1,
                 packName: null,
-                customWordsLimit: 1500
+                customWordsLimit: 1500,
+                managedVoice: true
             };
             this.room = room;
             this.state = {
@@ -71,6 +73,8 @@ function init(wsServer, path, moderKey) {
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
                 update = () => {
+                    if (room.voiceEnabled)
+                        processUserVoice();
                     send(room.onlinePlayers, "state", room);
                 },
                 rotatePlayers = (teamId) => {
@@ -106,6 +110,19 @@ function init(wsServer, path, moderKey) {
                                 room.currentPlayer = currentTeam.currentPlayer;
                         }
                     }
+                },
+                processUserVoice = () => {
+                    room.userVoice = {};
+                    room.onlinePlayers.forEach((user) => {
+                        if (!room.managedVoice || room.phase === 0 || room.phase === 1)
+                            room.userVoice[user] = true;
+                        else {
+                            if (!room.soloMode && room.currentTeam && room.teams[room.currentTeam].players.has(user))
+                                room.userVoice[user] = true;
+                            else if (room.soloMode && (room.currentPlayer === user || room.currentAssistant === user))
+                                room.userVoice[user] = true;
+                        }
+                    });
                 },
                 rotateTeams = () => {
                     if (room.currentTeam && !room.soloMode) {
@@ -327,10 +344,12 @@ function init(wsServer, path, moderKey) {
                         registry.log(error.message);
                     }
                 };
+            this.updatePublicState = update;
             this.userJoin = userJoin;
             this.userLeft = userLeft;
             this.userEvent = userEvent;
             this.eventHandlers = {
+                ...this.eventHandlers,
                 "team-join": (user, id) => {
                     if (id === "new") {
                         id = makeId();

@@ -163,9 +163,7 @@ class Player extends React.Component {
                 current: id === data.currentPlayer,
                 assistant: id === data.currentAssistant
             })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
-                {data.voiceEnabled ? <div className={cs("player-circle", {
-                    "speaking": data.userSpeaking && data.userSpeaking[id]
-                })} data-userId={id}/> : ""}
+                <UserAudioMarker user={id} data={data}/>
                 {data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({data.playerScores[id] || 0}<span
@@ -220,6 +218,7 @@ class Player extends React.Component {
 
 class Game extends React.Component {
     componentDidMount() {
+        this.gameName = "alias";
         const initArgs = {};
         if (parseInt(localStorage.darkThemeAlias))
             document.body.classList.add("dark-theme");
@@ -237,7 +236,7 @@ class Game extends React.Component {
             initArgs.acceptDelete = localStorage.acceptDelete;
             delete localStorage.acceptDelete;
         }
-        initArgs.roomId = location.hash.substr(1);
+        initArgs.roomId = this.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.aliasUserId;
         initArgs.userName = localStorage.userName;
         initArgs.token = localStorage.userToken;
