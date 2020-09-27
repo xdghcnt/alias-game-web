@@ -400,6 +400,20 @@ class Game extends React.Component {
             document.addEventListener("gesturestart", fixUserScale);
             document.addEventListener("touchmove", fixUserScale);
         }
+        let keyDownSubscriber = true;
+        const subscribeKeydown = () => {
+            document.body.addEventListener("keydown", (evt) => {
+                if (evt.code === "Space") {
+                    this.handleAction();
+                    keyDownSubscriber = false;
+                }
+            }, {once: true});
+        };
+        subscribeKeydown();
+        document.body.addEventListener("keyup", (evt) => {
+            if (evt.code === "Space" && !keyDownSubscriber)
+                subscribeKeydown();
+        });
     }
 
     updateState() {

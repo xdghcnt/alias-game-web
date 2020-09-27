@@ -948,6 +948,7 @@ input:checked + .word-report-approve.yes {
 .solo-mode .team {
     height: auto;
     min-height: 130px;
+    width: 185px;
 }
 
 .solo-mode .team.join {
@@ -1170,5 +1171,13 @@ a {
 }
 
 .user-audio-marker.speaking {
-    box-shadow: 0 0 0 3px #80af49 !important;
+    box-shadow: 0 0 0 3px #9ccc65c7 !important;
+}
+
+.dark-theme .user-audio-marker-elem {
+    background: #5e9e9e;
+}
+
+.dark-theme .user-audio-marker.speaking {
+    box-shadow: 0 0 0 3px #76c597eb !important;
 }
