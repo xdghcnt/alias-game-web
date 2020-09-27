@@ -1168,3 +1168,7 @@ a {
     margin-top: 6px;
     cursor: pointer;
 }
+
+.user-audio-marker.speaking {
+    box-shadow: 0 0 0 3px #80af49 !important;
+}
