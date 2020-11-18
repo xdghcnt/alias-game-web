@@ -1181,3 +1181,9 @@ a {
 .dark-theme .user-audio-marker.speaking {
     box-shadow: 0 0 0 3px #76c597eb !important;
 }
+
+@media (max-width: 560px) {
+    .teams-pane {
+        margin-top: 40px;
+    }
+}
