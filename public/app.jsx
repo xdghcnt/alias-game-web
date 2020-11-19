@@ -392,7 +392,7 @@ class Game extends React.Component {
         window.hyphenateEn = createHyphenator(hyphenationPatternsEnUs);
         if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
             const fixUserScale = (evt) => {
-                if (evt.originalEvent.scale !== 1) {
+                if (evt && evt.originalEvent && evt.originalEvent.scale !== 1) {
                     evt.originalEvent.preventDefault();
                     document.body.style.transform = "scale(1)";
                 }
