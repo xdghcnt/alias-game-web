@@ -968,7 +968,7 @@ class Game extends React.Component {
                                                 {settingsMode && this.state.soloMode ? `${this.state.soloModeRound}/` : ""}
                                                 {settingsMode ? (<input id="goal"
                                                                         type="number"
-                                                                        min="0"
+                                                                        min="1"
                                                                         value={!this.state.soloMode
                                                                             ? this.state.goal
                                                                             : this.state.soloModeGoal}

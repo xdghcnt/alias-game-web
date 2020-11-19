@@ -500,11 +500,11 @@ function init(wsServer, path, moderKey) {
                     update();
                 },
                 "set-goal": (user, goal) => {
-                    if (room.hostId === user && !isNaN(goal)) {
+                    if (room.hostId === user && !isNaN(goal) && goal > 0) {
                         if (!room.soloMode)
-                            room.goal = goal || 0;
+                            room.goal = goal;
                         else
-                            room.soloModeGoal = goal || 0;
+                            room.soloModeGoal = goal;
                     }
                     update();
                 },
