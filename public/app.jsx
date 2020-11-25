@@ -449,10 +449,10 @@ class Game extends React.Component {
                 packsDenied: this.reportListToShow.filter((it) => it.custom && !it.approved).length
             }
         }));
-        document.getElementById("snackbar").classList.add("show");
+        document.getElementById("snackbar")?.classList?.add("show");
         clearTimeout(this.wordReportNotifyTimeout);
         this.wordReportNotifyTimeout = setTimeout(() => {
-            document.getElementById("snackbar").classList.remove("show");
+            document.getElementById("snackbar")?.classList?.remove("show");
         }, (approvedList.length * 1000) + 3000);
         this.reportListToShow = [];
     }
