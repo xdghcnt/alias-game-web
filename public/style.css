@@ -1198,6 +1198,11 @@ a {
     padding: 0 6px;
     user-select: none;
     background: gainsboro;
+    display: none;
+}
+
+.words.counting .points-button {
+    display: block;
 }
 
 .dark-theme .points-button {
