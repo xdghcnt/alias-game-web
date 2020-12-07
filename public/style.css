@@ -1187,3 +1187,27 @@ a {
         margin-top: 40px;
     }
 }
+
+.isMobile .word input {
+    width: 31px;
+}
+
+.points-button {
+    position: absolute;
+    top: 3px;
+    padding: 0 6px;
+    user-select: none;
+    background: gainsboro;
+}
+
+.dark-theme .points-button {
+    background: #5f5f5f;
+}
+
+.points-button.remove-points {
+    left: -38px;
+}
+
+.points-button.add-points {
+    right: -38px;
+}
