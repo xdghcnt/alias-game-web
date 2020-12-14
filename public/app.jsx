@@ -256,7 +256,11 @@ class Game extends React.Component {
                 initDrawMode = true;
             if (this.state && this.state.voiceEnabled === 2 && state.phase !== 2 && this.reportListToShow.length)
                 setTimeout(() => this.showReportNotify(), 1000);
-            CommonRoom.processCommonRoom(state, this.state);
+            CommonRoom.processCommonRoom(state, this.state, {
+                maxPlayers: "∞",
+                largeImageKey: "alias",
+                details: "Alias/Шляпа"
+            });
             this.setState(Object.assign({
                 userId: this.userId,
                 activeWord: this.state.activeWord,

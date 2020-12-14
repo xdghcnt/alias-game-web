@@ -33,7 +33,7 @@ function init(wsServer, path, moderKey) {
         constructor(hostId, hostData, userRegistry) {
             super(hostId, hostData, userRegistry);
             const room = {
-                roomId: hostData.roomId,
+                ...this.room,
                 inited: true,
                 hostId: hostId,
                 phase: 0,
