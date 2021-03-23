@@ -1217,3 +1217,12 @@ a {
 .points-button.add-points {
     right: -38px;
 }
+
+.word-report-item.unprocessed .word-report-item-target {
+    cursor: pointer;
+    user-select: none;
+}
+
+.word-report-item.unprocessed .word-report-item-target:hover {
+    text-decoration: underline;
+}

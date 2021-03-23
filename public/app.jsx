@@ -633,7 +633,7 @@ class Game extends React.Component {
     handleClickSubmitReports() {
         const submitData = this.state.wordReportData.words.filter(
             (it) => !it.processed && it.approved !== null
-        ).map((it) => ({datetime: it.datetime, approved: it.approved}));
+        ).map((it) => ({datetime: it.datetime, approved: it.approved, level: it.level}));
         if (!this.state.wordReportSent && submitData.length) {
             this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, submitData);
             this.setState(Object.assign({}, this.state, {
@@ -660,6 +660,18 @@ class Game extends React.Component {
         this.setState(Object.assign({}, this.state, {
             wordReportData: this.state.wordReportData
         }));
+    }
+
+    toggleWordReportChangeTargetDifficulty(index) {
+        const word = this.state.wordReportData.words[index];
+        if (!word.processed) {
+            word.level++;
+            if (word.level === word.currentLevel)
+                word.level++;
+            if (word.level === 5)
+                word.level = word.newWord ? 1 : 0;
+            this.updateState();
+        }
     }
 
     handleToggleTheme() {
@@ -1150,7 +1162,9 @@ class Game extends React.Component {
                                 <div className="word-report-list">{
                                     data.wordReportData.words.length ? (<div>
                                             {data.wordReportData.words.map((it, index) => (
-                                                <div className={"word-report-item"}>
+                                                <div className={cs("word-report-item", {
+                                                    unprocessed: !it.processed
+                                                })}>
                                                     <div
                                                         className="word-report-item-name">{it.playerName}
                                                         <i className="material-icons remove-user-reports"
@@ -1184,7 +1198,11 @@ class Game extends React.Component {
                                                     <div
                                                         className="word-report-item-transfer">
                                                         {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
-                                                        !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
+                                                        !it.custom ?
+                                                            <span className="word-report-item-target"
+                                                                  onClick={() => this.toggleWordReportChangeTargetDifficulty(index)}>
+                                                                {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]}
+                                                            </span> : "Custom"}
                                                     </div>
                                                     <div
                                                         className="word-report-item-status">

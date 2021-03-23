@@ -661,6 +661,7 @@ function init(wsServer, path, moderKey) {
                             reportedWordsData.some((reportData) => {
                                 if (reportData.datetime === moderData.datetime && !reportData.processed) {
                                     hasChanges = true;
+                                    reportData.level = moderData.level;
                                     reportData.processed = true;
                                     reportData.approved = moderData.approved;
                                     Object.assign(moderData, reportData);
