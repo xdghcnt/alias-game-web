@@ -58,7 +58,8 @@ function init(wsServer, path, moderKey) {
                 soloModeGoal: 1,
                 packName: null,
                 customWordsLimit: 1500,
-                managedVoice: true
+                managedVoice: true,
+                soloNextGames: null
             };
             this.room = room;
             this.state = {
@@ -816,18 +817,19 @@ function init(wsServer, path, moderKey) {
                                 && !~defaultWords[3].indexOf(word)
                                 && !~defaultWords[4].indexOf(word));
                             if (wordList.length > 0) {
-                                const reportInfo = {
-                                    datetime: +new Date(),
+                                let datetime = +new Date();
+                                const reportList = wordList.map(word => ({
+                                    datetime: datetime++,
                                     user: user,
                                     playerName: room.playerNames[user],
                                     newWord: true,
-                                    wordList,
+                                    word: [word],
                                     level: level,
                                     processed: false,
                                     approved: null
-                                };
-                                reportedWordsData.push(reportInfo);
-                                fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                                }))
+                                reportedWordsData.push(...reportList);
+                                fs.appendFile(`${appDir}/reported-words.txt`, `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
                                 });
                             }
                         }

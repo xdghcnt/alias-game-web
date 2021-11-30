@@ -299,13 +299,14 @@ class Game extends React.Component {
             const wordSet = new Set();
             reportData.forEach((it) => {
                 if (it.newWord && it.approved) newWordsCount += it.wordList.length;
-                if (it.wordList)
+                if (it.wordList?.length > 1)
                     it.wordList.forEach((word) => wordSet.add(word));
-                else if (it.word && !this.isAutoDenied(it)) {
-                    if (wordSet.has(it.word))
+                else if ((it.word || it.wordList?.length === 1) && !this.isAutoDenied(it)) {
+                    const word = it.wordList ? it.wordList[0] : word;
+                    if (wordSet.has(word))
                         it.hasHistory = true;
                     else
-                        wordSet.add(it.word);
+                        wordSet.add(word);
                 }
             });
             this.setState(Object.assign({}, this.state, {
@@ -834,13 +835,15 @@ class Game extends React.Component {
             it.wordHistory = [];
             this.reportData.forEach((report) => {
                 if (!this.isAutoDenied(report))
-                    if (it.datetime > report.datetime)
-                        if (!report.wordList && report.word === it.word)
+                    if (it.datetime > report.datetime) {
+                        const word = it.wordList?.length === 1 ? it.wordList[0] : it.word;
+                        if (!report.wordList && report.word === word)
                             it.wordHistory.push(report);
-                        else if (report.wordList && report.wordList.includes(it.word))
+                        else if (report.wordList && report.wordList.includes(word))
                             it.wordHistory.push({
-                                ...report, word: it.word, wordList: undefined
+                                ...report, word, wordList: undefined
                             })
+                    }
             });
         }
         this.setState(this.state);
@@ -1172,8 +1175,8 @@ class Game extends React.Component {
                                                     </div>
                                                     <div
                                                         className="word-report-item-word">{!it.custom
-                                                        ? (!it.newWord
-                                                            ? <span>{it.word}{it.hasHistory ?
+                                                        ? ((!it.newWord || it.wordList.length === 1)
+                                                            ? <span>{it.word || it.wordList[0]}{it.hasHistory ?
                                                                 <span> <i onClick={() => this.toggleWordHistory(it)}
                                                                           className="material-icons history-button">
                                                                     {!it.wordHistory ? "history" : "close"}
