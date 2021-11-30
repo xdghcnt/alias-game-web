@@ -24,8 +24,11 @@ class Teams extends React.Component {
         return (
             <div
                 className={cs("team-list", {started: data.phase !== 0, "not-started": data.phase === 0})}>
-                {data.teams && Object.keys(data.teams).map((teamId, index) =>
-                    (<div onClick={() => game.handleTeamClick(teamId)} className={cs("team", {
+                {data.teams && Object.keys(data.teams).map((teamId, index) => {
+                    let score = data.teams[teamId].score;
+                    if (data.gameIsOver && data.teams[teamId].wordPoints > 0)
+                        score += data.teams[teamId].wordPoints;
+                    return (<div onClick={() => game.handleTeamClick(teamId)} className={cs("team", {
                         join: !(teamId !== "new" || data.phase !== 0),
                         current: data.currentTeam === teamId,
                         "goal-reached": data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal,
@@ -38,12 +41,12 @@ class Teams extends React.Component {
                                     onClick={(evt) => game.handleSetScore(teamId, evt)}>
                                     edit
                                 </i>) : ""}
-                            Score: {data.teams[teamId].score}
-                            <span className={cs("word-points", {
+                            Score: {score}
+                            {!data.gameIsOver ? <span className={cs("word-points", {
                                 active: data.teams[teamId].wordPoints,
                                 positive: data.teams[teamId].wordPoints > 0,
                                 negative: data.teams[teamId].wordPoints < 0
-                            })}>{Math.abs(data.teams[teamId].wordPoints)}</span>
+                            })}>{Math.abs(data.teams[teamId].wordPoints)}</span> : ""}
                         </div>)}
                         <div className="players-container">
                             {
@@ -52,7 +55,8 @@ class Teams extends React.Component {
                                 )
                             }
                         </div>
-                    </div>)
+                    </div>);
+                    }
                 )}
             </div>
         );
@@ -161,6 +165,9 @@ class Player extends React.Component {
             game = this.props.game,
             id = this.props.id,
             isHost = data.hostId === data.userId;
+        let score = data.playerScores[id] || 0;
+        if (data.gameIsOver && data.playerWordPoints[id] > 0)
+            score += data.playerWordPoints[id];
         return (
             <div className={cs("player", {
                 ready: ~data.readyPlayers.indexOf(id),
@@ -172,12 +179,12 @@ class Player extends React.Component {
                 <UserAudioMarker user={id} data={data}/>
                 {data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
-                    <span className="player-score">&nbsp;({data.playerScores[id] || 0}<span
+                    <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
                         className={cs("word-points", {
                             active: data.playerWordPoints[id],
                             positive: data.playerWordPoints[id] > 0,
                             negative: data.playerWordPoints[id] < 0
-                        })}>{Math.abs(data.playerWordPoints[id])}</span>{data.hostId === data.userId ?
+                        })}>{Math.abs(data.playerWordPoints[id])}</span>) : ""}{data.hostId === data.userId ?
                         (<i className="material-icons host-button change-player-score"
                             title="Change"
                             onClick={(evt) => game.handleSetPlayerScore(id, evt)}>
@@ -871,6 +878,7 @@ class Game extends React.Component {
                 gameIsOver,
                 hasPlayers = data.phase !== 0;
             data.showWatermark = false;
+            data.gameIsOver = false;
             if (data.phase === 0) {
                 const firstTeam = data.teams[Object.keys(data.teams)[0]];
                 hasPlayers = firstTeam && (!data.soloMode ? firstTeam.players.length > 0 : firstTeam.players.length > 1);
@@ -885,6 +893,7 @@ class Game extends React.Component {
             } else if (data.phase === 1) {
                 if (data.soloModeRound >= data.soloModeGoal) {
                     gameIsOver = true;
+                    data.gameIsOver = true;
                     const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
                         (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
                     statusText = `Player ${data.playerNames[playerWin]} wins!`;
@@ -908,6 +917,7 @@ class Game extends React.Component {
                         gameIsOver = true;
                         data.teams[mostPointsTeam].winner = true;
                         statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
+                        data.gameIsOver = true;
                         data.showWatermark = true;
                     }
                 }
