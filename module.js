@@ -823,7 +823,7 @@ function init(wsServer, path, moderKey) {
                                     user: user,
                                     playerName: room.playerNames[user],
                                     newWord: true,
-                                    word: [word],
+                                    wordList: [word],
                                     level: level,
                                     processed: false,
                                     approved: null
