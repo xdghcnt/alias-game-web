@@ -1462,7 +1462,9 @@ class Game extends React.Component {
                                         </span>
                                     <div className="ranked-status-user">
                                         Пользователь:&nbsp;<span
-                                        className="ranked-status">{data.authUsers[data.userId] ? 'Авторизован' : 'Не авторизован'}</span>
+                                        className="ranked-status">{data.authUsers[data.userId]
+                                        ? `Авторизован ${!data.authUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
+                                        : 'Не авторизован'}</span>
                                     </div>
                                     <div className="ranked-desc">
                                         Участвовать в Ranked-играх можно только войдя в Ranked-аккаунт.
