@@ -417,6 +417,16 @@ body.dark-theme {
     padding: 17px 13px;
 }
 
+.start-game-buttons.row-2 {
+    text-align: left;
+    margin-bottom: 21px;
+}
+
+.start-game-buttons.row-2 div {
+    padding: 7px 5px;
+    text-align: center;
+}
+
 .little-controls div {
     display: inline-block;
 }
@@ -606,7 +616,7 @@ body.dark-theme {
     box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
 }
 
-.word-report-modal {
+.word-report-modal, .ranked-modal {
     position: fixed;
     top: 0;
     bottom: 0;
@@ -614,31 +624,32 @@ body.dark-theme {
     right: 0;
     background: #00000057;
     z-index: 2;
+    padding-top: 42px;
 }
 
 .word-report-modal-bg {
     background: black;
 }
 
-.word-report-modal-content {
+.word-report-modal-content, .ranked-modal-content {
     background: white;
     margin: 0 auto;
     max-width: 628px;
     box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
 }
 
-.dark-theme .word-report-modal-content {
+.dark-theme .word-report-modal-content, .dark-theme .ranked-modal-content {
     background: #40403f;
 }
 
-.word-report-title {
+.word-report-title, .ranked-title {
     font-size: 20px;
     padding: 8px 13px;
     text-align: left;
     position: relative;
 }
 
-.word-report-modal-close {
+.word-report-modal-close, .ranked-modal-close {
     position: absolute;
     right: 9px;
     top: 5px;
@@ -646,7 +657,7 @@ body.dark-theme {
     cursor: pointer;
 }
 
-.word-report-save-button {
+.button {
     display: inline-block;
     padding: 1px 4px;
     background: #b2e675;
@@ -656,7 +667,7 @@ body.dark-theme {
     cursor: pointer;
 }
 
-.dark-theme .word-report-save-button {
+.dark-theme .button {
     background: rgb(79, 109, 109);
 }
 
@@ -849,8 +860,9 @@ input:checked + .word-report-approve.yes {
     padding: 4px;
 }
 
-.word-report-save-button.inactive {
+.button.inactive {
     color: #8e8e8e;
+    cursor: default;
 }
 
 .word-report-modal-content.add {
@@ -1065,7 +1077,6 @@ input:checked + .word-report-approve.yes {
 }
 
 .custom-game-button.has-pack-name {
-    margin-bottom: 8px;
     width: auto;
 }
 
@@ -1225,4 +1236,56 @@ a {
 
 .word-report-item.unprocessed .word-report-item-target:hover {
     text-decoration: underline;
+}
+
+.ranked-game-button {
+    text-align: left;
+    padding-bottom: 4px;
+    padding-left: 13px;
+    width: 91px;
+    margin-bottom: -14px;
+}
+
+.ranked-status-room, .ranked-status-user {
+    font-size: 18px;
+    text-align: left;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+}
+
+.ranked-content {
+    padding: 0 15px 17px;
+    text-align: left;
+}
+
+.ranked-auth-buttons {
+    font-size: 16px;
+    vertical-align: middle;
+    display: flex;
+    justify-content: right;
+}
+
+.ranked-desc {
+    padding: 3px;
+    color: #a1a1a1;
+    padding-top: 3px;
+}
+
+.ranked-status {
+    background: #00000026;
+    padding: 1px 4px;
+}
+
+.ranked-score {
+    opacity: 0.7;
+    font-weight: normal;
+}
+
+.dark-theme .word-points.positive {
+    color: #89b389;
+}
+
+.dark-theme .word-points.negative {
+    color: #ff7373;
 }

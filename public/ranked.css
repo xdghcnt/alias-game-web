@@ -1,0 +1,130 @@
+html {
+    background: #202020;
+    color: #cccaca;
+}
+
+.main {
+    background: rgb(64, 64, 63);
+    width: 610px;
+    margin: auto;
+    padding: 16px 40px;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 40%);
+}
+
+.button {
+    cursor: pointer;
+}
+
+.toggle-moderator i {
+    font-size: 19px;
+    vertical-align: middle;
+}
+
+.title {
+    font-size: 29px;
+}
+
+.section {
+    padding: 14px 0;
+}
+
+a {
+    color: #cccaca;
+}
+
+.moderator {
+    margin-right: 7px;
+}
+
+.player-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #868686;
+}
+
+.name {
+    font-size: 24px;
+    padding: 9px 23px;
+    width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.score {
+    font-size: 31px;
+    font-family: monospace;
+    margin-right: 15px;
+}
+
+.rank {
+    font-size: 28px;
+    width: 37px;
+    text-align: right;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.button.edit-score i {
+    font-size: 18px;
+    margin-right: 3px;
+}
+
+.stats {
+    color: #c1c1c1;
+}
+
+.match-player {
+    display: flex;
+    align-items: center;
+}
+
+.match-player:nth-child(even) {
+    background: #484848;
+}
+
+.players {
+    display: flex;
+    flex-flow: column;
+}
+
+.match {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #6d6d6d;
+}
+
+.match .date {
+    width: 117px;
+}
+
+.player-name {
+    width: 310px;
+    font-size: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+}
+
+.player-score {
+    width: 50px;
+}
+
+.player-diff {
+    width: 50px;
+}
+
+.host-button {
+    font-size: 14px;
+    margin-left: 4px;
+}
+
+.skill-group {
+    width: 131px;
+    margin-left: 13px;
+    font-size: 17px;
+    line-height: 24px;
+}

@@ -7,5 +7,8 @@
     "module.js",
     "words.json",
     "public"
-  ]
+  ],
+  "dependencies": {
+    "firebase-admin": "^10.0.0"
+  }
 }

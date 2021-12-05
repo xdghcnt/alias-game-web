@@ -25,37 +25,37 @@ class Teams extends React.Component {
             <div
                 className={cs("team-list", {started: data.phase !== 0, "not-started": data.phase === 0})}>
                 {data.teams && Object.keys(data.teams).map((teamId, index) => {
-                    let score = data.teams[teamId].score;
-                    if (data.gameIsOver && data.teams[teamId].wordPoints > 0)
-                        score += data.teams[teamId].wordPoints;
-                    return (<div onClick={() => game.handleTeamClick(teamId)} className={cs("team", {
-                        join: !(teamId !== "new" || data.phase !== 0),
-                        current: data.currentTeam === teamId,
-                        "goal-reached": data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal,
-                        winner: data.teams[teamId].winner
-                    })} key={index}>
-                        {data.soloMode ? "" : (<div className="score" onTouchStart={(e) => e.target.focus()}>
-                            {data.hostId === data.userId ?
-                                (<i className="material-icons host-button change-score"
-                                    title="Change"
-                                    onClick={(evt) => game.handleSetScore(teamId, evt)}>
-                                    edit
-                                </i>) : ""}
-                            Score: {score}
-                            {!data.gameIsOver ? <span className={cs("word-points", {
-                                active: data.teams[teamId].wordPoints,
-                                positive: data.teams[teamId].wordPoints > 0,
-                                negative: data.teams[teamId].wordPoints < 0
-                            })}>{Math.abs(data.teams[teamId].wordPoints)}</span> : ""}
-                        </div>)}
-                        <div className="players-container">
-                            {
-                                data.teams[teamId].players && data.teams[teamId].players.map(
-                                    (player, index) => (<Player key={index} data={data} id={player} game={game}/>)
-                                )
-                            }
-                        </div>
-                    </div>);
+                        let score = data.teams[teamId].score;
+                        if (data.gameIsOver && data.teams[teamId].wordPoints > 0)
+                            score += data.teams[teamId].wordPoints;
+                        return (<div onClick={() => game.handleTeamClick(teamId)} className={cs("team", {
+                            join: !(teamId !== "new" || data.phase !== 0),
+                            current: data.currentTeam === teamId,
+                            "goal-reached": data.teams[teamId].score + (data.teams[teamId].wordPoints || 0) >= data.goal,
+                            winner: data.teams[teamId].winner
+                        })} key={index}>
+                            {data.soloMode ? "" : (<div className="score" onTouchStart={(e) => e.target.focus()}>
+                                {data.hostId === data.userId ?
+                                    (<i className="material-icons host-button change-score"
+                                        title="Change"
+                                        onClick={(evt) => game.handleSetScore(teamId, evt)}>
+                                        edit
+                                    </i>) : ""}
+                                Score: {score}
+                                {!data.gameIsOver ? <span className={cs("word-points", {
+                                    active: data.teams[teamId].wordPoints,
+                                    positive: data.teams[teamId].wordPoints > 0,
+                                    negative: data.teams[teamId].wordPoints < 0
+                                })}>{Math.abs(data.teams[teamId].wordPoints)}</span> : ""}
+                            </div>)}
+                            <div className="players-container">
+                                {
+                                    data.teams[teamId].players && data.teams[teamId].players.map(
+                                        (player, index) => (<Player key={index} data={data} id={player} game={game}/>)
+                                    )
+                                }
+                            </div>
+                        </div>);
                     }
                 )}
             </div>
@@ -177,7 +177,16 @@ class Player extends React.Component {
                 assistant: id === data.currentAssistant
             })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
                 <UserAudioMarker user={id} data={data}/>
-                {data.playerNames[id]}
+                {((data.phase === 0 || data.rankedResultsSaved) && data.authUsers[id] && data.ranked) ? (
+                    <span className="ranked-score">[{!data.rankedResultsSaved
+                        ? data.authUsers[id].score : data.authUsers[id].score - (data.rankedScoreDiffs[id] || 0)}{data.rankedResultsSaved ? (
+                        <span
+                            className={cs("word-points", {
+                                active: data.rankedScoreDiffs[id],
+                                positive: data.rankedScoreDiffs[id] > 0,
+                                negative: data.rankedScoreDiffs[id] < 0
+                            })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
+                {data.authUsers[id] ? data.authUsers[id].name : data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
                         className={cs("word-points", {
@@ -227,6 +236,7 @@ class Player extends React.Component {
             </div>
         );
     }
+
 }
 
 class Game extends React.Component {
@@ -300,6 +310,9 @@ class Game extends React.Component {
                 activeWord: data && data.word,
                 activeWordReported: data && data.reported
             }));
+        });
+        this.socket.on("auth-name-duplicated", () => {
+            popup.alert({content: `Никнейм «${this.state.playerNames[this.userId]}» уже занят`});
         });
         this.socket.on("word-reports-data", (reportData) => {
             let newWordsCount = 0;
@@ -500,12 +513,18 @@ class Game extends React.Component {
     }
 
     handleTeamClick(id) {
-        if (this.state.phase === 0)
-            this.socket.emit("team-join", id);
+        if (this.state.phase === 0) {
+            if (this.state.ranked && !this.state.authUsers[this.userId])
+                this.handleClickOpenRanked();
+            else
+                this.socket.emit("team-join", id);
+        }
     }
 
     handleAction() {
-        this.socket.emit("action");
+        if (this.unsavedRankedResults) {
+            popup.confirm({content: "Сохранить результат Ranked-игры?"}, (evt) => evt.proceed && this.socket.emit("action"));
+        } else this.socket.emit("action");
     }
 
     handleChangeWordPoints(id, value) {
@@ -610,6 +629,51 @@ class Game extends React.Component {
             popup.alert({content: "Чтобы получить доступ к добавлению слов, нужно включить его в окне просмотра репортов"});
     }
 
+    handleClickAuthLogout() {
+        this.socket.emit('fb-logout')
+    }
+
+    handleClickAuthSMS() {
+        const auth = fb.getAuth();
+        if (!this.recaptchaVerifier)
+            this.recaptchaVerifier = new fb.RecaptchaVerifier('recaptcha-container', {
+                size: 'invisible'
+            }, auth);
+
+        popup.prompt({content: "Номер телефона"}, async (evt) => {
+            if (evt.proceed) {
+                try {
+                    const confirmationResult = await fb.signInWithPhoneNumber(auth, evt.input_value, this.recaptchaVerifier);
+                    popup.prompt({content: "Код из SMS"}, async (evt) => {
+                        if (evt.proceed) {
+                            try {
+                                const result = await confirmationResult.confirm(evt.input_value);
+                                this.socket.emit('fb-auth', result.user.accessToken);
+                            } catch (error) {
+                                popup.alert({content: error.message})
+                            }
+                        }
+                    });
+                } catch (error) {
+                    popup.alert({content: error.message})
+                }
+            }
+        });
+    }
+
+    handleClickToggleRankedMode() {
+        this.socket.emit('toggle-ranked');
+    }
+
+    async handleClickAuthGoogle() {
+        try {
+            const result = await fb.signInWithPopup(fb.getAuth(), new fb.GoogleAuthProvider());
+            this.socket.emit('fb-auth', result.user.accessToken);
+        } catch (error) {
+            popup.alert({content: error.message});
+        }
+    }
+
     handleWordAddChange(value) {
         this.setState(Object.assign({}, this.state, {
             wordAddCount: (value && value.split("\n").length) || 0
@@ -691,7 +755,10 @@ class Game extends React.Component {
     }
 
     handleClickStop() {
-        this.socket.emit("stop-game");
+        if (this.unsavedRankedResults) {
+            popup.confirm({content: `Результаты игры не будут сохранены. Вы уверены?`},
+                (evt) => evt.proceed && this.socket.emit("stop-game"));
+        } else this.socket.emit("stop-game");
     }
 
     handleClickResume() {
@@ -715,7 +782,10 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
+        if (!this.state.ranked)
+            popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
+        else
+            popup.confirm({content: `При удалении игрока игра будет завершена, а он получит штраф. Удалить ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player-ranked", id));
     }
 
     handleGiveHost(id, evt) {
@@ -790,6 +860,12 @@ class Game extends React.Component {
         }));
     }
 
+    handleClickCloseRanked() {
+        this.setState(Object.assign({}, this.state, {
+            rankedModalActive: false,
+        }));
+    }
+
     handleClickOpenCustom() {
         this.socket.emit("words-pack-list");
         this.setState(Object.assign({}, this.state, {
@@ -799,6 +875,12 @@ class Game extends React.Component {
             if (!name && document.getElementById("custom-word-area"))
                 document.getElementById("custom-word-area").focus();
         });
+    }
+
+    handleClickOpenRanked() {
+        this.setState(Object.assign({}, this.state, {
+            rankedModalActive: true,
+        }));
     }
 
     handleSelectCustom(name) {
@@ -871,25 +953,29 @@ class Game extends React.Component {
                     ? data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId)
                     : data.currentPlayer === data.userId || data.currentAssistant === data.userId,
                 currentTeam = data.teams[data.currentTeam],
-                settingsMode = isHost && this.state.phase === 0,
-                parentDir = location.pathname.match(/(.+?)\//)[1];
+                settingsMode = isHost && this.state.phase === 0 && !this.state.ranked;
             let actionText, statusText,
                 showWordsBet = false,
                 gameIsOver,
                 hasPlayers = data.phase !== 0;
             data.showWatermark = false;
             data.gameIsOver = false;
+            this.unsavedRankedResults = false;
             if (data.phase === 0) {
                 const firstTeam = data.teams[Object.keys(data.teams)[0]];
                 hasPlayers = firstTeam && (!data.soloMode ? firstTeam.players.length > 0 : firstTeam.players.length > 1);
-                if (hasPlayers) {
+                if (hasPlayers && (!data.ranked || firstTeam.players.length === 4)) {
                     if (isHost) {
                         statusText = "You can start the game";
                         actionText = "Start";
                     } else
                         statusText = "Host can start the game";
-                } else
-                    statusText = "Waiting for players";
+                } else {
+                    if (!data.ranked)
+                        statusText = "Waiting for players";
+                    else
+                        statusText = "Waiting for 4 players";
+                }
             } else if (data.phase === 1) {
                 if (data.soloModeRound >= data.soloModeGoal) {
                     gameIsOver = true;
@@ -898,6 +984,10 @@ class Game extends React.Component {
                         (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
                     statusText = `Player ${data.playerNames[playerWin]} wins!`;
                     data.showWatermark = true;
+                    if (data.ranked && !data.rankedResultsSaved && data.hostId === data.userId) {
+                        this.unsavedRankedResults = true;
+                        actionText = "Save";
+                    }
                 }
                 if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
                     let mostPoints = 0,
@@ -1010,7 +1100,7 @@ class Game extends React.Component {
                                      className={cs(
                                          "button-action", {
                                              pressed: data.readyPlayers && ~data.readyPlayers.indexOf(data.userId),
-                                             active: !!actionText
+                                             active: !!actionText,
                                          })
                                      }>{actionText}</div>
                             </div>
@@ -1045,12 +1135,13 @@ class Game extends React.Component {
                                                 />) : (<span className="value">{this.state.roundTime}</span>)}
                                             </div>
                                         </div>
-                                        <div className={cs("team-mode", {
-                                            "settings-button": settingsMode,
-                                            "level-selected": !this.state.soloMode
-                                        })}
-                                             onClick={() => this.handleClickToggleSoloMode(false)}>team
-                                        </div>
+                                        {
+                                            !data.ranked ? (<div className={cs("team-mode", {
+                                                "settings-button": settingsMode,
+                                                "level-selected": !this.state.soloMode
+                                            })} onClick={() => this.handleClickToggleSoloMode(false)}>team
+                                            </div>) : ''
+                                        }
                                         <div className={cs("team-mode", {
                                             "settings-button": settingsMode,
                                             "level-selected": this.state.soloMode
@@ -1115,16 +1206,26 @@ class Game extends React.Component {
                                             className="material-icons">whatshot</i>Insane
                                         </div>
                                     </div>
-                                    <div
-                                        className={cs("custom-game-button", {
-                                            "settings-button": true,
-                                            "level-selected": this.state.level === 0,
-                                            "has-pack-name": this.state.packName
-                                        })}
-                                        onClick={() => this.handleClickOpenCustom()}>
-                                        <i
-                                            className="material-icons">accessible</i>Custom{this.state.packName
-                                        ? `: ${this.state.packName}` : ""}
+                                    <div className="start-game-buttons row-2">
+                                        <div
+                                            className={cs("custom-game-button", {
+                                                "settings-button": true,
+                                                "level-selected": this.state.level === 0,
+                                                "has-pack-name": this.state.packName
+                                            })}
+                                            onClick={() => this.handleClickOpenCustom()}>
+                                            <i
+                                                className="material-icons">accessible</i>Custom{this.state.packName
+                                            ? `: ${this.state.packName}` : ""}
+                                        </div>
+                                        <div
+                                            className={cs("ranked-game-button", "settings-button", {
+                                                "level-selected": this.state.level === 'ranked',
+                                            })}
+                                            onClick={() => this.handleClickOpenRanked()}>
+                                            <i
+                                                className="material-icons">emoji_events</i>Ranked
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1185,7 +1286,7 @@ class Game extends React.Component {
                                                     </div>
                                                     <div
                                                         className="word-report-item-word">{!it.custom
-                                                        ? ((!it.newWord || it.wordList.length === 1)
+                                                        ? ((!it.newWord || it.wordList?.length === 1)
                                                             ? <span>{it.word || it.wordList[0]}{it.hasHistory ?
                                                                 <span> <i onClick={() => this.toggleWordHistory(it)}
                                                                           className="material-icons history-button">
@@ -1265,8 +1366,9 @@ class Game extends React.Component {
                                     </span>
                                     <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
                                            type="password"/>
-                                    <div className={cs("word-report-save-button", {inactive: data.wordReportSent})}
-                                         onClick={() => this.handleClickSubmitReports()}>Submit
+                                    <div
+                                        className={cs("button", "word-report-save-button", {inactive: data.wordReportSent})}
+                                        onClick={() => this.handleClickSubmitReports()}>Submit
                                     </div>
                                 </div>
                             </div>
@@ -1314,12 +1416,66 @@ class Game extends React.Component {
                                         })}>{data.wordAddCount}/{data.wordAddLevel === "custom" ? data.customWordsLimit : 50}
                                     </div>
                                     <div
-                                        className={cs("word-report-save-button", {
+                                        className={cs("word-report-save-button", "button", {
                                             inactive:
                                                 !(data.wordAddCount > 0 && data.wordAddCount <= (data.wordAddLevel === "custom" ? data.customWordsLimit : 50))
                                         })}
                                         onClick={() => this.handleClickSubmitNewWords()}>Submit
                                     </div>
+                                </div>
+                            </div>
+                        </div>) : ""}
+                        {data.rankedModalActive ? (<div className="ranked-modal">
+                            <div className="ranked-modal-content">
+                                <div className="ranked-title">
+                                    Ranked mode
+                                    <div className="ranked-modal-close"
+                                         onClick={() => this.handleClickCloseRanked()}>✕
+                                    </div>
+                                </div>
+                                <div className="ranked-content">
+                                    <div className="ranked-status-room">
+                                        Ranked-режим:&nbsp;<span
+                                        className="ranked-status">{data.ranked ? 'Активен' : 'Неактивен'}</span>
+                                    </div>
+                                    <div className="ranked-desc">
+                                        Активировать Ranked-режим могут только <a target="_blank"
+                                                                                  href="./alias/ranked#moderators">Ranked-модераторы</a>
+                                    </div>
+                                    <span className="ranked-auth-buttons">
+                                            <span className={cs("ranked-auth-button", "button", {
+                                                inactive: !data.authUsers?.[data.userId]?.moderator
+                                            })}
+                                                  onClick={() => this.handleClickToggleRankedMode()}>{!data.ranked
+                                                ? 'Активировать' : 'Деактивировать'}
+                                            </span>
+                                        </span>
+                                    <div className="ranked-status-user">
+                                        Пользователь:&nbsp;<span
+                                        className="ranked-status">{data.authUsers[data.userId] ? 'Авторизован' : 'Не авторизован'}</span>
+                                    </div>
+                                    <div className="ranked-desc">
+                                        Участвовать в Ranked-играх можно только войдя в Ranked-аккаунт.
+                                    </div>
+                                    <div className="ranked-desc">
+                                        Аккаунт будет создан при первом входе, и будет использовать ваш текущий никнейм
+                                        (Его нельзя будет поменять)
+                                    </div>
+                                    {!data.authUsers[data.userId] ? (
+                                        <div className="ranked-auth-buttons">
+                                            <span className="ranked-auth-button button"
+                                                  onClick={() => this.handleClickAuthGoogle()}>Войти через Google
+                                            </span>
+                                            <span className="ranked-auth-button button"
+                                                  onClick={() => this.handleClickAuthSMS()}>Войти через SMS
+                                            </span>
+                                        </div>) : (
+                                        <div className="ranked-auth-buttons">
+                                                <span className="ranked-auth-button button"
+                                                      onClick={() => this.handleClickAuthLogout()}>Выйти из Ranked-аккаунта
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>) : ""}
@@ -1378,7 +1534,7 @@ class Game extends React.Component {
                                         })}>{data.wordCustomCount}/{data.customWordsLimit}
                                     </div>) : ""}
                                     {settingsMode ? <div
-                                        className={cs("word-report-save-button", {
+                                        className={cs("word-report-save-button", "button", {
                                             inactive: !(data.customPackSelected != null
                                                 || (data.wordCustomCount > 0
                                                     && data.wordCustomCount <= data.customWordsLimit))
@@ -1455,6 +1611,7 @@ class Game extends React.Component {
 }
 
 ReactDOM.render(
-    <Game/>,
+    <Game/>
+    ,
     document.getElementById('root')
 );
