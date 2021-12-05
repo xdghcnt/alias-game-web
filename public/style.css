@@ -1289,3 +1289,7 @@ a {
 .dark-theme .word-points.negative {
     color: #ff7373;
 }
+
+.ranked-status a {
+    text-decoration: none;
+}

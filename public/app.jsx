@@ -1434,6 +1434,16 @@ class Game extends React.Component {
                                     </div>
                                 </div>
                                 <div className="ranked-content">
+                                    <div className="ranked-status-user">
+                                        Ranked-таблица:&nbsp;<span
+                                        className="ranked-status">
+                                        <a target="_blank"
+                                           href="./alias/ranked#moderators">Открыть</a></span>
+                                    </div>
+                                    <div className="ranked-desc">
+                                        В Ranked-таблице можно увидеть список участников и результаты игр
+                                    </div>
+                                    <br/>
                                     <div className="ranked-status-room">
                                         Ranked-режим:&nbsp;<span
                                         className="ranked-status">{data.ranked ? 'Активен' : 'Неактивен'}</span>
