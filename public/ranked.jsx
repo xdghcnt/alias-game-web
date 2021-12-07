@@ -58,8 +58,14 @@ class Page extends React.Component {
 
     async updateData() {
         const data = (await (await fetch('/alias/ranked/data')).json());
+        data.rankedGames.reverse();
         const players = Object.keys(data.authUsers).map((userId) =>
             data.authUsers[userId]).sort((a, b) => b.score - a.score);
+        for (const game of data.rankedGames) {
+            game.playerScoresSorted = Object.keys(game.playerRanks).sort((a, b) => {
+                return game.playerRanks[a] - game.playerRanks[b];
+            });
+        }
         this.setState({
             authUsers: data.authUsers,
             moderators: players.filter((user) => user.moderator).map((user) => ({
@@ -78,7 +84,7 @@ class Page extends React.Component {
                         gamesCountWin++;
                     else if (game.playerRanks[player.id] === 2)
                         gamesCountWin += 0.6;
-                    totalPoints += game.playerScores[player.id];
+                    totalPoints += (game.playerScores[player.id] || 0);
                 }
                 return {
                     id: player.id,
@@ -135,7 +141,7 @@ class Page extends React.Component {
                         <div
                             className="date">{(new Date(gameRow.datetime)).toLocaleDateString()} {(new Date(gameRow.datetime)).toLocaleTimeString()}</div>
                         <div className="players">
-                            {Object.keys(gameRow.playerScores).map((player) => (<div className="match-player">
+                            {gameRow.playerScoresSorted.map((player) => (<div className="match-player">
                                 <div className="player-name">{data.authUsers[player].name} {gameRow.moderator === player ? (
                                     <i className="material-icons host-button"
                                        title="Game host">

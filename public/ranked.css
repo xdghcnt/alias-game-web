@@ -45,7 +45,7 @@ a {
 .name {
     font-size: 24px;
     padding: 9px 23px;
-    width: 250px;
+    width: 243px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -54,6 +54,8 @@ a {
     font-size: 31px;
     font-family: monospace;
     margin-right: 15px;
+    width: 69px;
+    text-align: right;
 }
 
 .rank {

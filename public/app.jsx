@@ -939,520 +939,521 @@ class Game extends React.Component {
     }
 
     render() {
-        clearTimeout(this.timeOut);
-        if (this.state.disconnected)
-            return (<div
-                className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
-        else if (this.state.inited) {
-            document.body.classList.add("captcha-solved");
-            const
-                data = this.state,
-                isHost = data.hostId === data.userId,
-                isTurn = data.currentPlayer === data.userId,
-                isTeamTurn = !data.soloMode
-                    ? data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId)
-                    : data.currentPlayer === data.userId || data.currentAssistant === data.userId,
-                currentTeam = data.teams[data.currentTeam],
-                settingsMode = isHost && this.state.phase === 0 && !this.state.ranked;
-            let actionText, statusText,
-                showWordsBet = false,
-                gameIsOver,
-                hasPlayers = data.phase !== 0;
-            data.showWatermark = false;
-            data.gameIsOver = false;
-            this.unsavedRankedResults = false;
-            if (data.phase === 0) {
-                const firstTeam = data.teams[Object.keys(data.teams)[0]];
-                hasPlayers = firstTeam && (!data.soloMode ? firstTeam.players.length > 0 : firstTeam.players.length > 1);
-                if (hasPlayers && (!data.ranked || firstTeam.players.length === 4)) {
-                    if (isHost) {
-                        statusText = "You can start the game";
-                        actionText = "Start";
-                    } else
-                        statusText = "Host can start the game";
-                } else {
-                    if (!data.ranked)
-                        statusText = "Waiting for players";
-                    else
-                        statusText = "Waiting for 4 players";
-                }
-            } else if (data.phase === 1) {
-                if (data.soloModeRound >= data.soloModeGoal) {
-                    gameIsOver = true;
-                    data.gameIsOver = true;
-                    const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
-                        (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
-                    statusText = `Player ${data.playerNames[playerWin]} wins!`;
-                    data.showWatermark = true;
-                    if (data.ranked && !data.rankedResultsSaved && data.hostId === data.userId) {
-                        this.unsavedRankedResults = true;
-                        actionText = "Save";
+        try {
+            clearTimeout(this.timeOut);
+            if (this.state.disconnected)
+                return (<div
+                    className="kicked">Disconnected{this.state.disconnectReason ? ` (${this.state.disconnectReason})` : ""}</div>);
+            else if (this.state.inited) {
+                document.body.classList.add("captcha-solved");
+                const
+                    data = this.state,
+                    isHost = data.hostId === data.userId,
+                    isTurn = data.currentPlayer === data.userId,
+                    isTeamTurn = !data.soloMode
+                        ? data.currentTeam && data.teams[data.currentTeam] && !!~data.teams[data.currentTeam].players.indexOf(data.userId)
+                        : data.currentPlayer === data.userId || data.currentAssistant === data.userId,
+                    currentTeam = data.teams[data.currentTeam],
+                    settingsMode = isHost && this.state.phase === 0 && !this.state.ranked;
+                let actionText, statusText,
+                    showWordsBet = false,
+                    gameIsOver,
+                    hasPlayers = data.phase !== 0;
+                data.showWatermark = false;
+                data.gameIsOver = false;
+                this.unsavedRankedResults = false;
+                if (data.phase === 0) {
+                    const firstTeam = data.teams[Object.keys(data.teams)[0]];
+                    hasPlayers = firstTeam && (!data.soloMode ? firstTeam.players.length > 0 : firstTeam.players.length > 1);
+                    if (hasPlayers && (!data.ranked || firstTeam.players.length === 4)) {
+                        if (isHost) {
+                            statusText = "You can start the game";
+                            actionText = "Start";
+                        } else
+                            statusText = "Host can start the game";
+                    } else {
+                        if (!data.ranked)
+                            statusText = "Waiting for players";
+                        else
+                            statusText = "Waiting for 4 players";
                     }
-                }
-                if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
-                    let mostPoints = 0,
-                        mostPointsTeam,
-                        teamsReachedGoal = Object.keys(data.teams).filter(teamId => {
-                            const
-                                team = data.teams[teamId],
-                                points = team.score + (team.wordPoints || 0);
-                            if (points > mostPoints) {
-                                mostPoints = points;
-                                mostPointsTeam = teamId;
-                            }
-                            return points >= data.goal;
-                        }),
-                        teamsReachedGoalScores = teamsReachedGoal.map((teamId) => data.teams[teamId].score + (data.teams[teamId].wordPoints || 0)).sort((a, b) => b - a);
-                    if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoalScores[0] !== teamsReachedGoalScores[1])) {
+                } else if (data.phase === 1) {
+                    if (data.soloModeRound >= data.soloModeGoal) {
                         gameIsOver = true;
-                        data.teams[mostPointsTeam].winner = true;
-                        statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
                         data.gameIsOver = true;
+                        const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
+                            (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
+                        statusText = `Player ${data.playerNames[playerWin]} wins!`;
                         data.showWatermark = true;
+                        if (data.ranked && !data.rankedResultsSaved && data.hostId === data.userId) {
+                            this.unsavedRankedResults = true;
+                            actionText = "Save";
+                        }
+                    }
+                    if (Object.keys(data.teams).indexOf(data.currentTeam) === 0) {
+                        let mostPoints = 0,
+                            mostPointsTeam,
+                            teamsReachedGoal = Object.keys(data.teams).filter(teamId => {
+                                const
+                                    team = data.teams[teamId],
+                                    points = team.score + (team.wordPoints || 0);
+                                if (points > mostPoints) {
+                                    mostPoints = points;
+                                    mostPointsTeam = teamId;
+                                }
+                                return points >= data.goal;
+                            }),
+                            teamsReachedGoalScores = teamsReachedGoal.map((teamId) => data.teams[teamId].score + (data.teams[teamId].wordPoints || 0)).sort((a, b) => b - a);
+                        if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoalScores[0] !== teamsReachedGoalScores[1])) {
+                            gameIsOver = true;
+                            data.teams[mostPointsTeam].winner = true;
+                            statusText = `Team ${Object.keys(data.teams).indexOf(mostPointsTeam) + 1} wins!`;
+                            data.gameIsOver = true;
+                            data.showWatermark = true;
+                        }
+                    }
+                    //showWordsBet = true;
+                    if (!gameIsOver) {
+                        if (isTurn && (!data.soloMode ? data.readyPlayers.length === currentTeam.players.length : data.readyPlayers.length === 2)) {
+                            actionText = "Start!";
+                            statusText = "Prepare to explain things";
+                        } else if (isTeamTurn) {
+                            actionText = "Ready";
+                            statusText = "Waiting for team.";
+                        } else
+                            statusText = "Waiting for other team.";
+                    }
+                    this.gameIsOver = gameIsOver;
+                } else if (data.phase === 2) {
+                    if (isTurn) {
+                        statusText = "Explain things!";
+                        actionText = "Next";
+                    } else if (isTeamTurn)
+                        statusText = "Call out things!";
+                    else
+                        statusText = "Other team playing, keep silent.";
+                    const timerSecondDiff = ((this.state.timer % 100) || 100);
+                    if (this.state.timer - timerSecondDiff > 0) {
+                        let timeStart = new Date();
+                        this.timeOut = setTimeout(() => {
+                            //console.log(`timer: ${this.state.timer} diff: ${timerSecondDiff}`);
+                            if (data.phase === 2 && this.state.timer)
+                                this.setState(Object.assign({}, this.state, {timer: this.state.timer - (new Date() - timeStart)}));
+                        }, timerSecondDiff);
                     }
                 }
-                //showWordsBet = true;
                 if (!gameIsOver) {
-                    if (isTurn && (!data.soloMode ? data.readyPlayers.length === currentTeam.players.length : data.readyPlayers.length === 2)) {
-                        actionText = "Start!";
-                        statusText = "Prepare to explain things";
-                    } else if (isTeamTurn) {
-                        actionText = "Ready";
-                        statusText = "Waiting for team.";
-                    } else
-                        statusText = "Waiting for other team.";
+                    if (this.state.dictMode && this.state.dictLength === 0) {
+                        actionText = null;
+                        statusText = "No more words, GG"
+                    } else if (data.wordsEnded) {
+                        actionText = null;
+                        statusText = `No more words`;
+                    }
                 }
-                this.gameIsOver = gameIsOver;
-            } else if (data.phase === 2) {
-                if (isTurn) {
-                    statusText = "Explain things!";
-                    actionText = "Next";
-                } else if (isTeamTurn)
-                    statusText = "Call out things!";
-                else
-                    statusText = "Other team playing, keep silent.";
-                const timerSecondDiff = ((this.state.timer % 100) || 100);
-                if (this.state.timer - timerSecondDiff > 0) {
-                    let timeStart = new Date();
-                    this.timeOut = setTimeout(() => {
-                        //console.log(`timer: ${this.state.timer} diff: ${timerSecondDiff}`);
-                        if (data.phase === 2 && this.state.timer)
-                            this.setState(Object.assign({}, this.state, {timer: this.state.timer - (new Date() - timeStart)}));
-                    }, timerSecondDiff);
-                }
-            }
-            if (!gameIsOver) {
-                if (this.state.dictMode && this.state.dictLength === 0) {
-                    actionText = null;
-                    statusText = "No more words, GG"
-                } else if (data.wordsEnded) {
-                    actionText = null;
-                    statusText = `No more words`;
-                }
-            }
-            showWordsBet = false;
-            return (
-                <div className="game">
-                    <div className={cs("game-board", {
-                        active: this.state.inited,
-                        "game-over": gameIsOver,
-                        "solo-mode": this.state.soloMode,
-                        isMobile: this.isMobile
-                    })}>
-                        <div className="teams-pane">
-                            <div
-                                title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
-                                className={cs("dict-progress", {active: this.state.dictMode})}
-                            >
-                                <div className="dict-progress-bar"
-                                     style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
-                            </div>
-                            {data.drawMode ? (<div id="draw-pane">
-                                <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
-                                   onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
-                            {data.soloMode ? "Players" : "Teams"}:
-                            <Teams data={this.state} game={this}/>
-                            <br/>
-                            <div className={cs(
-                                "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
-                                Spectators:
+                showWordsBet = false;
+                return (
+                    <div className="game">
+                        <div className={cs("game-board", {
+                            active: this.state.inited,
+                            "game-over": gameIsOver,
+                            "solo-mode": this.state.soloMode,
+                            isMobile: this.isMobile
+                        })}>
+                            <div className="teams-pane">
+                                <div
+                                    title={`${this.state.dictInitLength - this.state.dictLength} of ${this.state.dictInitLength} completed`}
+                                    className={cs("dict-progress", {active: this.state.dictMode})}
+                                >
+                                    <div className="dict-progress-bar"
+                                         style={{width: `${this.state.dictMode && (100 - Math.round((this.state.dictLength / this.state.dictInitLength) * 100))}%`}}/>
+                                </div>
+                                {data.drawMode ? (<div id="draw-pane">
+                                    <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
+                                       onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
+                                {data.soloMode ? "Players" : "Teams"}:
+                                <Teams data={this.state} game={this}/>
                                 <br/>
-                                <Spectators data={this.state} game={this}/>
-                            </div>
-                        </div>
-                        <div className="control-pane">
-                            <Timer data={this.state}/>
-                            <Words data={this.state}
-                                   game={this}/>
-                            <br/>
-                            <div className="action-pane">
-                                <div className="status-text">
-                                    {statusText}
-                                    <span className={cs("words-bet-label", {active: showWordsBet})}> Words: </span>
-                                    <input
-                                        className={cs("words-bet-input", {active: showWordsBet})}
-                                        disabled={!(isTurn && this.state.phase === 1)}
-                                        type="number" min="1" max="99" value={data.currentBet}
-                                        onChange={(evt) => !isNaN(evt.target.valueAsNumber)
-                                            && this.handleChangeBet(evt.target.valueAsNumber)}/>
+                                <div className={cs(
+                                    "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
+                                    Spectators:
+                                    <br/>
+                                    <Spectators data={this.state} game={this}/>
                                 </div>
-                                <div onClick={() => this.handleAction()}
-                                     className={cs(
-                                         "button-action", {
-                                             pressed: data.readyPlayers && ~data.readyPlayers.indexOf(data.userId),
-                                             active: !!actionText,
-                                         })
-                                     }>{actionText}</div>
                             </div>
-                        </div>
-                        <div className="host-controls" onTouchStart={(e) => e.target.focus()}>
-                            <div className="host-controls-menu">
-                                <div>
-                                    <div className="little-controls">
-                                        <div className="game-settings">
-                                            <div className="set-goal"><i title="goal"
-                                                                         className="material-icons">flag</i>
-                                                {settingsMode && this.state.soloMode ? `${this.state.soloModeRound}/` : ""}
-                                                {settingsMode ? (<input id="goal"
-                                                                        type="number"
-                                                                        min="1"
-                                                                        value={!this.state.soloMode
-                                                                            ? this.state.goal
-                                                                            : this.state.soloModeGoal}
-                                                                        onChange={evt => this.handleChangeGoal(evt.target.valueAsNumber)}
-                                                />) : (<span
-                                                    className="value">{this.state.soloMode
-                                                    ? `${this.state.soloModeRound}/${this.state.soloModeGoal}`
-                                                    : this.state.goal}</span>)}
+                            <div className="control-pane">
+                                <Timer data={this.state}/>
+                                <Words data={this.state}
+                                       game={this}/>
+                                <br/>
+                                <div className="action-pane">
+                                    <div className="status-text">
+                                        {statusText}
+                                        <span className={cs("words-bet-label", {active: showWordsBet})}> Words: </span>
+                                        <input
+                                            className={cs("words-bet-input", {active: showWordsBet})}
+                                            disabled={!(isTurn && this.state.phase === 1)}
+                                            type="number" min="1" max="99" value={data.currentBet}
+                                            onChange={(evt) => !isNaN(evt.target.valueAsNumber)
+                                                && this.handleChangeBet(evt.target.valueAsNumber)}/>
+                                    </div>
+                                    <div onClick={() => this.handleAction()}
+                                         className={cs(
+                                             "button-action", {
+                                                 pressed: data.readyPlayers && ~data.readyPlayers.indexOf(data.userId),
+                                                 active: !!actionText,
+                                             })
+                                         }>{actionText}</div>
+                                </div>
+                            </div>
+                            <div className="host-controls" onTouchStart={(e) => e.target.focus()}>
+                                <div className="host-controls-menu">
+                                    <div>
+                                        <div className="little-controls">
+                                            <div className="game-settings">
+                                                <div className="set-goal"><i title="goal"
+                                                                             className="material-icons">flag</i>
+                                                    {settingsMode && this.state.soloMode ? `${this.state.soloModeRound}/` : ""}
+                                                    {settingsMode ? (<input id="goal"
+                                                                            type="number"
+                                                                            min="1"
+                                                                            value={!this.state.soloMode
+                                                                                ? this.state.goal
+                                                                                : this.state.soloModeGoal}
+                                                                            onChange={evt => this.handleChangeGoal(evt.target.valueAsNumber)}
+                                                    />) : (<span
+                                                        className="value">{this.state.soloMode
+                                                        ? `${this.state.soloModeRound}/${this.state.soloModeGoal}`
+                                                        : this.state.goal}</span>)}
+                                                </div>
+                                                <div className="set-round-time"><i title="time"
+                                                                                   className="material-icons">timer</i>
+                                                    {(settingsMode) ? (<input id="round-time"
+                                                                              type="number"
+                                                                              value={this.state.roundTime}
+                                                                              min="0"
+                                                                              onChange={evt => this.handleChangeRoundTime(evt.target.valueAsNumber)}
+                                                    />) : (<span className="value">{this.state.roundTime}</span>)}
+                                                </div>
                                             </div>
-                                            <div className="set-round-time"><i title="time"
-                                                                               className="material-icons">timer</i>
-                                                {(settingsMode) ? (<input id="round-time"
-                                                                          type="number"
-                                                                          value={this.state.roundTime}
-                                                                          min="0"
-                                                                          onChange={evt => this.handleChangeRoundTime(evt.target.valueAsNumber)}
-                                                />) : (<span className="value">{this.state.roundTime}</span>)}
+                                            {
+                                                !data.ranked ? (<div className={cs("team-mode", {
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": !this.state.soloMode
+                                                })} onClick={() => this.handleClickToggleSoloMode(false)}>team
+                                                </div>) : ''
+                                            }
+                                            <div className={cs("team-mode", {
+                                                "settings-button": settingsMode,
+                                                "level-selected": this.state.soloMode
+                                            })}
+                                                 onClick={() => this.handleClickToggleSoloMode(true)}>solo
+                                            </div>
+                                            {(settingsMode || (data.ranked && data.phase === 0)) ? (
+                                                <div className="shuffle-players settings-button"
+                                                     onClick={() => this.handleClickShuffle()}>shuffle players<i
+                                                    className="material-icons">casino</i>
+                                                </div>) : ""}
+                                        </div>
+                                        <div className="draw-mode-buttons">
+                                            <div
+                                                className={cs({
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": !data.drawMode
+                                                })}
+                                                onClick={() => this.handleClickToggleDrawMode(false)}><i
+                                                className="material-icons">record_voice_over</i>Explain
+                                            </div>
+                                            <div
+                                                className={cs({
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": data.drawMode
+                                                })}
+                                                onClick={() => this.handleClickToggleDrawMode(true)}><i
+                                                className="material-icons">gesture</i>Draw
                                             </div>
                                         </div>
-                                        {
-                                            !data.ranked ? (<div className={cs("team-mode", {
-                                                "settings-button": settingsMode,
-                                                "level-selected": !this.state.soloMode
-                                            })} onClick={() => this.handleClickToggleSoloMode(false)}>team
-                                            </div>) : ''
-                                        }
-                                        <div className={cs("team-mode", {
-                                            "settings-button": settingsMode,
-                                            "level-selected": this.state.soloMode
-                                        })}
-                                             onClick={() => this.handleClickToggleSoloMode(true)}>solo
+                                        <div className="start-game-buttons">
+                                            <div
+                                                className={cs({
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": data.level === 1
+                                                })}
+                                                onClick={() => this.handleClickLevel(1)}><i
+                                                className="material-icons">pets</i>Easy
+                                            </div>
+                                            <div
+                                                className={cs({
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": this.state.level === 2
+                                                })}
+                                                onClick={() => this.handleClickLevel(2)}><i
+                                                className="material-icons">child_friendly</i>Normal
+                                            </div>
+                                            <div
+                                                className={cs({
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": this.state.level === 3
+                                                })}
+                                                onClick={() => this.handleClickLevel(3)}><i
+                                                className="material-icons">school</i>Hard
+                                            </div>
+                                            <div
+                                                className={cs({
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": this.state.level === 4
+                                                })}
+                                                onClick={() => this.handleClickLevel(4)}><i
+                                                className="material-icons">whatshot</i>Insane
+                                            </div>
                                         </div>
-                                        {(settingsMode) ? (
-                                            <div className="shuffle-players settings-button"
-                                                 onClick={() => this.handleClickShuffle()}>shuffle players<i
-                                                className="material-icons">casino</i>
-                                            </div>) : ""}
-                                    </div>
-                                    <div className="draw-mode-buttons">
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": !data.drawMode
-                                            })}
-                                            onClick={() => this.handleClickToggleDrawMode(false)}><i
-                                            className="material-icons">record_voice_over</i>Explain
-                                        </div>
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": data.drawMode
-                                            })}
-                                            onClick={() => this.handleClickToggleDrawMode(true)}><i
-                                            className="material-icons">gesture</i>Draw
-                                        </div>
-                                    </div>
-                                    <div className="start-game-buttons">
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": data.level === 1
-                                            })}
-                                            onClick={() => this.handleClickLevel(1)}><i
-                                            className="material-icons">pets</i>Easy
-                                        </div>
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": this.state.level === 2
-                                            })}
-                                            onClick={() => this.handleClickLevel(2)}><i
-                                            className="material-icons">child_friendly</i>Normal
-                                        </div>
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": this.state.level === 3
-                                            })}
-                                            onClick={() => this.handleClickLevel(3)}><i
-                                            className="material-icons">school</i>Hard
-                                        </div>
-                                        <div
-                                            className={cs({
-                                                "settings-button": settingsMode,
-                                                "level-selected": this.state.level === 4
-                                            })}
-                                            onClick={() => this.handleClickLevel(4)}><i
-                                            className="material-icons">whatshot</i>Insane
-                                        </div>
-                                    </div>
-                                    <div className="start-game-buttons row-2">
-                                        <div
-                                            className={cs("custom-game-button", {
-                                                "settings-button": true,
-                                                "level-selected": this.state.level === 0,
-                                                "has-pack-name": this.state.packName
-                                            })}
-                                            onClick={() => this.handleClickOpenCustom()}>
-                                            <i
-                                                className="material-icons">accessible</i>Custom{this.state.packName
-                                            ? `: ${this.state.packName}` : ""}
-                                        </div>
-                                        <div
-                                            className={cs("ranked-game-button", "settings-button", {
-                                                "level-selected": this.state.level === 'ranked',
-                                            })}
-                                            onClick={() => this.handleClickOpenRanked()}>
-                                            <i
-                                                className="material-icons">emoji_events</i>Ranked
+                                        <div className="start-game-buttons row-2">
+                                            <div
+                                                className={cs("custom-game-button", {
+                                                    "settings-button": true,
+                                                    "level-selected": this.state.level === 0,
+                                                    "has-pack-name": this.state.packName
+                                                })}
+                                                onClick={() => this.handleClickOpenCustom()}>
+                                                <i
+                                                    className="material-icons">accessible</i>Custom{this.state.packName
+                                                ? `: ${this.state.packName}` : ""}
+                                            </div>
+                                            <div
+                                                className={cs("ranked-game-button", "settings-button", {
+                                                    "level-selected": this.state.level === 'ranked',
+                                                })}
+                                                onClick={() => this.handleClickOpenRanked()}>
+                                                <i
+                                                    className="material-icons">emoji_events</i>Ranked
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="side-buttons">
-                                {this.state.userId === this.state.hostId ?
-                                    <i onClick={() => this.socket.emit("set-room-mode", false)}
-                                       className="material-icons exit settings-button">store</i> : ""}
-                                <i onClick={() => this.handleClickGetReports()}
-                                   className="material-icons get-reports settings-button">assignment_late</i>
-                                <i onClick={() => this.handleClickOpenWordAdd()}
-                                   className="material-icons get-reports settings-button">add_box</i>
-                                {(isHost && hasPlayers && (data.phase === 0 || this.gameIsOver)) ?
-                                    (<i onClick={() => this.handleClickRestart()}
-                                        className="material-icons start-game settings-button">sync</i>) : ""}
-                                {(isHost && hasPlayers) ? (data.phase === 0
-                                    ? (<i onClick={() => this.handleClickResume()}
-                                          className="material-icons start-game settings-button">lock_open</i>)
-                                    : (<i onClick={() => this.handleClickStop()}
-                                          className="material-icons start-game settings-button">{
-                                        this.state.phase === 2 ? "pause" : "lock_outline"
-                                    }</i>)) : ""}
-                                <i onClick={() => this.handleClickChangeName()}
-                                   className="toggle-theme material-icons settings-button">edit</i>
-                                {!parseInt(localStorage.darkThemeAlias)
-                                    ? (<i onClick={() => this.handleToggleTheme()}
-                                          className="toggle-theme material-icons settings-button">brightness_2</i>)
-                                    : (<i onClick={() => this.handleToggleTheme()}
-                                          className="toggle-theme material-icons settings-button">wb_sunny</i>)}
-                            </div>
-                            <i className="material-icons">settings</i>
-                        </div>
-                        {data.wordReportData ? (<div className="word-report-modal">
-                            <div className="word-report-modal-content">
-                                <div className="word-report-title">Words moderation
-                                    <div className="word-report-modal-stats">
-                                        Total<span className="word-report-stat-num">{data.wordReportData.total}</span>
-                                        Processed<span
-                                        className="word-report-stat-num">{data.wordReportData.processed}</span>
-                                        Approved<span
-                                        className="word-report-stat-num">{data.wordReportData.approved}</span>
-                                        New<span
-                                        className="word-report-stat-num">{data.wordReportData.new}</span>
-                                    </div>
-                                    <div className="word-report-modal-close"
-                                         onClick={() => this.handleClickCloseReports()}>✕
-                                    </div>
+                                <div className="side-buttons">
+                                    {this.state.userId === this.state.hostId ?
+                                        <i onClick={() => this.socket.emit("set-room-mode", false)}
+                                           className="material-icons exit settings-button">store</i> : ""}
+                                    <i onClick={() => this.handleClickGetReports()}
+                                       className="material-icons get-reports settings-button">assignment_late</i>
+                                    <i onClick={() => this.handleClickOpenWordAdd()}
+                                       className="material-icons get-reports settings-button">add_box</i>
+                                    {(isHost && hasPlayers && (data.phase === 0 || this.gameIsOver)) ?
+                                        (<i onClick={() => this.handleClickRestart()}
+                                            className="material-icons start-game settings-button">sync</i>) : ""}
+                                    {(isHost && hasPlayers) ? (data.phase === 0
+                                        ? (<i onClick={() => this.handleClickResume()}
+                                              className="material-icons start-game settings-button">lock_open</i>)
+                                        : (<i onClick={() => this.handleClickStop()}
+                                              className="material-icons start-game settings-button">{
+                                            this.state.phase === 2 ? "pause" : "lock_outline"
+                                        }</i>)) : ""}
+                                    <i onClick={() => this.handleClickChangeName()}
+                                       className="toggle-theme material-icons settings-button">edit</i>
+                                    {!parseInt(localStorage.darkThemeAlias)
+                                        ? (<i onClick={() => this.handleToggleTheme()}
+                                              className="toggle-theme material-icons settings-button">brightness_2</i>)
+                                        : (<i onClick={() => this.handleToggleTheme()}
+                                              className="toggle-theme material-icons settings-button">wb_sunny</i>)}
                                 </div>
-                                <div className="word-report-list">{
-                                    data.wordReportData.words.length ? (<div>
-                                            {data.wordReportData.words.map((it, index) => (
-                                                <div className={cs("word-report-item", {
-                                                    unprocessed: !it.processed
-                                                })}>
-                                                    <div
-                                                        className="word-report-item-name">{it.playerName}
-                                                        <i className="material-icons remove-user-reports"
-                                                           onClick={() => this.removeUserReports(it.user, it.playerName)}>delete_forever</i>
-                                                    </div>
-                                                    <div
-                                                        className="word-report-item-word">{!it.custom
-                                                        ? ((!it.newWord || it.wordList?.length === 1)
-                                                            ? <span>{it.word || it.wordList[0]}{it.hasHistory ?
-                                                                <span> <i onClick={() => this.toggleWordHistory(it)}
-                                                                          className="material-icons history-button">
+                                <i className="material-icons">settings</i>
+                            </div>
+                            {data.wordReportData ? (<div className="word-report-modal">
+                                <div className="word-report-modal-content">
+                                    <div className="word-report-title">Words moderation
+                                        <div className="word-report-modal-stats">
+                                            Total<span className="word-report-stat-num">{data.wordReportData.total}</span>
+                                            Processed<span
+                                            className="word-report-stat-num">{data.wordReportData.processed}</span>
+                                            Approved<span
+                                            className="word-report-stat-num">{data.wordReportData.approved}</span>
+                                            New<span
+                                            className="word-report-stat-num">{data.wordReportData.new}</span>
+                                        </div>
+                                        <div className="word-report-modal-close"
+                                             onClick={() => this.handleClickCloseReports()}>✕
+                                        </div>
+                                    </div>
+                                    <div className="word-report-list">{
+                                        data.wordReportData.words.length ? (<div>
+                                                {data.wordReportData.words.map((it, index) => (
+                                                    <div className={cs("word-report-item", {
+                                                        unprocessed: !it.processed
+                                                    })}>
+                                                        <div
+                                                            className="word-report-item-name">{it.playerName}
+                                                            <i className="material-icons remove-user-reports"
+                                                               onClick={() => this.removeUserReports(it.user, it.playerName)}>delete_forever</i>
+                                                        </div>
+                                                        <div
+                                                            className="word-report-item-word">{!it.custom
+                                                            ? ((!it.newWord || it.wordList?.length === 1)
+                                                                ? <span>{it.word || it.wordList[0]}{it.hasHistory ?
+                                                                    <span> <i onClick={() => this.toggleWordHistory(it)}
+                                                                              className="material-icons history-button">
                                                                     {!it.wordHistory ? "history" : "close"}
                                                                 </i>
                                                                 </span> : ""}</span>
-                                                            : (<div className="word-report-item-word-list">
-                                                                {it.wordList.map((word) => (<div>{word}</div>))}
-                                                            </div>))
-                                                        : (
-                                                            <span>{it.packName}&nbsp;
-                                                                {!(it.processed && !it.approved)
-                                                                    ? (<span
-                                                                        onClick={() => !it.loading && this.handleClickShowPack(index)}
-                                                                        className={cs({"custom-view-link": !it.loading})}>
+                                                                : (<div className="word-report-item-word-list">
+                                                                    {it.wordList.map((word) => (<div>{word}</div>))}
+                                                                </div>))
+                                                            : (
+                                                                <span>{it.packName}&nbsp;
+                                                                    {!(it.processed && !it.approved)
+                                                                        ? (<span
+                                                                            onClick={() => !it.loading && this.handleClickShowPack(index)}
+                                                                            className={cs({"custom-view-link": !it.loading})}>
                                                                         ({it.loading ? "Loading" : (it.wordList ? "Hide" : "Show")})</span>)
-                                                                    : ""}
-                                                                {it.wordList
-                                                                    ? (<div className="word-report-item-word-list">
-                                                                        {it.wordList.map((word) => (<div>{word}</div>))}
-                                                                    </div>)
-                                                                    : ""}</span>)}</div>
-                                                    <div
-                                                        className="word-report-item-transfer">
-                                                        {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
-                                                        !it.custom ?
-                                                            <span className="word-report-item-target"
-                                                                  onClick={() => this.toggleWordReportChangeTargetDifficulty(index)}>
+                                                                        : ""}
+                                                                    {it.wordList
+                                                                        ? (<div className="word-report-item-word-list">
+                                                                            {it.wordList.map((word) => (<div>{word}</div>))}
+                                                                        </div>)
+                                                                        : ""}</span>)}</div>
+                                                        <div
+                                                            className="word-report-item-transfer">
+                                                            {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
+                                                            !it.custom ?
+                                                                <span className="word-report-item-target"
+                                                                      onClick={() => this.toggleWordReportChangeTargetDifficulty(index)}>
                                                                 {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]}
                                                             </span> : "Custom"}
-                                                    </div>
-                                                    <div
-                                                        className="word-report-item-status">
-                                                        {it.processed ? (it.approved ? (
-                                                            <span className="approved">Approved</span>) : (
-                                                            <span className="denied">Denied</span>)) : (
-                                                            <div className="word-report-approve-controls">
-                                                                <input id={`word-report-approve-no-${index}`}
-                                                                       type="checkbox"
-                                                                       checked={it.approved === false}
-                                                                       onChange={() => this.handleWordReportApprove(index, false)}/>
-                                                                <label htmlFor={`word-report-approve-no-${index}`}
-                                                                       className="word-report-approve no">✖</label>
-                                                                <input id={`word-report-approve-yes-${index}`}
-                                                                       type="checkbox" checked={it.approved}
-                                                                       onChange={() => this.handleWordReportApprove(index, true)}/>
-                                                                <label htmlFor={`word-report-approve-yes-${index}`}
-                                                                       className="word-report-approve yes">✔</label>
+                                                        </div>
+                                                        <div
+                                                            className="word-report-item-status">
+                                                            {it.processed ? (it.approved ? (
+                                                                <span className="approved">Approved</span>) : (
+                                                                <span className="denied">Denied</span>)) : (
+                                                                <div className="word-report-approve-controls">
+                                                                    <input id={`word-report-approve-no-${index}`}
+                                                                           type="checkbox"
+                                                                           checked={it.approved === false}
+                                                                           onChange={() => this.handleWordReportApprove(index, false)}/>
+                                                                    <label htmlFor={`word-report-approve-no-${index}`}
+                                                                           className="word-report-approve no">✖</label>
+                                                                    <input id={`word-report-approve-yes-${index}`}
+                                                                           type="checkbox" checked={it.approved}
+                                                                           onChange={() => this.handleWordReportApprove(index, true)}/>
+                                                                    <label htmlFor={`word-report-approve-yes-${index}`}
+                                                                           className="word-report-approve yes">✔</label>
+                                                                </div>)}
+                                                        </div>
+                                                        {it.wordHistory ? <div className="word-history">
+                                                            {it.wordHistory.map((it) => <div className="word-report-item">
+                                                                <div className="word-report-item-name">{it.playerName}</div>
+                                                                <div className="word-report-item-transfer">
+                                                                    {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
+                                                                    !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
+                                                                </div>
+                                                                <div className="word-report-item-status">
+                                                                    {it.approved ? (
+                                                                        <span className="approved">Approved</span>) : (
+                                                                        <span className="denied">Denied</span>)}
+                                                                </div>
                                                             </div>)}
-                                                    </div>
-                                                    {it.wordHistory ? <div className="word-history">
-                                                        {it.wordHistory.map((it) => <div className="word-report-item">
-                                                            <div className="word-report-item-name">{it.playerName}</div>
-                                                            <div className="word-report-item-transfer">
-                                                                {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
-                                                                !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
-                                                            </div>
-                                                            <div className="word-report-item-status">
-                                                                {it.approved ? (
-                                                                    <span className="approved">Approved</span>) : (
-                                                                    <span className="denied">Denied</span>)}
-                                                            </div>
-                                                        </div>)}
-                                                    </div> : ""}
-                                                </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
-                                            <div className="word-report-show-all"
-                                                 onClick={() => this.handleClickShowMoreReports()}>Show more</div>) : ""}
-                                        </div>)
-                                        : (<div className="word-report-no-data">No words reported yet</div>)
-                                }</div>
-                                <div className="word-report-manage-buttons">
+                                                        </div> : ""}
+                                                    </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
+                                                <div className="word-report-show-all"
+                                                     onClick={() => this.handleClickShowMoreReports()}>Show more</div>) : ""}
+                                            </div>)
+                                            : (<div className="word-report-no-data">No words reported yet</div>)
+                                    }</div>
+                                    <div className="word-report-manage-buttons">
                                     <span className="word-report-allow-report"
                                           onClick={() => this.handleClickAllowReport()}><i
                                         className="material-icons pin-notification-button">{parseInt(localStorage.aliasAllowReport)
                                         ? "check_box" : "check_box_outline_blank"}</i> Разрешить
                                         репорты и добавление
                                     </span>
-                                    <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
-                                           type="password"/>
-                                    <div
-                                        className={cs("button", "word-report-save-button", {inactive: data.wordReportSent})}
-                                        onClick={() => this.handleClickSubmitReports()}>Submit
+                                        <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
+                                               type="password"/>
+                                        <div
+                                            className={cs("button", "word-report-save-button", {inactive: data.wordReportSent})}
+                                            onClick={() => this.handleClickSubmitReports()}>Submit
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>) : ""}
-                        {data.wordAddCount != null ? (<div className="word-report-modal">
-                            <div className="word-report-modal-content add">
-                                <div className="word-report-title">Add new words
-                                    <div className="word-report-modal-close"
-                                         onClick={() => this.handleClickCloseWordAdd()}>✕
+                            </div>) : ""}
+                            {data.wordAddCount != null ? (<div className="word-report-modal">
+                                <div className="word-report-modal-content add">
+                                    <div className="word-report-title">Add new words
+                                        <div className="word-report-modal-close"
+                                             onClick={() => this.handleClickCloseWordAdd()}>✕
+                                        </div>
                                     </div>
-                                </div>
-                                <input
-                                    style={{display: data.wordAddLevel === "custom" ? "block" : "none"}}
-                                    className="word-add-pack-name"
-                                    maxLength="40"
-                                    id="word-add-pack-name"
-                                    placeholder="Pack name"
-                                />
-                                <textarea
-                                    id="word-add-area"
-                                    onChange={((event) => this.handleWordAddChange(event.target.value))}
-                                    className="word-add-textarea"/>
-                                <div className="word-report-manage-buttons">
-                                    <div
-                                        className="word-add-level-select">
+                                    <input
+                                        style={{display: data.wordAddLevel === "custom" ? "block" : "none"}}
+                                        className="word-add-pack-name"
+                                        maxLength="40"
+                                        id="word-add-pack-name"
+                                        placeholder="Pack name"
+                                    />
+                                    <textarea
+                                        id="word-add-area"
+                                        onChange={((event) => this.handleWordAddChange(event.target.value))}
+                                        className="word-add-textarea"/>
+                                    <div className="word-report-manage-buttons">
+                                        <div
+                                            className="word-add-level-select">
                                         <span
                                             onClick={() => this.handleWordAddLevel(1)}
                                             className={cs("settings-button", {"level-selected": data.wordAddLevel === 1})}>Easy</span>
-                                        <span
-                                            onClick={() => this.handleWordAddLevel(2)}
-                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 2})}>Normal</span>
-                                        <span
-                                            onClick={() => this.handleWordAddLevel(3)}
-                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 3})}>Hard</span>
-                                        <span
-                                            onClick={() => this.handleWordAddLevel(4)}
-                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === 4})}>Insane</span>
-                                        <span
-                                            onClick={() => this.handleWordAddLevel("custom")}
-                                            className={cs("settings-button", {"level-selected": data.wordAddLevel === "custom"})}>Custom</span>
-                                    </div>
-                                    <div
-                                        className={cs("word-add-count", {
-                                            overflow: data.wordAddCount > (data.wordAddLevel === "custom" ? data.customWordsLimit : 50)
-                                        })}>{data.wordAddCount}/{data.wordAddLevel === "custom" ? data.customWordsLimit : 50}
-                                    </div>
-                                    <div
-                                        className={cs("word-report-save-button", "button", {
-                                            inactive:
-                                                !(data.wordAddCount > 0 && data.wordAddCount <= (data.wordAddLevel === "custom" ? data.customWordsLimit : 50))
-                                        })}
-                                        onClick={() => this.handleClickSubmitNewWords()}>Submit
-                                    </div>
-                                </div>
-                            </div>
-                        </div>) : ""}
-                        {data.rankedModalActive ? (<div className="ranked-modal">
-                            <div className="ranked-modal-content">
-                                <div className="ranked-title">
-                                    Ranked mode
-                                    <div className="ranked-modal-close"
-                                         onClick={() => this.handleClickCloseRanked()}>✕
+                                            <span
+                                                onClick={() => this.handleWordAddLevel(2)}
+                                                className={cs("settings-button", {"level-selected": data.wordAddLevel === 2})}>Normal</span>
+                                            <span
+                                                onClick={() => this.handleWordAddLevel(3)}
+                                                className={cs("settings-button", {"level-selected": data.wordAddLevel === 3})}>Hard</span>
+                                            <span
+                                                onClick={() => this.handleWordAddLevel(4)}
+                                                className={cs("settings-button", {"level-selected": data.wordAddLevel === 4})}>Insane</span>
+                                            <span
+                                                onClick={() => this.handleWordAddLevel("custom")}
+                                                className={cs("settings-button", {"level-selected": data.wordAddLevel === "custom"})}>Custom</span>
+                                        </div>
+                                        <div
+                                            className={cs("word-add-count", {
+                                                overflow: data.wordAddCount > (data.wordAddLevel === "custom" ? data.customWordsLimit : 50)
+                                            })}>{data.wordAddCount}/{data.wordAddLevel === "custom" ? data.customWordsLimit : 50}
+                                        </div>
+                                        <div
+                                            className={cs("word-report-save-button", "button", {
+                                                inactive:
+                                                    !(data.wordAddCount > 0 && data.wordAddCount <= (data.wordAddLevel === "custom" ? data.customWordsLimit : 50))
+                                            })}
+                                            onClick={() => this.handleClickSubmitNewWords()}>Submit
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="ranked-content">
-                                    <div className="ranked-status-user">
-                                        Ranked-таблица:&nbsp;<span
-                                        className="ranked-status">
+                            </div>) : ""}
+                            {data.rankedModalActive ? (<div className="ranked-modal">
+                                <div className="ranked-modal-content">
+                                    <div className="ranked-title">
+                                        Ranked mode
+                                        <div className="ranked-modal-close"
+                                             onClick={() => this.handleClickCloseRanked()}>✕
+                                        </div>
+                                    </div>
+                                    <div className="ranked-content">
+                                        <div className="ranked-status-user">
+                                            Ranked-таблица:&nbsp;<span
+                                            className="ranked-status">
                                         <a target="_blank"
                                            href="./alias/ranked#moderators">Открыть</a></span>
-                                    </div>
-                                    <div className="ranked-desc">
-                                        В Ranked-таблице можно увидеть список участников и результаты игр
-                                    </div>
-                                    <br/>
-                                    <div className="ranked-status-room">
-                                        Ranked-режим:&nbsp;<span
-                                        className="ranked-status">{data.ranked ? 'Активен' : 'Неактивен'}</span>
-                                    </div>
-                                    <div className="ranked-desc">
-                                        Активировать Ranked-режим могут только <a target="_blank"
-                                                                                  href="./alias/ranked#moderators">Ranked-модераторы</a>
-                                    </div>
-                                    <span className="ranked-auth-buttons">
+                                        </div>
+                                        <div className="ranked-desc">
+                                            В Ranked-таблице можно увидеть список участников и результаты игр
+                                        </div>
+                                        <br/>
+                                        <div className="ranked-status-room">
+                                            Ranked-режим:&nbsp;<span
+                                            className="ranked-status">{data.ranked ? 'Активен' : 'Неактивен'}</span>
+                                        </div>
+                                        <div className="ranked-desc">
+                                            Активировать Ranked-режим могут только <a target="_blank"
+                                                                                      href="./alias/ranked#moderators">Ranked-модераторы</a>
+                                        </div>
+                                        <span className="ranked-auth-buttons">
                                             <span className={cs("ranked-auth-button", "button", {
                                                 inactive: !data.authUsers?.[data.userId]?.moderator
                                             })}
@@ -1460,165 +1461,169 @@ class Game extends React.Component {
                                                 ? 'Активировать' : 'Деактивировать'}
                                             </span>
                                         </span>
-                                    <div className="ranked-status-user">
-                                        Пользователь:&nbsp;<span
-                                        className="ranked-status">{data.authUsers[data.userId]
-                                        ? `Авторизован ${!data.authUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
-                                        : 'Не авторизован'}</span>
-                                    </div>
-                                    <div className="ranked-desc">
-                                        Участвовать в Ranked-играх можно только войдя в Ranked-аккаунт.
-                                    </div>
-                                    <div className="ranked-desc">
-                                        Аккаунт будет создан при первом входе, и будет использовать ваш текущий никнейм
-                                        (Его нельзя будет поменять)
-                                    </div>
-                                    {!data.authUsers[data.userId] ? (
-                                        <div className="ranked-auth-buttons">
+                                        <div className="ranked-status-user">
+                                            Пользователь:&nbsp;<span
+                                            className="ranked-status">{data.authUsers[data.userId]
+                                            ? `Авторизован ${!data.authUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
+                                            : 'Не авторизован'}</span>
+                                        </div>
+                                        <div className="ranked-desc">
+                                            Участвовать в Ranked-играх можно только войдя в Ranked-аккаунт.
+                                        </div>
+                                        <div className="ranked-desc">
+                                            Аккаунт будет создан при первом входе, и будет использовать ваш текущий никнейм
+                                            (Его нельзя будет поменять)
+                                        </div>
+                                        {!data.authUsers[data.userId] ? (
+                                            <div className="ranked-auth-buttons">
                                             <span className="ranked-auth-button button"
                                                   onClick={() => this.handleClickAuthGoogle()}>Войти через Google
                                             </span>
-                                            <span className="ranked-auth-button button"
-                                                  onClick={() => this.handleClickAuthSMS()}>Войти через SMS
+                                                <span className="ranked-auth-button button"
+                                                      onClick={() => this.handleClickAuthSMS()}>Войти через SMS
                                             </span>
-                                        </div>) : (
-                                        <div className="ranked-auth-buttons">
+                                            </div>) : (
+                                            <div className="ranked-auth-buttons">
                                                 <span className="ranked-auth-button button"
                                                       onClick={() => this.handleClickAuthLogout()}>Выйти из Ranked-аккаунта
                                             </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>) : ""}
+                            {data.customModalActive ? (<div className="word-report-modal custom">
+                                <div className="word-report-modal-content custom">
+                                    <div className="word-report-title">Custom word packs
+                                        {data.wordPacks[data.customPackSelected] ? (
+                                            <div className="word-report-modal-stats">
+                                                Words<span
+                                                className="word-report-stat-num">{data.wordPacks[data.customPackSelected].wordList.length}</span>
+                                                Author<span
+                                                className="word-report-stat-num">{data.wordPacks[data.customPackSelected].author}</span>
+                                            </div>) : ""}
+                                        {settingsMode && !data.wordPacks[data.customPackSelected] ? (
+                                            <input
+                                                className="custom-words-pack-name"
+                                                maxLength="40"
+                                                id="custom-words-pack-name"
+                                                placeholder="Pack name"
+                                            />) : ""}
+                                        <div className="word-report-modal-close"
+                                             onClick={() => this.handleClickCloseCustom()}>✕
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>) : ""}
-                        {data.customModalActive ? (<div className="word-report-modal custom">
-                            <div className="word-report-modal-content custom">
-                                <div className="word-report-title">Custom word packs
-                                    {data.wordPacks[data.customPackSelected] ? (
-                                        <div className="word-report-modal-stats">
-                                            Words<span
-                                            className="word-report-stat-num">{data.wordPacks[data.customPackSelected].wordList.length}</span>
-                                            Author<span
-                                            className="word-report-stat-num">{data.wordPacks[data.customPackSelected].author}</span>
+                                    </div>
+                                    <div className="custom-packs">
+                                        <div className="custom-pack-list">
+                                            {settingsMode ? (
+                                                <div
+                                                    onClick={() => this.handleSelectCustom()}
+                                                    className={cs("custom-pack-list-item", {selected: data.customPackSelected == null})}>
+                                                    &lt;Custom&gt;</div>) : ""}
+                                            {Object.keys(data.wordPacks).map((name) => (
+                                                <div onClick={() => this.handleSelectCustom(name)}
+                                                     className={cs("custom-pack-list-item", {selected: data.customPackSelected === name})}>
+                                                    {name}</div>))}
+                                        </div>
+                                        <div className="custom-pack-pane">
+                                            {(settingsMode && data.customPackSelected == null)
+                                                ? (<textarea
+                                                    id="custom-word-area"
+                                                    onChange={((event) => this.handleCustomWordsChange(event.target.value))}
+                                                    className="custom-word-textarea text-color"/>)
+                                                : data.customPackSelected != null
+                                                    ? (<div className="custom-pack-word-list">
+                                                        {data.wordPacks[data.customPackSelected] != null
+                                                            ? data.wordPacks[data.customPackSelected].wordList.map((word) => (
+                                                                <div className="custom-pack-word-list-item">{word}</div>))
+                                                            : "Loading"}
+                                                    </div>) : ""}
+                                        </div>
+                                    </div>
+                                    <div className="word-report-manage-buttons">
+                                        {settingsMode && data.customPackSelected == null ? (<div
+                                            className={cs("word-add-count", {
+                                                overflow: data.wordCustomCount > data.customWordsLimit
+                                            })}>{data.wordCustomCount}/{data.customWordsLimit}
                                         </div>) : ""}
-                                    {settingsMode && !data.wordPacks[data.customPackSelected] ? (
-                                        <input
-                                            className="custom-words-pack-name"
-                                            maxLength="40"
-                                            id="custom-words-pack-name"
-                                            placeholder="Pack name"
-                                        />) : ""}
-                                    <div className="word-report-modal-close"
-                                         onClick={() => this.handleClickCloseCustom()}>✕
+                                        {settingsMode ? <div
+                                            className={cs("word-report-save-button", "button", {
+                                                inactive: !(data.customPackSelected != null
+                                                    || (data.wordCustomCount > 0
+                                                        && data.wordCustomCount <= data.customWordsLimit))
+                                            })}
+                                            onClick={() => this.handleClickSetCustomWords()}>Select
+                                        </div> : ""}
                                     </div>
                                 </div>
-                                <div className="custom-packs">
-                                    <div className="custom-pack-list">
-                                        {settingsMode ? (
-                                            <div
-                                                onClick={() => this.handleSelectCustom()}
-                                                className={cs("custom-pack-list-item", {selected: data.customPackSelected == null})}>
-                                                &lt;Custom&gt;</div>) : ""}
-                                        {Object.keys(data.wordPacks).map((name) => (
-                                            <div onClick={() => this.handleSelectCustom(name)}
-                                                 className={cs("custom-pack-list-item", {selected: data.customPackSelected === name})}>
-                                                {name}</div>))}
-                                    </div>
-                                    <div className="custom-pack-pane">
-                                        {(settingsMode && data.customPackSelected == null)
-                                            ? (<textarea
-                                                id="custom-word-area"
-                                                onChange={((event) => this.handleCustomWordsChange(event.target.value))}
-                                                className="custom-word-textarea text-color"/>)
-                                            : data.customPackSelected != null
-                                                ? (<div className="custom-pack-word-list">
-                                                    {data.wordPacks[data.customPackSelected] != null
-                                                        ? data.wordPacks[data.customPackSelected].wordList.map((word) => (
-                                                            <div className="custom-pack-word-list-item">{word}</div>))
-                                                        : "Loading"}
-                                                </div>) : ""}
-                                    </div>
-                                </div>
-                                <div className="word-report-manage-buttons">
-                                    {settingsMode && data.customPackSelected == null ? (<div
-                                        className={cs("word-add-count", {
-                                            overflow: data.wordCustomCount > data.customWordsLimit
-                                        })}>{data.wordCustomCount}/{data.customWordsLimit}
-                                    </div>) : ""}
-                                    {settingsMode ? <div
-                                        className={cs("word-report-save-button", "button", {
-                                            inactive: !(data.customPackSelected != null
-                                                || (data.wordCustomCount > 0
-                                                    && data.wordCustomCount <= data.customWordsLimit))
-                                        })}
-                                        onClick={() => this.handleClickSetCustomWords()}>Select
-                                    </div> : ""}
-                                </div>
-                            </div>
-                        </div>) : ""}
-                        <div id="snackbar" className={cs({pinned: this.state.notificationPinned})}>
-                            {data.wordReportNotify ? (<div>
-                                {data.wordReportNotify.approved.length ? (<div>
-                                    Word reports approved
-                                    <i onClick={() => this.toggleNotificationPinned()}
-                                       className="material-icons pin-notification-button">attach_file</i>
-                                    <div className="word-report-notify-list">
-                                        {data.wordReportNotify.approved.map((it) => (<div
-                                            className="word-report-notify-item">
-                                            {it.word} <span className="word-report-notify-transfer">
+                            </div>) : ""}
+                            <div id="snackbar" className={cs({pinned: this.state.notificationPinned})}>
+                                {data.wordReportNotify ? (<div>
+                                    {data.wordReportNotify.approved.length ? (<div>
+                                        Word reports approved
+                                        <i onClick={() => this.toggleNotificationPinned()}
+                                           className="material-icons pin-notification-button">attach_file</i>
+                                        <div className="word-report-notify-list">
+                                            {data.wordReportNotify.approved.map((it) => (<div
+                                                className="word-report-notify-item">
+                                                {it.word} <span className="word-report-notify-transfer">
                                         ({["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel]} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]})
                                     </span></div>))}
-                                    </div>
+                                        </div>
+                                    </div>) : ""}
+                                    {data.wordReportNotify.denied.length ? (<div>
+                                        {data.wordReportNotify.approved.length ? "And " : ""} {data.wordReportNotify.denied.length}
+                                        {data.wordReportNotify.approved.length ? "" : " word"} report{data.wordReportNotify.denied.length > 1 ? "s" : ""} denied
+                                    </div>) : ""}
+                                    {data.wordReportNotify.added ? (<div>
+                                        {data.wordReportNotify.approved.length || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.added} new
+                                        word{data.wordReportNotify.added > 1 ? "s" : ""} added
+                                    </div>) : ""}
+                                    {data.wordReportNotify.addDenied ? (<div>
+                                        {data.wordReportNotify.added
+                                        || data.wordReportNotify.approved.length
+                                        || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.addDenied} new
+                                        word{data.wordReportNotify.addDenied > 1 ? "s" : ""} declined
+                                    </div>) : ""}
+                                    {data.wordReportNotify.deleted.length ? (<div>
+                                        {data.wordReportNotify.added
+                                        || data.wordReportNotify.approved.length
+                                        || data.wordReportNotify.denied.length
+                                        || data.wordReportNotify.addDenied ? "Also " : ""}
+                                        {data.wordReportNotify.deleted.length} word{data.wordReportNotify.deleted.length > 1 ? "s" : ""} deleted
+                                    </div>) : ""}
+                                    {data.wordReportNotify.packsAdded ? (<div>
+                                        {data.wordReportNotify.added
+                                        || data.wordReportNotify.approved.length
+                                        || data.wordReportNotify.denied.length
+                                        || data.wordReportNotify.addDenied
+                                        || data.wordReportNotify.deleted.length ? "Also " : ""}
+                                        {data.wordReportNotify.packsAdded} custom words
+                                        pack{data.wordReportNotify.packsAdded > 1 ? "s" : ""} added
+                                    </div>) : ""}
+                                    {data.wordReportNotify.packsDenied ? (<div>
+                                        {data.wordReportNotify.added
+                                        || data.wordReportNotify.approved.length
+                                        || data.wordReportNotify.denied.length
+                                        || data.wordReportNotify.addDenied
+                                        || data.wordReportNotify.deleted.length
+                                        || data.wordReportNotify.packsAdded ? "Also " : ""}
+                                        {data.wordReportNotify.packsDenied} custom words
+                                        pack{data.wordReportNotify.packsDenied > 1 ? "s" : ""} denied
+                                    </div>) : ""}
                                 </div>) : ""}
-                                {data.wordReportNotify.denied.length ? (<div>
-                                    {data.wordReportNotify.approved.length ? "And " : ""} {data.wordReportNotify.denied.length}
-                                    {data.wordReportNotify.approved.length ? "" : " word"} report{data.wordReportNotify.denied.length > 1 ? "s" : ""} denied
-                                </div>) : ""}
-                                {data.wordReportNotify.added ? (<div>
-                                    {data.wordReportNotify.approved.length || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.added} new
-                                    word{data.wordReportNotify.added > 1 ? "s" : ""} added
-                                </div>) : ""}
-                                {data.wordReportNotify.addDenied ? (<div>
-                                    {data.wordReportNotify.added
-                                    || data.wordReportNotify.approved.length
-                                    || data.wordReportNotify.denied.length ? "Also " : ""}{data.wordReportNotify.addDenied} new
-                                    word{data.wordReportNotify.addDenied > 1 ? "s" : ""} declined
-                                </div>) : ""}
-                                {data.wordReportNotify.deleted.length ? (<div>
-                                    {data.wordReportNotify.added
-                                    || data.wordReportNotify.approved.length
-                                    || data.wordReportNotify.denied.length
-                                    || data.wordReportNotify.addDenied ? "Also " : ""}
-                                    {data.wordReportNotify.deleted.length} word{data.wordReportNotify.deleted.length > 1 ? "s" : ""} deleted
-                                </div>) : ""}
-                                {data.wordReportNotify.packsAdded ? (<div>
-                                    {data.wordReportNotify.added
-                                    || data.wordReportNotify.approved.length
-                                    || data.wordReportNotify.denied.length
-                                    || data.wordReportNotify.addDenied
-                                    || data.wordReportNotify.deleted.length ? "Also " : ""}
-                                    {data.wordReportNotify.packsAdded} custom words
-                                    pack{data.wordReportNotify.packsAdded > 1 ? "s" : ""} added
-                                </div>) : ""}
-                                {data.wordReportNotify.packsDenied ? (<div>
-                                    {data.wordReportNotify.added
-                                    || data.wordReportNotify.approved.length
-                                    || data.wordReportNotify.denied.length
-                                    || data.wordReportNotify.addDenied
-                                    || data.wordReportNotify.deleted.length
-                                    || data.wordReportNotify.packsAdded ? "Also " : ""}
-                                    {data.wordReportNotify.packsDenied} custom words
-                                    pack{data.wordReportNotify.packsDenied > 1 ? "s" : ""} denied
-                                </div>) : ""}
-                            </div>) : ""}
+                            </div>
+                            <CommonRoom state={this.state} app={this}/>
                         </div>
-                        <CommonRoom state={this.state} app={this}/>
                     </div>
-                </div>
+                );
+            } else return (
+                <div/>
             );
-        } else return (
-            <div/>
-        );
+        } catch (error) {
+            console.error(error);
+            debugger
+        }
     }
 }
 
