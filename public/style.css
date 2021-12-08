@@ -1302,7 +1302,5 @@ a {
 }
 
 .ranked.solo-mode .team {
-    height: auto;
-    min-height: 130px;
-    width: 250px;
+    width: 221px;
 }

@@ -724,13 +724,13 @@ function init(wsServer, path, moderKey, fbConfig) {
                     update();
                 },
                 "remove-player": (user, playerId) => {
-                    if (room.hostId === user && playerId && !room.ranked) {
+                    if (room.hostId === user && playerId && (!room.ranked || room.phase === 0)) {
                         removePlayer(playerId);
                     }
                     update();
                 },
                 "remove-player-ranked": (user, playerId) => {
-                    if (room.hostId === user && playerId && room.ranked) {
+                    if (room.hostId === user && playerId && room.ranked && room.phase === 1) {
                         saveRankedResults(user, playerId);
                     }
                     update();

@@ -782,7 +782,7 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        if (!this.state.ranked)
+        if (!this.state.ranked || this.state.phase === 0)
             popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
         else
             popup.confirm({content: `При удалении игрока игра будет завершена, а он получит штраф. Удалить ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player-ranked", id));
