@@ -71,7 +71,7 @@ function init(wsServer, path, moderKey, fbConfig) {
     app.get("/alias/ranked/edit-score", (req, res) => {
         if (req.query.key === moderKey && !isNaN(req.query.score)) {
             if (authUsers[req.query.user]) {
-                authUsers[req.query.user].score = req.query.score
+                authUsers[req.query.user].score = parseInt(req.query.score);
                 fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4), (error) => {
                     if (error)
                         res.send({
@@ -452,6 +452,7 @@ function init(wsServer, path, moderKey, fbConfig) {
                                 delete authUserByToken[user];
                                 leaveTeams(user);
                                 room.spectators.add(user);
+                                endRound();
                             }
                         });
                 },
@@ -506,10 +507,13 @@ function init(wsServer, path, moderKey, fbConfig) {
                                 authUsers[otherPlayer].score + acc, 0) / otherPlayers.length;
                             const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - authUsers[player].score) / rankedScoreMultiplier));
                             const rankedScoreDiff = rankedBaseMultiplier
-                                * ((1 - expectedVictory) * playersYouWon)
+                                * (((1 - expectedVictory) * playersYouWon)
                                 + ((0.5 - expectedVictory) * playersYouDraw)
-                                + ((0 - expectedVictory) * playersYouLose);
-                            rankedScoreDiffs[player] = Math.round(rankedScoreDiff * skillGroupMultiplier[rankedScoreDiff > 0 ? 0 : 1]);
+                                + ((0 - expectedVictory) * playersYouLose));
+                            if (leaverPlayer === player || !leaverPlayer)
+                                rankedScoreDiffs[player] = Math.round(rankedScoreDiff * skillGroupMultiplier[rankedScoreDiff > 0 ? 0 : 1]);
+                            else if (leaverPlayer)
+                                rankedScoreDiffs[player] = 0;
                         }
                         const prevScores = {};
                         Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = authUsers[player].score);

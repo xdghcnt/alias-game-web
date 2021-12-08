@@ -1058,6 +1058,7 @@ class Game extends React.Component {
                             active: this.state.inited,
                             "game-over": gameIsOver,
                             "solo-mode": this.state.soloMode,
+                            ranked: this.state.ranked,
                             isMobile: this.isMobile
                         })}>
                             <div className="teams-pane">
@@ -1071,7 +1072,7 @@ class Game extends React.Component {
                                 {data.drawMode ? (<div id="draw-pane">
                                     <i className={cs("material-icons", "button-clear-draw", {active: data.currentPlayer === data.userId})}
                                        onClick={(evt) => this.handleClickDrawClear(evt)}>delete_forever</i></div>) : ""}
-                                {data.soloMode ? "Players" : "Teams"}:
+                                {data.soloMode ? (data.ranked ? "Ranked players" : "Players") : "Teams"}:
                                 <Teams data={this.state} game={this}/>
                                 <br/>
                                 <div className={cs(
@@ -1149,11 +1150,14 @@ class Game extends React.Component {
                                             })}
                                                  onClick={() => this.handleClickToggleSoloMode(true)}>solo
                                             </div>
-                                            {(settingsMode || (data.ranked && data.phase === 0)) ? (
-                                                <div className="shuffle-players settings-button"
-                                                     onClick={() => this.handleClickShuffle()}>shuffle players<i
-                                                    className="material-icons">casino</i>
-                                                </div>) : ""}
+                                            {(settingsMode || (isHost && data.ranked && data.phase === 0)) ? (
+                                                <>
+                                                    <div className="spacer"/>
+                                                    <div className="shuffle-players settings-button"
+                                                         onClick={() => this.handleClickShuffle()}>shuffle players&nbsp;<i
+                                                        className="material-icons">casino</i>
+                                                    </div>
+                                                </>) : ""}
                                         </div>
                                         <div className="draw-mode-buttons">
                                             <div
@@ -1262,7 +1266,8 @@ class Game extends React.Component {
                                 <div className="word-report-modal-content">
                                     <div className="word-report-title">Words moderation
                                         <div className="word-report-modal-stats">
-                                            Total<span className="word-report-stat-num">{data.wordReportData.total}</span>
+                                            Total<span
+                                            className="word-report-stat-num">{data.wordReportData.total}</span>
                                             Processed<span
                                             className="word-report-stat-num">{data.wordReportData.processed}</span>
                                             Approved<span
@@ -1354,7 +1359,8 @@ class Game extends React.Component {
                                                         </div> : ""}
                                                     </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
                                                 <div className="word-report-show-all"
-                                                     onClick={() => this.handleClickShowMoreReports()}>Show more</div>) : ""}
+                                                     onClick={() => this.handleClickShowMoreReports()}>Show
+                                                    more</div>) : ""}
                                             </div>)
                                             : (<div className="word-report-no-data">No words reported yet</div>)
                                     }</div>
@@ -1471,7 +1477,8 @@ class Game extends React.Component {
                                             Участвовать в Ranked-играх можно только войдя в Ranked-аккаунт.
                                         </div>
                                         <div className="ranked-desc">
-                                            Аккаунт будет создан при первом входе, и будет использовать ваш текущий никнейм
+                                            Аккаунт будет создан при первом входе, и будет использовать ваш текущий
+                                            никнейм
                                             (Его нельзя будет поменять)
                                         </div>
                                         {!data.authUsers[data.userId] ? (
@@ -1535,7 +1542,8 @@ class Game extends React.Component {
                                                     ? (<div className="custom-pack-word-list">
                                                         {data.wordPacks[data.customPackSelected] != null
                                                             ? data.wordPacks[data.customPackSelected].wordList.map((word) => (
-                                                                <div className="custom-pack-word-list-item">{word}</div>))
+                                                                <div
+                                                                    className="custom-pack-word-list-item">{word}</div>))
                                                             : "Loading"}
                                                     </div>) : ""}
                                         </div>

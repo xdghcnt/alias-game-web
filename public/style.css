@@ -428,7 +428,8 @@ body.dark-theme {
 }
 
 .little-controls div {
-    display: inline-block;
+    display: flex;
+    align-items: center;
 }
 
 .settings-button {
@@ -506,6 +507,8 @@ body.dark-theme {
     text-align: left;
     border-bottom: 1px solid;
     padding-bottom: 6px;
+    display: flex;
+    align-items: center;
 }
 
 .shuffle-players {
@@ -1292,4 +1295,14 @@ a {
 
 .ranked-status a {
     text-decoration: none;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.ranked.solo-mode .team {
+    height: auto;
+    min-height: 130px;
+    width: 250px;
 }

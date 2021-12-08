@@ -104,8 +104,11 @@ class Page extends React.Component {
         return (<div className="main">
             <div className="title">Модераторы</div>
             <div className="moderators section">
-                {data.moderators.map((moderator) => (<a className="moderator" target="_blank" title="Контакт в Discord"
-                                                        href={`https://discordapp.com/users/${moderator.discord}/`}>{moderator.name}</a>))}
+                {data.moderators.map((moderator, index) =>
+                    (<><a className="moderator"
+                          target="_blank" title="Контакт в Discord"
+                          href={`https://discordapp.com/users/${moderator.discord}/`}>{moderator.name}</a>
+                    {index !== data.moderators.length - 1 ? <span className="spacer"/> : ''}</>))}
             </div>
             <div className="title">Игроки</div>
             <div className="players section">
@@ -130,7 +133,7 @@ class Page extends React.Component {
                     <div className="button toggle-moderator"
                          onClick={() => this.setModeratorStatus(player.id, !player.moderator)}
                          title={!player.moderator ? 'Сделать модератором' : 'Сделать немодератором'}>
-                        <i className="material-icons">{!player.moderator ? 'key' : 'key_off'}</i>
+                        <i className="material-icons">{player.moderator ? 'key' : 'key_off'}</i>
                     </div>
                 </div>))}
             </div>
