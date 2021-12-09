@@ -481,7 +481,7 @@ function init(wsServer, path, moderKey, fbConfig) {
                             );
                             rankedScoreDiffs[player] = 0;
                         }
-                        totalPoints = totalPoints / 2;
+                        totalPoints = totalPoints / users.length;
                         const rankedBaseMultiplier = 20;
                         const rankedScoreMultiplier = 400;
                         const skillGroupMultipliers = [
