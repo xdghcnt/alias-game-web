@@ -452,7 +452,8 @@ function init(wsServer, path, moderKey, fbConfig) {
                                 delete authUserByToken[user];
                                 leaveTeams(user);
                                 room.spectators.add(user);
-                                endRound();
+                                if (room.phase === 2)
+                                    endRound();
                             }
                         });
                 },

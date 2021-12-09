@@ -322,7 +322,7 @@ class Game extends React.Component {
                 if (it.wordList?.length > 1)
                     it.wordList.forEach((word) => wordSet.add(word));
                 else if ((it.word || it.wordList?.length === 1) && !this.isAutoDenied(it)) {
-                    const word = it.wordList ? it.wordList[0] : word;
+                    const word = it.wordList ? it.wordList[0] : it.word;
                     if (wordSet.has(word))
                         it.hasHistory = true;
                     else
@@ -782,10 +782,14 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        if (!this.state.ranked || this.state.phase === 0)
-            popup.confirm({content: `Removing ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
-        else
-            popup.confirm({content: `При удалении игрока игра будет завершена, а он получит штраф. Удалить ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("remove-player-ranked", id));
+        const name = this.state.authUsers[id] ? this.state.authUsers[id].name : this.state.playerNames[id]
+        if (!this.state.ranked || this.state.phase === 0) {
+            if (this.state.phase !== 0)
+                popup.confirm({content: `Removing ${name}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
+            else
+                this.socket.emit("remove-player", id);
+        } else
+            popup.confirm({content: `При удалении игрока игра будет завершена, а он получит штраф. Удалить ${name}?`}, (evt) => evt.proceed && this.socket.emit("remove-player-ranked", id));
     }
 
     handleGiveHost(id, evt) {
@@ -1154,8 +1158,9 @@ class Game extends React.Component {
                                                 <>
                                                     <div className="spacer"/>
                                                     <div className="shuffle-players settings-button"
-                                                         onClick={() => this.handleClickShuffle()}>shuffle players&nbsp;<i
-                                                        className="material-icons">casino</i>
+                                                         onClick={() => this.handleClickShuffle()}>shuffle players&nbsp;
+                                                        <i
+                                                            className="material-icons">casino</i>
                                                     </div>
                                                 </>) : ""}
                                         </div>
