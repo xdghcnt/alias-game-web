@@ -389,7 +389,6 @@ function init(wsServer, path, moderKey, fbConfig) {
                             score: 1000,
                             name: room.playerNames[user],
                             id: decodedToken.uid,
-                            gamesCount: 0,
                             registerTime: new Date()
                         };
                         fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4),
