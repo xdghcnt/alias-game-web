@@ -120,27 +120,27 @@ class Words extends React.Component {
                                 {!word.reported ? (<div className="report-word-list">
                                     {data.level !== 1 ? (<div
                                         className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 1)}><i
+                                        onClick={() => game.handleClickReportWordLevel(word.word, 1)}><i
                                         className="material-icons">pets</i> Easy ←
                                     </div>) : ""}
-                                    {data.level !== 2 ? (<div
+                                    {(data.level !== 2 && data.level !== "ranked") ? (<div
                                         className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 2)}><i
+                                        onClick={() => game.handleClickReportWordLevel(word.word, 2)}><i
                                         className="material-icons">child_friendly</i> Normal ←
                                     </div>) : ""}
                                     {data.level !== 3 ? (<div
                                         className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 3)}><i
+                                        onClick={() => game.handleClickReportWordLevel(word.word, 3)}><i
                                         className="material-icons">school</i> Hard ←
                                     </div>) : ""}
                                     {data.level !== 4 ? (<div
                                         className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 4)}><i
+                                        onClick={() => game.handleClickReportWordLevel(word.word, 4)}><i
                                         className="material-icons">whatshot</i> Insane ←
                                     </div>) : ""}
                                     <div
                                         className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, data.level, 0)}><i
+                                        onClick={() => game.handleClickReportWordLevel(word.word, 0)}><i
                                         className="material-icons">delete_forever</i> Remove ←
                                     </div>
                                 </div>) : ""}
@@ -182,9 +182,10 @@ class Player extends React.Component {
                         ? data.authUsers[id].score : data.authUsers[id].score - (data.rankedScoreDiffs[id] || 0)}{data.rankedResultsSaved ? (
                         <span
                             className={cs("word-points", {
-                                active: data.rankedScoreDiffs[id],
+                                active: true,
                                 positive: data.rankedScoreDiffs[id] > 0,
-                                negative: data.rankedScoreDiffs[id] < 0
+                                negative: data.rankedScoreDiffs[id] < 0,
+                                equal: data.rankedScoreDiffs[id] === 0
                             })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
                 {data.authUsers[id] ? data.authUsers[id].name : data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
@@ -837,9 +838,9 @@ class Game extends React.Component {
         this.debouncedEmit("set-round-time", value);
     }
 
-    handleClickReportWordLevel(word, currentLevel, level) {
+    handleClickReportWordLevel(word, level) {
         if (!!parseInt(localStorage.aliasAllowReport))
-            this.socket.emit("report-word", word, currentLevel, level);
+            this.socket.emit("report-word", word, level);
         else
             popup.alert({content: "Чтобы получить доступ к репорту слов, нужно включить его в окне просмотра репортов"});
     }

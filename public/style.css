@@ -340,6 +340,10 @@ body.dark-theme {
     color: green;
 }
 
+.word-points.equal:before {
+    content: "±";
+}
+
 .word-points.positive:before {
     content: "+";
 }

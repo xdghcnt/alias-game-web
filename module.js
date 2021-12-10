@@ -468,7 +468,8 @@ function init(wsServer, path, moderKey, fbConfig) {
                             const player = room.authUsers[user].id;
                             playerScores[player] = (room.playerScores[user] || 0) + (room.playerWordPoints[user] || 0);
                         }
-                        const scores = [...new Set(Object.keys(playerScores).map((user) => playerScores[user]))].sort().reverse();
+                        const scores = [...new Set(Object.keys(playerScores).map((user) => playerScores[user]))]
+                            .sort((a, b) => a - b).reverse();
                         const scoreRanks = {};
                         let leaverPlayer;
                         for (const user of users) {
@@ -508,8 +509,8 @@ function init(wsServer, path, moderKey, fbConfig) {
                             const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - authUsers[player].score) / rankedScoreMultiplier));
                             const rankedScoreDiff = rankedBaseMultiplier
                                 * (((1 - expectedVictory) * playersYouWon)
-                                + ((0.5 - expectedVictory) * playersYouDraw)
-                                + ((0 - expectedVictory) * playersYouLose));
+                                    + ((0.5 - expectedVictory) * playersYouDraw)
+                                    + ((0 - expectedVictory) * playersYouLose));
                             if (leaverPlayer === player || !leaverPlayer)
                                 rankedScoreDiffs[player] = Math.round(rankedScoreDiff * skillGroupMultiplier[rankedScoreDiff > 0 ? 0 : 1]);
                             else if (leaverPlayer)
@@ -881,8 +882,12 @@ function init(wsServer, path, moderKey, fbConfig) {
                         });
                     }
                 },
-                "report-word": (user, word, currentLevel, level) => {
-                    if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)) {
+                "report-word": (user, word, level) => {
+                    if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)
+                        && room.level !== 0 && room.level !== level && [0, 1, 2, 3, 4].includes(level)) {
+                        let currentLevel = room.level;
+                        if (currentLevel === 'ranked')
+                            currentLevel = 2;
                         const reportInfo = {
                             datetime: +new Date(),
                             user: user,
