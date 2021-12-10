@@ -56,9 +56,29 @@ class Page extends React.Component {
         });
     }
 
+    removeGame(datetime) {
+        popup.prompt({
+            content: "Супермодераторский ключ"
+        }, async (evt) => {
+            if (evt.proceed) {
+                const key = evt.input_value;
+                if (evt.proceed) {
+                    const result = (await (await fetch(
+                        `/alias/ranked/remove-game?key=${key}&datetime=${datetime}`
+                    )).json());
+                    if (result.message)
+                        popup.alert({content: result.message});
+                    else
+                        this.updateData();
+                }
+
+            }
+        });
+    }
+
     async updateData() {
         const data = (await (await fetch('/alias/ranked/data')).json());
-        data.rankedGames.reverse();
+        data.rankedGames = data.rankedGames.filter(game => !game.deleted).reverse();
         const players = Object.keys(data.authUsers).map((userId) =>
             data.authUsers[userId]).sort((a, b) => b.score - a.score);
         for (const game of data.rankedGames) {
@@ -108,7 +128,7 @@ class Page extends React.Component {
                     (<><a className="moderator"
                           target="_blank" title="Контакт в Discord"
                           href={`https://discordapp.com/users/${moderator.discord}/`}>{moderator.name}</a>
-                    {index !== data.moderators.length - 1 ? <span className="spacer"/> : ''}</>))}
+                        {index !== data.moderators.length - 1 ? <span className="spacer"/> : ''}</>))}
             </div>
             <div className="title">Игроки</div>
             <div className="players section">
@@ -142,10 +162,13 @@ class Page extends React.Component {
                 {data.gameList.map((gameRow) => (
                     <div className="match">
                         <div
-                            className="date">{(new Date(gameRow.datetime)).toLocaleDateString()} {(new Date(gameRow.datetime)).toLocaleTimeString()}</div>
+                            className="date">{(new Date(gameRow.datetime)).toLocaleDateString()} {(new Date(gameRow.datetime)).toLocaleTimeString()}
+                            <i onClick={() => this.removeGame(gameRow.datetime)}
+                               className="material-icons remove-game">delete_forever</i></div>
                         <div className="players">
                             {gameRow.playerScoresSorted.map((player) => (<div className="match-player">
-                                <div className="player-name">{data.authUsers[player].name} {gameRow.moderator === player ? (
+                                <div
+                                    className="player-name">{data.authUsers[player].name} {gameRow.moderator === player ? (
                                     <i className="material-icons host-button"
                                        title="Game host">
                                         stars

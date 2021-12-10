@@ -84,6 +84,38 @@ function init(wsServer, path, moderKey, fbConfig) {
         } else res.send({message: 'Неверный ключ'});
     });
 
+    app.get("/alias/ranked/remove-game", (req, res) => {
+        if (req.query.key === moderKey) {
+            const rankedGame = rankedGames.find((game) => game.datetime === req.query.datetime)
+            if (rankedGame) {
+                rankedGame.deleted = true;
+                Object.keys(rankedGame.rankedScoreDiffs).forEach((player) => {
+                    if (authUsers[player])
+                        authUsers[player].score -= rankedGame.rankedScoreDiffs[player];
+                })
+                fs.writeFile(
+                    `${appDir}/ranked-games.txt`,
+                    `${rankedGames.map((rankedGame) => JSON.stringify(rankedGame)).join("\n")}\n`,
+                    (error) => {
+                        if (error)
+                            res.send({
+                                message: error.message
+                            });
+                        else {
+                            fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4), (error) => {
+                                if (error)
+                                    res.send({
+                                        message: error.message
+                                    });
+                                else
+                                    res.send({});
+                            })
+                        }
+                    });
+            } else res.send({message: 'Что-то пошло не так'});
+        } else res.send({message: 'Неверный ключ'});
+    });
+
     app.use("/alias", wsServer.static(`${__dirname}/public`));
 
     class GameState extends wsServer.users.RoomState {
@@ -1150,6 +1182,7 @@ function init(wsServer, path, moderKey, fbConfig) {
             this.state = snapshot.state;
             Object.keys(this.room.authUsers).forEach((user) => {
                 authUserByToken[user] = authUsers[this.room.authUsers[user].id];
+                this.room.authUsers[user] = authUsers[this.room.authUsers[user].id];
             })
             if (this.room.level === 0)
                 this.room.level = 2;

@@ -131,3 +131,14 @@ a {
     width: 13px;
     display: inline-block;
 }
+
+.remove-game {
+    font-size: 14px;
+    vertical-align: text-bottom;
+    opacity: 0.5;
+    cursor: pointer;
+}
+
+.remove-game:hover {
+    opacity: 1;
+}
