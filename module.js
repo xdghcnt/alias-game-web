@@ -379,7 +379,7 @@ function init(wsServer, path, moderKey, fbConfig) {
                         room.spectators.delete(playerId);
                         delete room.playerNames[playerId];
                         delete room.authUsers[playerId];
-                        this.socket.emit("user-kicked", playerId);
+                        this.emit("user-kicked", playerId);
                     } else
                         room.spectators.add(playerId);
                 },
