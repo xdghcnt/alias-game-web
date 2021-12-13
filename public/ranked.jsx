@@ -107,6 +107,7 @@ class Page extends React.Component {
                     totalPoints += (game.playerScores[player.id] || 0);
                 }
                 return {
+                    inactive: gamesCount === 0 && player.score === 1000,
                     id: player.id,
                     name: player.name,
                     score: player.score,
@@ -115,6 +116,13 @@ class Page extends React.Component {
                     winRate: gamesCount ? Math.round(gamesCountWin / gamesCount * 100) : 0,
                     averagePoints: gamesCount ? (totalPoints / gamesCount).toFixed(1) : 0
                 };
+            }).sort((a, b) => {
+                if (a.inactive && !b.inactive)
+                    return 1;
+                else if (!a.inactive && b.inactive)
+                    return -1;
+                else
+                    return 0;
             }),
         })
     }
@@ -132,7 +140,9 @@ class Page extends React.Component {
             </div>
             <div className="title">Игроки</div>
             <div className="players section">
-                {data.players.map((player, index) => (<div className="player-row">
+                {data.players.map((player, index) => (<div className={cs("player-row", {
+                    inactive: player.inactive
+                })}>
                     <div className="rank">{index + 1}</div>
                     <div className="name">{player.name}</div>
                     <div className="score">{player.score}</div>
