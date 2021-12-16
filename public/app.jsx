@@ -116,7 +116,9 @@ class Words extends React.Component {
                             onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
                         {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
-                            <div className="report-word-menu" onTouchStart={(e) => e.target.focus()}>
+                            <div className="report-word-menu"
+                                 onClick={() => data.sortMode && game.handleClickReportWordLevel(word.word, 0)}
+                                 onTouchStart={(e) => e.target.focus()}>
                                 {!word.reported ? (<div className="report-word-list">
                                     {data.level !== 1 ? (<div
                                         className="settings-button"
@@ -144,10 +146,16 @@ class Words extends React.Component {
                                         className="material-icons">delete_forever</i> Remove ←
                                     </div>
                                 </div>) : ""}
-                                <i className="material-icons"
-                                   title={!word.reported ? "Report word" : "Reported"}>
-                                    report_problem
-                                </i>
+                                {data.sortMode
+                                    ? <i className="material-icons"
+                                         title={!word.reported ? "Remove word" : "Removed"}>
+                                        cancel
+                                    </i>
+                                    : <i className="material-icons"
+                                         title={!word.reported ? "Report word" : "Reported"}>
+                                        report_problem
+                                    </i>}
+
                             </div>) : ""}
                         {game.isMobile ? <div className="points-button add-points" onClick={() =>
                             game.handleAddWordPoints(index)}>+</div> : ""}
@@ -181,13 +189,13 @@ class Player extends React.Component {
                     <span className="ranked-score">[{!data.rankedResultsSaved
                         ? data.authUsers[id].score : data.authUsers[id].score - (data.rankedScoreDiffs[id] || 0)}
                         {(data.rankedResultsSaved && !data.spectators.includes(id)) ? (
-                        <span
-                            className={cs("word-points", {
-                                active: true,
-                                positive: data.rankedScoreDiffs[id] > 0,
-                                negative: data.rankedScoreDiffs[id] < 0,
-                                equal: data.rankedScoreDiffs[id] === 0
-                            })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
+                            <span
+                                className={cs("word-points", {
+                                    active: true,
+                                    positive: data.rankedScoreDiffs[id] > 0,
+                                    negative: data.rankedScoreDiffs[id] < 0,
+                                    equal: data.rankedScoreDiffs[id] === 0
+                                })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
                 {data.authUsers[id] ? data.authUsers[id].name : data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
@@ -1065,7 +1073,8 @@ class Game extends React.Component {
                             "game-over": gameIsOver,
                             "solo-mode": this.state.soloMode,
                             ranked: this.state.ranked,
-                            isMobile: this.isMobile
+                            isMobile: this.isMobile,
+                            "sort-mode": this.state.sortMode,
                         })}>
                             <div className="teams-pane">
                                 <div

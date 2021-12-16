@@ -44,6 +44,8 @@ a {
     width: 243px;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: inline-block;
+    white-space: nowrap;
 }
 
 .score {
@@ -102,9 +104,11 @@ a {
     font-size: 20px;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: flex;
     align-items: center;
     padding-left: 12px;
+    white-space: nowrap;
+    display: inline;
+    box-sizing: border-box;
 }
 
 .player-score {

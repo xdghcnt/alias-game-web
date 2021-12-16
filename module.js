@@ -1,4 +1,4 @@
-function init(wsServer, path, moderKey, fbConfig) {
+function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const
         fbAdmin = require('firebase-admin'),
         fbApp = fbAdmin.initializeApp({credential: fbAdmin.credential.cert(fbConfig)}),
@@ -151,7 +151,8 @@ function init(wsServer, path, moderKey, fbConfig) {
                 authUsers: {},
                 ranked: false,
                 rankedResultsSaved: false,
-                rankedScoreDiffs: {}
+                rankedScoreDiffs: {},
+                sortMode
             };
             this.room = room;
             this.state = {
@@ -937,8 +938,17 @@ function init(wsServer, path, moderKey, fbConfig) {
                             reportInfo.approved = false;
                         } else reportedWords.push(word);
                         fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                            if (sortMode) {
+                                const moderData = [{
+                                    "datetime": reportInfo.datetime,
+                                    "approved": true,
+                                    "level": level
+                                }];
+                                this.eventHandlers["apply-words-moderation"](user, moderKey, moderData);
+                                update();
+                            }
                         });
-                        update();
+                        if (!sortMode) update();
                     }
                 },
                 "get-word-reports-data": (user) => {
@@ -1006,11 +1016,14 @@ function init(wsServer, path, moderKey, fbConfig) {
                                                     });
                                                 }
                                             });
-                                            userRegistry.send(aliasPlayers, "word-report-notify", moderData);
+                                            if (!sortMode)
+                                                userRegistry.send(aliasPlayers, "word-report-notify", moderData);
                                         }
                                     );
-                                    send(user, "word-reports-data", reportedWordsData);
-                                    send(user, "word-reports-request-status", "Success");
+                                    if (!sortMode) {
+                                        send(user, "word-reports-data", reportedWordsData);
+                                        send(user, "word-reports-request-status", "Success");
+                                    }
                                 } else
                                     send(user, "word-reports-request-status", err.message)
                             });
@@ -1033,7 +1046,8 @@ function init(wsServer, path, moderKey, fbConfig) {
                             () => {
                             }
                         );
-                        send(user, "word-reports-request-status", "Success");
+                        if (!sortMode)
+                            send(user, "word-reports-request-status", "Success");
                     } else
                         send(user, "word-reports-request-status", "Wrong key");
                 },

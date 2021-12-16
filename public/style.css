@@ -607,6 +607,10 @@ body.dark-theme {
     display: block;
 }
 
+.sort-mode .report-word-menu:hover .report-word-list, .sort-mode .report-word-menu:focus .report-word-list {
+    display: none;
+}
+
 .popup_modals .modal_buttons .btn.btn_sdry {
     background-color: #ababab !important;
 }
