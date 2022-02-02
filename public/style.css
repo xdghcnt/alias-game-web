@@ -416,6 +416,10 @@ body.dark-theme {
     margin: 3px;
 }
 
+.start-game-buttons {
+    text-align: left;
+}
+
 .start-game-buttons div {
     display: inline-block;
     padding: 17px 13px;
@@ -517,8 +521,7 @@ body.dark-theme {
 
 .shuffle-players {
     float: right;
-    margin-top: 2px;
-    padding-left: 5px;
+    margin-left: 10px;
 }
 
 .side-buttons * {

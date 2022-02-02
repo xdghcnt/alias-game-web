@@ -1,7 +1,7 @@
 function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const
         fbAdmin = require('firebase-admin'),
-        fbApp = fbAdmin.initializeApp({credential: fbAdmin.credential.cert(fbConfig)}),
+        fbApp = fbConfig && fbAdmin.initializeApp({credential: fbAdmin.credential.cert(fbConfig)}),
         fs = require('fs'),
         app = wsServer.app,
         registry = wsServer.users,
@@ -152,6 +152,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 ranked: false,
                 rankedResultsSaved: false,
                 rankedScoreDiffs: {},
+                deafMode: false,
+                mode: 'team',
                 sortMode
             };
             this.room = room;
@@ -162,6 +164,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 drawTempList: []
             };
             this.lastInteraction = new Date();
+            this.wordSkippedCoolDown = false;
             let timer;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
@@ -696,7 +699,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             startTimer();
                         }
                     }
-                    if (room.phase === 2 && room.currentPlayer === user) {
+                    if (room.phase === 2
+                        && (!room.deafMode ? room.currentPlayer === user : room.teams[room.currentTeam].players.has(user) && !this.wordSkippedCoolDown)) {
                         if (room.currentWords.length > 99)
                             endRound();
                         if (room.currentBet > room.currentWords.length + 1) {
@@ -709,10 +713,16 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                         reported: !!~reportedWords.indexOf(this.state.activeWord)
                                     });
                                 this.state.activeWord = randomWord;
-                                send(user, "active-word", {
+                                send(room.currentPlayer, "active-word", {
                                     word: this.state.activeWord,
                                     reported: !!~reportedWords.indexOf(this.state.activeWord)
                                 });
+                                if (room.deafMode) {
+                                    this.wordSkippedCoolDown = true;
+                                    setTimeout(() => {
+                                        this.wordSkippedCoolDown = false;
+                                    }, 1000);
+                                }
                             } else {
                                 endRound();
                                 room.wordsEnded = true;
@@ -828,9 +838,20 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         setAssistant(playerId);
                     update();
                 },
-                "toggle-solo-mode": (user, state) => {
-                    if (!room.ranked && room.phase === 0 && room.hostId === user)
-                        toggleSoloMode(state);
+                "set-mode": (user, mode) => {
+                    if (!room.ranked && room.phase === 0 && room.hostId === user
+                        && ['team', 'solo', 'deaf'].includes(mode) && mode !== room.mode) {
+                        room.mode = mode;
+                        room.deafMode = false;
+                        if (mode === 'team')
+                            toggleSoloMode(false);
+                        else if (mode === 'solo')
+                            toggleSoloMode(true);
+                        else if (mode === 'deaf') {
+                            room.deafMode = true;
+                            toggleSoloMode(false);
+                        }
+                    }
                     update();
                 },
                 "toggle-draw-mode": (user, state) => {
@@ -1139,17 +1160,19 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     }
                 },
                 "fb-auth": (user, token) => {
-                    fbApp.auth()
-                        .verifyIdToken(token)
-                        .then((decodedToken) => {
-                            if (!authUsers[decodedToken.uid])
-                                registerAuthUser(user, decodedToken);
-                            else
-                                loginUserAuth(user, decodedToken.uid);
-                        })
-                        .catch((error) => {
-                            registry.log(`- login error - ${error.message}`);
-                        });
+                    if (fbApp)
+                        fbApp.auth()
+                            .verifyIdToken(token)
+                            .then((decodedToken) => {
+                                if (!authUsers[decodedToken.uid])
+                                    registerAuthUser(user, decodedToken);
+                                else
+                                    loginUserAuth(user, decodedToken.uid);
+                            })
+                            .catch((error) => {
+                                registry.log(`- login error - ${error.message}`);
+                            });
+                    else send(user, 'message', 'Ranked-режим не активен');
                 },
                 "fb-logout": (user) => {
                     delete room.authUsers[user];

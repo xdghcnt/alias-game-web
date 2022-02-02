@@ -288,6 +288,17 @@ class Game extends React.Component {
                 largeImageKey: "alias",
                 details: "Alias/Шляпа"
             });
+
+            if (state.voiceEnabled) {
+                if (state.deafMode) {
+                    if (state.phase === 2 && state.currentPlayer === this.userId)
+                        window.dispatchEvent(new Event('self-deafen'));
+                    else
+                        window.dispatchEvent(new Event('self-undeafen'));
+                } else if (this.state.deafMode && !state.deafMode)
+                    window.dispatchEvent(new Event('self-undeafen'));
+            }
+
             this.setState(Object.assign({
                 userId: this.userId,
                 activeWord: this.state.activeWord,
@@ -863,8 +874,8 @@ class Game extends React.Component {
         this.socket.emit("toggle-draw-mode", state);
     }
 
-    handleClickToggleSoloMode(state) {
-        this.socket.emit("toggle-solo-mode", state);
+    handleClickSetMode(mode) {
+        this.socket.emit("set-mode", mode);
     }
 
     handleClickCloseCustom() {
@@ -1039,11 +1050,11 @@ class Game extends React.Component {
                     }
                     this.gameIsOver = gameIsOver;
                 } else if (data.phase === 2) {
-                    if (isTurn) {
-                        statusText = "Explain things!";
+                    if (isTeamTurn && !isTurn) {
+                        statusText = "Call out things!";
                         actionText = "Next";
                     } else if (isTeamTurn)
-                        statusText = "Call out things!";
+                        statusText = "Explain things!";
                     else
                         statusText = "Other team playing, keep silent.";
                     const timerSecondDiff = ((this.state.timer % 100) || 100);
@@ -1155,15 +1166,21 @@ class Game extends React.Component {
                                             {
                                                 !data.ranked ? (<div className={cs("team-mode", {
                                                     "settings-button": settingsMode,
-                                                    "level-selected": !this.state.soloMode
-                                                })} onClick={() => this.handleClickToggleSoloMode(false)}>team
+                                                    "level-selected": this.state.mode === 'team'
+                                                })} onClick={() => this.handleClickSetMode('team')}>team
                                                 </div>) : ''
                                             }
                                             <div className={cs("team-mode", {
                                                 "settings-button": settingsMode,
-                                                "level-selected": this.state.soloMode
+                                                "level-selected": this.state.mode === 'solo'
                                             })}
-                                                 onClick={() => this.handleClickToggleSoloMode(true)}>solo
+                                                 onClick={() => this.handleClickSetMode('solo')}>solo
+                                            </div>
+                                            <div className={cs("team-mode", {
+                                                "settings-button": settingsMode,
+                                                "level-selected": this.state.mode === 'deaf'
+                                            })}
+                                                 onClick={() => this.handleClickSetMode('deaf')}>deaf
                                             </div>
                                             {(settingsMode || (isHost && data.ranked && data.phase === 0)) ? (
                                                 <>
