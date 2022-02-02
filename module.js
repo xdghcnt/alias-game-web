@@ -453,6 +453,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         room.level = 'ranked';
                         room.soloModeGoal = 1;
                         room.roundTime = 60;
+                        room.mode = 'solo';
+                        room.deafMode = false;
                         toggleSoloMode(true);
                         const firstTeam = Object.keys(room.teams)[0];
                         if (firstTeam)
