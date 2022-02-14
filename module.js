@@ -140,7 +140,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 wordIndex: 0,
                 wordsEnded: false,
                 level: 2,
-                drawMode: false,
+                drawMode: true,
                 drawCommitOnly: false,
                 soloMode: false,
                 soloModeRound: 0,
