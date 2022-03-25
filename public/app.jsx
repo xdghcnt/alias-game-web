@@ -1050,11 +1050,11 @@ class Game extends React.Component {
                     }
                     this.gameIsOver = gameIsOver;
                 } else if (data.phase === 2) {
-                    if (isTeamTurn && !isTurn) {
-                        statusText = "Call out things!";
+                    if (isTeamTurn && (!data.deafMode ? isTurn : !isTurn)) {
+                        statusText = !data.deafMode ? "Explain things!" : "Call out things!";
                         actionText = "Next";
                     } else if (isTeamTurn)
-                        statusText = "Explain things!";
+                        statusText = data.deafMode ? "Explain things!" : "Call out things!";
                     else
                         statusText = "Other team playing, keep silent.";
                     const timerSecondDiff = ((this.state.timer % 100) || 100);
