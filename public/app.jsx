@@ -272,7 +272,7 @@ class Game extends React.Component {
         initArgs.roomId = this.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.aliasUserId;
         initArgs.userName = localStorage.userName;
-        initArgs.token = localStorage.userToken;
+        initArgs.token = this.userToken = localStorage.userToken;
         initArgs.wssToken = window.wssToken;
         this.socket = window.socket.of("alias");
         this.socket.on("state", (state) => {
