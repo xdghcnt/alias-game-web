@@ -79,15 +79,15 @@ class Page extends React.Component {
     async updateData() {
         const data = (await (await fetch('/alias/ranked/data')).json());
         data.rankedGames = data.rankedGames.filter(game => !game.deleted).reverse();
-        const players = Object.keys(data.authUsers).map((userId) =>
-            data.authUsers[userId]).sort((a, b) => b.score - a.score);
+        const players = Object.keys(data.rankedUsers).map((userId) =>
+            data.rankedUsers[userId]).sort((a, b) => b.score - a.score);
         for (const game of data.rankedGames) {
             game.playerScoresSorted = Object.keys(game.playerRanks).sort((a, b) => {
                 return game.playerRanks[a] - game.playerRanks[b];
             });
         }
         this.setState({
-            authUsers: data.authUsers,
+            rankedUsers: data.rankedUsers,
             moderators: players.filter((user) => user.moderator).map((user) => ({
                 name: user.name,
                 discord: user.discord,
@@ -178,7 +178,7 @@ class Page extends React.Component {
                         <div className="players">
                             {gameRow.playerScoresSorted.map((player) => (<div className="match-player">
                                 <div
-                                    className="player-name">{data.authUsers[player].name} {gameRow.moderator === player ? (
+                                    className="player-name">{data.rankedUsers[player].name} {gameRow.moderator === player ? (
                                     <i className="material-icons host-button"
                                        title="Game host">
                                         stars

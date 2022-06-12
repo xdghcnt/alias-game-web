@@ -14,9 +14,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const appDir = registry.config.appDir || __dirname;
     let reportedWordsData = [], reportedWords = [], rankedGames = [];
 
-    const authUsers = JSON.parse(fs.readFileSync(`${appDir}/auth-users.json`));
+    const rankedUsers = JSON.parse(fs.readFileSync(`${appDir}/auth-users.json`));
 
-    const authUserByToken = {};
+    const rankedUserByToken = {};
 
     const defaultWords = JSON.parse(fs.readFileSync(`${appDir}/moderated-words.json`));
 
@@ -43,20 +43,20 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     app.get("/alias/ranked/data", (req, res) => {
         res.send({
             rankedGames,
-            authUsers
+            rankedUsers
         });
     });
 
     app.get("/alias/ranked/toggle-moderator", (req, res) => {
         if (req.query.key === moderKey) {
-            if (authUsers[req.query.user]) {
-                if (authUsers[req.query.user].moderator)
-                    delete authUsers[req.query.user].moderator;
+            if (rankedUsers[req.query.user]) {
+                if (rankedUsers[req.query.user].moderator)
+                    delete rankedUsers[req.query.user].moderator;
                 else {
-                    authUsers[req.query.user].moderator = true;
-                    authUsers[req.query.user].discord = req.query.discord;
+                    rankedUsers[req.query.user].moderator = true;
+                    rankedUsers[req.query.user].discord = req.query.discord;
                 }
-                fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4), (error) => {
+                fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4), (error) => {
                     if (error)
                         res.send({
                             message: error.message
@@ -70,9 +70,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
     app.get("/alias/ranked/edit-score", (req, res) => {
         if (req.query.key === moderKey && !isNaN(req.query.score)) {
-            if (authUsers[req.query.user]) {
-                authUsers[req.query.user].score = parseInt(req.query.score);
-                fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4), (error) => {
+            if (rankedUsers[req.query.user]) {
+                rankedUsers[req.query.user].score = parseInt(req.query.score);
+                fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4), (error) => {
                     if (error)
                         res.send({
                             message: error.message
@@ -90,8 +90,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             if (rankedGame) {
                 rankedGame.deleted = true;
                 Object.keys(rankedGame.rankedScoreDiffs).forEach((player) => {
-                    if (authUsers[player])
-                        authUsers[player].score -= rankedGame.rankedScoreDiffs[player];
+                    if (rankedUsers[player])
+                        rankedUsers[player].score -= rankedGame.rankedScoreDiffs[player];
                 })
                 fs.writeFile(
                     `${appDir}/ranked-games.txt`,
@@ -102,7 +102,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 message: error.message
                             });
                         else {
-                            fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4), (error) => {
+                            fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4), (error) => {
                                 if (error)
                                     res.send({
                                         message: error.message
@@ -148,7 +148,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 packName: null,
                 customWordsLimit: 1500,
                 managedVoice: true,
-                authUsers: {},
+                rankedUsers: {},
                 ranked: false,
                 rankedResultsSaved: false,
                 rankedScoreDiffs: {},
@@ -382,7 +382,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     if (room.spectators.has(playerId) || !room.onlinePlayers.has(playerId)) {
                         room.spectators.delete(playerId);
                         delete room.playerNames[playerId];
-                        delete room.authUsers[playerId];
+                        delete room.rankedUsers[playerId];
                         this.emit("user-kicked", playerId);
                     } else
                         room.spectators.add(playerId);
@@ -408,9 +408,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     && data.dots.length > 0
                     && data.thickness > 0
                     && data.thickness < 10,
-                registerAuthUser = (user, decodedToken) => {
-                    const nameDuplicated = Object.keys(authUsers).find((authUserId) => {
-                        return authUsers[authUserId].name === room.playerNames[user];
+                registerRankedUser = (user, decodedToken) => {
+                    const nameDuplicated = Object.keys(rankedUsers).find((rankedUserId) => {
+                        return rankedUsers[rankedUserId].name === room.playerNames[user];
                     });
                     if (nameDuplicated)
                         send(user, 'auth-name-duplicated');
@@ -421,29 +421,29 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             decodedToken
                         }, null, 4)}\n`, () => {
                         })
-                        authUsers[decodedToken.uid] = {
+                        rankedUsers[decodedToken.uid] = {
                             score: 1000,
                             name: room.playerNames[user],
                             id: decodedToken.uid,
                             registerTime: new Date()
                         };
-                        fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4),
+                        fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4),
                             (err) => {
                                 if (!err) {
-                                    loginUserAuth(user, decodedToken.id);
+                                    loginUserRanked(user, decodedToken.id);
                                 } else {
-                                    delete authUsers[decodedToken.uid];
+                                    delete rankedUsers[decodedToken.uid];
                                     registry.log(`- auth-users.json saving error ${err.message}`);
                                     send(user, "message", `Ошибка регистрации: ${err.message}`);
                                 }
                             })
                     }
                 },
-                loginUserAuth = (user, authUserId) => {
-                    const authUser = authUsers[authUserId];
-                    authUserByToken[user] = authUser;
-                    room.authUsers[user] = authUser;
-                    removeDuplicateUserAuth(user);
+                loginUserRanked = (user, rankedUserId) => {
+                    const rankedUser = rankedUsers[rankedUserId];
+                    rankedUserByToken[user] = rankedUser;
+                    room.rankedUsers[user] = rankedUser;
+                    removeDuplicateUserRanked(user);
                     update();
                 },
                 toggleRanked = (state) => {
@@ -459,7 +459,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         const firstTeam = Object.keys(room.teams)[0];
                         if (firstTeam)
                             room.teams[firstTeam].players.forEach((playerId) => {
-                                if (!room.authUsers[playerId]) {
+                                if (!room.rankedUsers[playerId]) {
                                     leaveTeams(playerId);
                                     room.spectators.add(playerId);
                                 }
@@ -481,12 +481,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     } else room.currentAssistant = null;
                     restartGame();
                 },
-                removeDuplicateUserAuth = (newUser) => {
-                    if (authUserByToken[newUser])
-                        Object.keys(room.authUsers).forEach((user) => {
-                            if (user !== newUser && room.authUsers[user].id === authUserByToken[newUser].id) {
-                                delete room.authUsers[user];
-                                delete authUserByToken[user];
+                removeDuplicateUserRanked = (newUser) => {
+                    if (rankedUserByToken[newUser])
+                        Object.keys(room.rankedUsers).forEach((user) => {
+                            if (user !== newUser && room.rankedUsers[user].id === rankedUserByToken[newUser].id) {
+                                delete room.rankedUsers[user];
+                                delete rankedUserByToken[user];
                                 leaveTeams(user);
                                 room.spectators.add(user);
                                 if (room.phase === 2)
@@ -496,14 +496,14 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 },
                 saveRankedResults = (user, leaverId) => {
                     if (room.ranked && (room.phase === 1 || leaverId) && room.hostId === user
-                        && room.authUsers[user]?.moderator) {
+                        && room.rankedUsers[user]?.moderator) {
                         const users = [...room.teams[Object.keys(room.teams)[0]].players];
-                        const players = users.map((player) => room.authUsers[player].id);
+                        const players = users.map((player) => room.rankedUsers[player].id);
                         const playerScores = {};
                         const rankedScoreDiffs = {};
                         let totalPoints = 0;
                         for (const user of users) {
-                            const player = room.authUsers[user].id;
+                            const player = room.rankedUsers[user].id;
                             playerScores[player] = (room.playerScores[user] || 0) + (room.playerWordPoints[user] || 0);
                         }
                         const scores = [...new Set(Object.keys(playerScores).map((user) => playerScores[user]))]
@@ -511,7 +511,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         const scoreRanks = {};
                         let leaverPlayer;
                         for (const user of users) {
-                            const player = room.authUsers[user].id;
+                            const player = room.rankedUsers[user].id;
                             if (user === leaverId)
                                 leaverPlayer = player;
                             totalPoints += (playerScores[player] || 0);
@@ -543,8 +543,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 .filter((scorePlayer) => scorePlayer !== player && scoreRanks[scorePlayer] === scoreRanks[player]).length;
                             const otherPlayers = players.filter((otherPlayer) => otherPlayer !== player);
                             const avgRankScore = otherPlayers.reduce((acc, otherPlayer) =>
-                                authUsers[otherPlayer].score + acc, 0) / otherPlayers.length;
-                            const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - authUsers[player].score) / rankedScoreMultiplier));
+                                rankedUsers[otherPlayer].score + acc, 0) / otherPlayers.length;
+                            const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - rankedUsers[player].score) / rankedScoreMultiplier));
                             const rankedScoreDiff = rankedBaseMultiplier
                                 * (((1 - expectedVictory) * playersYouWon)
                                     + ((0.5 - expectedVictory) * playersYouDraw)
@@ -555,13 +555,13 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 rankedScoreDiffs[player] = 0;
                         }
                         const prevScores = {};
-                        Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = authUsers[player].score);
+                        Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = rankedUsers[player].score);
                         const gameResult = {
                             playerScores,
                             playerRanks: scoreRanks,
                             rankedScoreDiffs,
                             datetime: new Date(),
-                            moderator: room.authUsers[user].id,
+                            moderator: room.rankedUsers[user].id,
                             prevScores,
                             skillGroup: ['Very High', 'High', 'Normal', 'Low'][skillGroup]
                         };
@@ -574,13 +574,13 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 else {
                                     rankedGames.push(gameResult);
                                     for (const [index, player] of players.entries()) {
-                                        authUsers[player].score += rankedScoreDiffs[player];
+                                        rankedUsers[player].score += rankedScoreDiffs[player];
                                         room.rankedScoreDiffs[users[index]] = rankedScoreDiffs[player];
                                     }
                                     room.rankedResultsSaved = true;
                                     room.currentWords = [];
                                     room.phase = 0;
-                                    fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(authUsers, null, 4),
+                                    fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4),
                                         () => {
                                         });
                                     addWordPoints();
@@ -592,14 +592,15 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     }
                 },
                 userJoin = (data) => {
+                    void this.commonLogin(data);
                     const user = data.userId;
                     if (!room.playerNames[user])
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
-                    if (authUserByToken[user]) {
-                        removeDuplicateUserAuth(user);
-                        room.authUsers[user] = authUserByToken[user];
+                    if (rankedUserByToken[user]) {
+                        removeDuplicateUserRanked(user);
+                        room.rankedUsers[user] = rankedUserByToken[user];
                     }
                     if (!this.state.roomWordsList)
                         selectWordSet(2);
@@ -616,7 +617,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     room.onlinePlayers.delete(user);
                     if (room.spectators.has(user)) {
                         delete room.playerNames[user];
-                        delete room.authUsers[user];
+                        delete room.rankedUsers[user];
                     }
                     room.spectators.delete(user);
                     room.readyPlayers.delete(user);
@@ -641,7 +642,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             this.eventHandlers = {
                 ...this.eventHandlers,
                 "team-join": (user, id) => {
-                    if (!room.ranked || ((id === "new" || room.teams[id]) && room.authUsers[user]
+                    if (!room.ranked || ((id === "new" || room.teams[id]) && room.rankedUsers[user]
                         && (!room.teams[id] || room.teams[id].players.size < 4))) {
                         if (id === "new" && (!room.soloMode || !Object.keys(room.teams).length)) {
                             id = makeId();
@@ -764,11 +765,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         send(room.onlinePlayers, "highlight-user", user);
                     }
                 },
-                "change-name": (user, value) => {
-                    if (value)
-                        room.playerNames[user] = value.substr && value.substr(0, 60);
-                    update();
-                },
                 "remove-player": (user, playerId) => {
                     if (room.hostId === user && playerId && (!room.ranked || room.phase === 0)) {
                         removePlayer(playerId);
@@ -824,7 +820,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         selectWordSet(wordSet, user);
                 },
                 "give-host": (user, playerId) => {
-                    if (room.hostId === user && playerId && (!room.ranked || authUserByToken[playerId]?.moderator)) {
+                    if (room.hostId === user && playerId && (!room.ranked || rankedUserByToken[playerId]?.moderator)) {
                         room.hostId = playerId;
                         this.emit("host-changed", user, playerId);
                     }
@@ -1166,10 +1162,10 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         fbApp.auth()
                             .verifyIdToken(token)
                             .then((decodedToken) => {
-                                if (!authUsers[decodedToken.uid])
-                                    registerAuthUser(user, decodedToken);
+                                if (!rankedUsers[decodedToken.uid])
+                                    registerRankedUser(user, decodedToken);
                                 else
-                                    loginUserAuth(user, decodedToken.uid);
+                                    loginUserRanked(user, decodedToken.uid);
                             })
                             .catch((error) => {
                                 registry.log(`- login error - ${error.message}`);
@@ -1177,8 +1173,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     else send(user, 'message', 'Ranked-режим не активен');
                 },
                 "fb-logout": (user) => {
-                    delete room.authUsers[user];
-                    delete authUserByToken[user];
+                    delete room.rankedUsers[user];
+                    delete rankedUserByToken[user];
                     if (room.ranked) {
                         leaveTeams(user);
                         room.spectators.add(user);
@@ -1186,7 +1182,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     update();
                 },
                 "toggle-ranked": (user) => {
-                    if (room.phase === 0 && room.hostId === user && room.authUsers[user]?.moderator)
+                    if (room.phase === 0 && room.hostId === user && room.rankedUsers[user]?.moderator)
                         toggleRanked(!room.ranked);
                     update();
                 }
@@ -1219,9 +1215,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
         setSnapshot(snapshot) {
             Object.assign(this.room, snapshot.room);
             this.state = snapshot.state;
-            Object.keys(this.room.authUsers).forEach((user) => {
-                authUserByToken[user] = authUsers[this.room.authUsers[user].id];
-                this.room.authUsers[user] = authUsers[this.room.authUsers[user].id];
+            Object.keys(this.room.rankedUsers).forEach((user) => {
+                rankedUserByToken[user] = rankedUsers[this.room.rankedUsers[user].id];
+                this.room.rankedUsers[user] = rankedUsers[this.room.rankedUsers[user].id];
             })
             if (this.room.level === 0)
                 this.room.level = 2;

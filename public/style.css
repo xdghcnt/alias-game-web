@@ -610,8 +610,9 @@ body.dark-theme {
     display: block;
 }
 
-.sort-mode .report-word-menu:hover .report-word-list, .sort-mode .report-word-menu:focus .report-word-list {
-    display: none;
+.sort-mode .word.reported .report-word-menu > i {
+    color: #9ccc65;
+    opacity: 1;
 }
 
 .popup_modals .modal_buttons .btn.btn_sdry {
@@ -1143,6 +1144,7 @@ input:checked + .word-report-approve.yes {
 
 .teams-pane {
     margin: 20px;
+    margin-top: 45px;
 }
 
 .kicked {
