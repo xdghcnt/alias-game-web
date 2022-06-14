@@ -120,7 +120,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
     class GameState extends wsServer.users.RoomState {
         constructor(hostId, hostData, userRegistry) {
-            super(hostId, hostData, userRegistry);
+            super(hostId, hostData, userRegistry, 'alias');
             const room = {
                 ...this.room,
                 inited: true,

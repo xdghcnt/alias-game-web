@@ -197,8 +197,7 @@ class Player extends React.Component {
                                     equal: data.rankedScoreDiffs[id] === 0
                                 })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
                 {data.rankedUsers[id] ? data.rankedUsers[id].name : data.playerNames[id]}
-                {data.authUsers[id] ? <i className="material-icons host-button profile-button" title="Профиль"
-                                         onClick={(evt) => window.commonRoom.toggleShowProfile(id, evt)}>person</i> : ''}
+                <PlayerProfileButton data={data} id={id} />
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
                         className={cs("word-points", {
