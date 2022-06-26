@@ -1,3 +1,5 @@
+const fs = require("fs");
+
 function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const
         fbAdmin = require('firebase-admin'),
@@ -5,7 +7,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
         fs = require('fs'),
         app = wsServer.app,
         registry = wsServer.users,
-        channel = "alias",
         autoDenialRules = [
             [1, 3], [1, 4], [1, 0], [2, 4]
         ];
@@ -119,8 +120,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     app.use("/alias", wsServer.static(`${__dirname}/public`));
 
     class GameState extends wsServer.users.RoomState {
-        constructor(hostId, hostData, userRegistry) {
-            super(hostId, hostData, userRegistry, 'alias');
+        constructor(hostId, hostData, userRegistry, registry) {
+            super(hostId, hostData, userRegistry, registry.games.alias.id, path);
             const room = {
                 ...this.room,
                 inited: true,
@@ -161,7 +162,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 activeWord: null,
                 roomWordsList: null,
                 drawList: [],
-                drawTempList: []
+                drawTempList: [],
+                winProcessed: false,
             };
             this.lastInteraction = new Date();
             this.wordSkippedCoolDown = false;
@@ -329,6 +331,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         setAssistant([...room.teams[room.currentTeam].players][1]);
                 },
                 restartGame = () => {
+                    checkWin();
+                    this.state.winProcessed = false;
                     addWordPoints();
                     room.phase = 0;
                     room.currentWords = [];
@@ -577,6 +581,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                         rankedUsers[player].score += rankedScoreDiffs[player];
                                         room.rankedScoreDiffs[users[index]] = rankedScoreDiffs[player];
                                     }
+                                    checkWin();
                                     room.rankedResultsSaved = true;
                                     room.currentWords = [];
                                     room.phase = 0;
@@ -591,8 +596,47 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             })
                     }
                 },
+                checkWin = () => {
+                    if (this.state.winProcessed || room.onlinePlayers.size <= 4) return;
+                    let winners = [];
+                    if (!room.soloMode) {
+                        if (Object.keys(room.teams).indexOf(room.currentTeam) === 0) {
+                            let mostPoints = 0,
+                                mostPointsTeam,
+                                teamsReachedGoal = Object.keys(room.teams).filter(teamId => {
+                                    const
+                                        team = room.teams[teamId],
+                                        points = team.score + (team.wordPoints || 0);
+                                    if (points > mostPoints) {
+                                        mostPoints = points;
+                                        mostPointsTeam = teamId;
+                                    }
+                                    return points >= room.goal;
+                                }),
+                                teamsReachedGoalScores = teamsReachedGoal.map((teamId) => room.teams[teamId].score + (room.teams[teamId].wordPoints || 0)).sort((a, b) => b - a);
+                            if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoalScores[0] !== teamsReachedGoalScores[1])) {
+                                winners = [...data.teams[mostPointsTeam].players];
+                            }
+                        }
+                    } else if (room.soloModeRound >= room.soloModeGoal) {
+                        const playerWin = Object.keys(room.playerScores).sort((idA, idB) =>
+                            (room.playerScores[idB] + (room.playerWordPoints[idB] || 0)) - (room.playerScores[idA] + (room.playerWordPoints[idA] || 0)))[0];
+                        winners = [playerWin];
+                    }
+                    if (winners.length > 0) {
+                        this.state.winProcessed = true;
+                        for (const user of winners) {
+                            const userData = {user, room};
+                            registry.authUsers.processAchievement(userData, registry.achievements.win100Alias.id);
+                            registry.authUsers.processAchievement(userData, registry.achievements.winGames.id, {game: registry.games.alias.id});
+                            if (room.goal >= 100)
+                                registry.authUsers.processAchievement(userData, registry.achievements.aliasMarathon.id);
+                            if (room.ranked)
+                                registry.authUsers.processAchievement(userData, registry.achievements.rankedAliasWin.id);
+                        }
+                    }
+                },
                 userJoin = (data) => {
-                    void this.commonLogin(data);
                     const user = data.userId;
                     if (!room.playerNames[user])
                         room.spectators.add(user);
@@ -753,6 +797,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     if (room.hostId === user) {
                         endRound();
                         room.phase = 0;
+                        checkWin();
                         update();
                     }
                 },
@@ -943,6 +988,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         const reportInfo = {
                             datetime: +new Date(),
                             user: user,
+                            authUser: room.authUsers[user]?._id,
                             playerName: room.playerNames[user],
                             word: word,
                             currentLevel: currentLevel,
@@ -988,13 +1034,15 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     if (reportedWordIndex !== -1)
                                         reportedWords.splice(reportedWordIndex, 1);
                                     if (reportData.custom) {
-                                        if (reportData.approved)
+                                        if (reportData.approved) {
                                             fs.rename(
                                                 `${appDir}/custom/new/${reportData.datetime}.json`,
                                                 `${appDir}/custom/${reportData.packName}.json`, () => {
                                                 }
                                             );
-                                        else
+                                            if (reportData.authUser)
+                                                registry.authUsers.processAchievement({authUser: reportData.authUser}, registry.achievements.createPack.id);
+                                        } else
                                             fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
                                             });
                                     } else {
@@ -1006,12 +1054,19 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     if (reportData.level !== 0)
                                                         defaultWords[reportData.level].push(reportData.word);
                                                 }
+                                                if (reportData.authUser)
+                                                    registry.authUsers.processAchievement({authUser: reportData.authUser}, registry.achievements.reportWords.id);
                                             } else {
                                                 reportData.wordList.filter((word) =>
                                                     !~defaultWords[1].indexOf(word)
                                                     && !~defaultWords[2].indexOf(word)
                                                     && !~defaultWords[3].indexOf(word)
-                                                    && !~defaultWords[4].indexOf(word)).forEach((word) => defaultWords[reportData.level].push(word));
+                                                    && !~defaultWords[4].indexOf(word)).forEach((word) => {
+                                                    defaultWords[reportData.level].push(word);
+
+                                                    if (reportData.authUser)
+                                                        registry.authUsers.processAchievement({authUser: reportData.authUser}, registry.achievements.addWords.id);
+                                                });
                                             }
                                         }
                                     }
@@ -1090,6 +1145,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     const reportInfo = {
                                         datetime: +new Date(),
                                         user: user,
+                                        authUser: room.authUsers[user]?._id,
                                         playerName: room.playerNames[user],
                                         word: word,
                                         currentLevel: currentLevel,
@@ -1114,6 +1170,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 const reportInfo = {
                                     datetime: +new Date(),
                                     user: user,
+                                    authUser: room.authUsers[user]?._id,
                                     playerName: room.playerNames[user],
                                     custom: true,
                                     packName: packName,
@@ -1143,6 +1200,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 const reportList = wordList.map(word => ({
                                     datetime: datetime++,
                                     user: user,
+                                    authUser: room.authUsers[user]?._id,
                                     playerName: room.playerNames[user],
                                     newWord: true,
                                     wordList: [word],
@@ -1185,6 +1243,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     if (room.phase === 0 && room.hostId === user && room.rankedUsers[user]?.moderator)
                         toggleRanked(!room.ranked);
                     update();
+                },
+                "toggle-theme": (user) => {
+                    registry.authUsers.processAchievement({user, room}, registry.achievements.aliasDarkTheme.id);
+                },
+                "allow-report": (user) => {
+                    registry.authUsers.processAchievement({user, room}, registry.achievements.allowReportsAlias.id);
                 }
             };
         }
@@ -1266,7 +1330,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
         }
     }
 
-    registry.createRoomManager(path, channel, GameState);
+    registry.createRoomManager(path, GameState);
 }
 
 module.exports = init;

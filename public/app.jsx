@@ -278,7 +278,7 @@ class Game extends React.Component {
         initArgs.userName = localStorage.userName;
         initArgs.token = this.userToken = localStorage.userToken;
         initArgs.wssToken = window.wssToken;
-        this.socket = window.socket.of("alias");
+        this.socket = window.socket.of(location.pathname);
         this.socket.on("state", (state) => {
             let initDrawMode, needScroll;
             if (this.state.inited && this.state.currentWords.length < state.currentWords.length)
@@ -741,6 +741,9 @@ class Game extends React.Component {
 
     handleClickAllowReport() {
         localStorage.aliasAllowReport = !parseInt(localStorage.aliasAllowReport) ? 1 : 0;
+        if (localStorage.aliasAllowReport) {
+            this.socket.emit("allow-report");
+        }
         this.setState(Object.assign({}, this.state));
     }
 
@@ -773,6 +776,10 @@ class Game extends React.Component {
 
     handleToggleTheme() {
         localStorage.darkThemeAlias = !parseInt(localStorage.darkThemeAlias) ? 1 : 0;
+        if (localStorage.darkThemeAlias && !this.toggleThemeSent) {
+            this.socket.emit('toggle-theme');
+            this.toggleThemeSent = true;
+        }
         document.body.classList.toggle("dark-theme");
         this.setState(Object.assign({}, this.state));
         if (this.sketcher)
