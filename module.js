@@ -1022,6 +1022,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 "apply-words-moderation": (user, sentModerKey, moderData) => {
                     if (moderData && moderData[0] && sentModerKey === moderKey) {
                         let hasChanges = false;
+                        const reportAchievements = [];
                         moderData.forEach((moderData) => {
                             reportedWordsData.some((reportData) => {
                                 if (reportData.datetime === moderData.datetime && !reportData.processed) {
@@ -1040,8 +1041,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                 `${appDir}/custom/${reportData.packName}.json`, () => {
                                                 }
                                             );
-                                            if (reportData.authUser)
-                                                registry.authUsers.processAchievement({authUser: reportData.authUser}, registry.achievements.createPack.id);
+                                            reportAchievements.push({authUser: reportData.authUser, achievement: registry.achievements.createPack.id});
                                         } else
                                             fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
                                             });
@@ -1054,8 +1054,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     if (reportData.level !== 0)
                                                         defaultWords[reportData.level].push(reportData.word);
                                                 }
-                                                if (reportData.authUser)
-                                                    registry.authUsers.processAchievement({authUser: reportData.authUser}, registry.achievements.reportWords.id);
+                                                reportAchievements.push({authUser: reportData.authUser, achievement: registry.achievements.reportWords.id});
                                             } else {
                                                 reportData.wordList.filter((word) =>
                                                     !~defaultWords[1].indexOf(word)
@@ -1064,8 +1063,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     && !~defaultWords[4].indexOf(word)).forEach((word) => {
                                                     defaultWords[reportData.level].push(word);
 
-                                                    if (reportData.authUser)
-                                                        registry.authUsers.processAchievement({authUser: reportData.authUser}, registry.achievements.addWords.id);
+                                                    reportAchievements.push({authUser: reportData.authUser, achievement: registry.achievements.addWords.id});
                                                 });
                                             }
                                         }
@@ -1074,6 +1072,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 }
                             });
                         });
+                        (async () => {
+                            for (const item of reportAchievements) {
+                                if (item.authUser)
+                                    await registry.authUsers.processAchievement({authUser: item.authUser}, item.achievement);
+                            }
+                        })();
                         if (!hasChanges)
                             send(user, "word-reports-request-status", "Success");
                         else

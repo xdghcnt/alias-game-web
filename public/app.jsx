@@ -111,10 +111,12 @@ class Words extends React.Component {
                             game.handleRemoveWordPoints(index)}>−</div> : ""}
                         &nbsp;{hyphenate(word.word)}&nbsp;
                         <input
+                            step={data.level === "ranked" ? "0.5" : "1"}
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
-                            type="number" value={word.points} min="-2" max="1"
+                            type="number" value={word.points} min="-1" max="1"
                             onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
+
                         {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu"
                                  onClick={() => data.sortMode && game.handleClickReportWordLevel(word.word, 0)}
@@ -148,8 +150,8 @@ class Words extends React.Component {
                                 </div>) : ""}
                                 {data.sortMode
                                     ? <i className="material-icons"
-                                         title={!word.reported ? "Sort word" : "Sorted"}>
-                                        check_circle
+                                         title={!word.reported ? "Remove word" : "Removed"}>
+                                        cancel
                                     </i>
                                     : <i className="material-icons"
                                          title={!word.reported ? "Report word" : "Reported"}>
@@ -185,9 +187,9 @@ class Player extends React.Component {
                 assistant: id === data.currentAssistant
             })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
                 <UserAudioMarker user={id} data={data}/>
-                {((data.phase === 0 || data.rankedResultsSaved) && data.rankedUsers[id] && data.ranked) ? (
+                {((data.phase === 0 || data.rankedResultsSaved) && data.authUsers[id] && data.ranked) ? (
                     <span className="ranked-score">[{!data.rankedResultsSaved
-                        ? data.rankedUsers[id].score : data.rankedUsers[id].score - (data.rankedScoreDiffs[id] || 0)}
+                        ? data.authUsers[id].score : data.authUsers[id].score - (data.rankedScoreDiffs[id] || 0)}
                         {(data.rankedResultsSaved && !data.spectators.includes(id)) ? (
                             <span
                                 className={cs("word-points", {
@@ -196,8 +198,7 @@ class Player extends React.Component {
                                     negative: data.rankedScoreDiffs[id] < 0,
                                     equal: data.rankedScoreDiffs[id] === 0
                                 })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
-                {data.rankedUsers[id] ? data.rankedUsers[id].name : data.playerNames[id]}
-                <PlayerProfileButton data={data} id={id} />
+                {data.authUsers[id] ? data.authUsers[id].name : data.playerNames[id]}
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
                         className={cs("word-points", {
@@ -254,6 +255,7 @@ class Game extends React.Component {
     componentDidMount() {
         this.gameName = "alias";
         const initArgs = {};
+        localStorage.authToken = localStorage.authToken || makeId();
         if (parseInt(localStorage.darkThemeAlias))
             document.body.classList.add("dark-theme");
         if (!localStorage.aliasUserId || !localStorage.userToken) {
@@ -270,11 +272,9 @@ class Game extends React.Component {
             initArgs.acceptDelete = localStorage.acceptDelete;
             delete localStorage.acceptDelete;
         }
+        initArgs.authToken = localStorage.authToken;
         initArgs.roomId = this.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.aliasUserId;
-        if (!localStorage.authToken)
-            localStorage.authToken = makeId();
-        initArgs.authToken = this.authToken = localStorage.authToken;
         initArgs.userName = localStorage.userName;
         initArgs.token = this.userToken = localStorage.userToken;
         initArgs.wssToken = window.wssToken;
@@ -539,7 +539,7 @@ class Game extends React.Component {
 
     handleTeamClick(id) {
         if (this.state.phase === 0) {
-            if (this.state.ranked && !this.state.rankedUsers[this.userId])
+            if (this.state.ranked && !this.state.authUsers[this.userId])
                 this.handleClickOpenRanked();
             else
                 this.socket.emit("team-join", id);
@@ -814,7 +814,7 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        const name = this.state.rankedUsers[id] ? this.state.rankedUsers[id].name : this.state.playerNames[id]
+        const name = this.state.authUsers[id] ? this.state.authUsers[id].name : this.state.playerNames[id]
         if (!this.state.ranked || this.state.phase === 0) {
             if (this.state.phase !== 0)
                 popup.confirm({content: `Removing ${name}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
@@ -1505,7 +1505,7 @@ class Game extends React.Component {
                                         </div>
                                         <span className="ranked-auth-buttons">
                                             <span className={cs("ranked-auth-button", "button", {
-                                                inactive: !data.rankedUsers?.[data.userId]?.moderator
+                                                inactive: !data.authUsers?.[data.userId]?.moderator
                                             })}
                                                   onClick={() => this.handleClickToggleRankedMode()}>{!data.ranked
                                                 ? 'Активировать' : 'Деактивировать'}
@@ -1513,8 +1513,8 @@ class Game extends React.Component {
                                         </span>
                                         <div className="ranked-status-user">
                                             Пользователь:&nbsp;<span
-                                            className="ranked-status">{data.rankedUsers[data.userId]
-                                            ? `Авторизован ${!data.rankedUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
+                                            className="ranked-status">{data.authUsers[data.userId]
+                                            ? `Авторизован ${!data.authUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
                                             : 'Не авторизован'}</span>
                                         </div>
                                         <div className="ranked-desc">
@@ -1525,7 +1525,7 @@ class Game extends React.Component {
                                             никнейм
                                             (Его нельзя будет поменять)
                                         </div>
-                                        {!data.rankedUsers[data.userId] ? (
+                                        {!data.authUsers[data.userId] ? (
                                             <div className="ranked-auth-buttons">
                                             <span className="ranked-auth-button button"
                                                   onClick={() => this.handleClickAuthGoogle()}>Войти через Google

@@ -1317,3 +1317,7 @@ a {
 .ranked.solo-mode .team {
     width: 221px;
 }
+
+.ranked .word input {
+    width: 62px;
+}
