@@ -291,7 +291,7 @@ class Game extends React.Component {
                 maxPlayers: "∞",
                 largeImageKey: "alias",
                 details: "Alias/Шляпа"
-            });
+            }, this);
 
             if (state.voiceEnabled) {
                 if (state.deafMode) {
@@ -420,21 +420,6 @@ class Game extends React.Component {
                 playerNode.classList.add("highlight-anim");
                 setTimeout(() => playerNode && playerNode.classList.remove("highlight-anim"), 100);
             }
-        });
-        this.socket.on("words-pack", (data) => {
-            if (data.index != null) {
-                const wordReport = this.state.wordReportData.words[data.index];
-                wordReport.wordList = data.wordList;
-                wordReport.loading = false;
-            } else
-                this.state.wordPacks[data.packName] = data;
-            this.setState(Object.assign({}, this.state));
-        });
-        this.socket.on("words-pack-list", (list) => {
-            list.forEach((packName) => {
-                this.state.wordPacks[packName] = this.state.wordPacks[packName] || null;
-            });
-            this.setState(Object.assign({}, this.state));
         });
         document.title = `Alias - ${initArgs.roomId}`;
         this.socket.emit("init", initArgs);
@@ -594,10 +579,6 @@ class Game extends React.Component {
 
     handleClickLevel(level) {
         this.socket.emit("select-word-set", level);
-    }
-
-    handleClickCustom() {
-        popup.prompt({content: "URL to words separated by lines"}, (evt) => evt.proceed && this.socket.emit("setup-words", evt.input_value));
     }
 
     handleClickRestart() {
@@ -776,7 +757,7 @@ class Game extends React.Component {
 
     handleToggleTheme() {
         localStorage.darkThemeAlias = !parseInt(localStorage.darkThemeAlias) ? 1 : 0;
-        if (localStorage.darkThemeAlias && !this.toggleThemeSent) {
+        if (parseInt(localStorage.darkThemeAlias) && !this.toggleThemeSent && this.state.authUsers[this.state.userId]) {
             this.socket.emit('toggle-theme');
             this.toggleThemeSent = true;
         }
@@ -889,13 +870,6 @@ class Game extends React.Component {
         this.socket.emit("set-mode", mode);
     }
 
-    handleClickCloseCustom() {
-        this.setState(Object.assign({}, this.state, {
-            customModalActive: false,
-            customPackSelected: null
-        }));
-    }
-
     handleClickCloseRanked() {
         this.setState(Object.assign({}, this.state, {
             rankedModalActive: false,
@@ -917,34 +891,6 @@ class Game extends React.Component {
         this.setState(Object.assign({}, this.state, {
             rankedModalActive: true,
         }));
-    }
-
-    handleSelectCustom(name) {
-        if (name && !this.state.wordPacks[name])
-            this.socket.emit("view-words-pack", name);
-        this.setState(Object.assign({}, this.state, {
-            customPackSelected: name
-        }), () => {
-            if (!name && document.getElementById("custom-word-area"))
-                document.getElementById("custom-word-area").focus();
-        });
-    }
-
-    handleCustomWordsChange(value) {
-        this.setState(Object.assign({}, this.state, {
-            wordCustomCount: (value && value.split("\n").length) || 0
-        }));
-    }
-
-    handleClickSetCustomWords() {
-        if (this.state.customPackSelected
-            || (this.state.wordCustomCount > 0 && this.state.wordCustomCount <= this.state.customWordsLimit)) {
-            if (this.state.customPackSelected)
-                this.socket.emit("setup-words-preset", this.state.customPackSelected);
-            else
-                this.socket.emit("setup-words", document.getElementById("custom-words-pack-name").value, document.getElementById("custom-word-area").value.split("\n"));
-            this.handleClickCloseCustom();
-        }
     }
 
     isAutoDenied(report) {
@@ -1543,72 +1489,7 @@ class Game extends React.Component {
                                     </div>
                                 </div>
                             </div>) : ""}
-                            {data.customModalActive ? (<div className="word-report-modal custom">
-                                <div className="word-report-modal-content custom">
-                                    <div className="word-report-title">Custom word packs
-                                        {data.wordPacks[data.customPackSelected] ? (
-                                            <div className="word-report-modal-stats">
-                                                Words<span
-                                                className="word-report-stat-num">{data.wordPacks[data.customPackSelected].wordList.length}</span>
-                                                Author<span
-                                                className="word-report-stat-num">{data.wordPacks[data.customPackSelected].author}</span>
-                                            </div>) : ""}
-                                        {settingsMode && !data.wordPacks[data.customPackSelected] ? (
-                                            <input
-                                                className="custom-words-pack-name"
-                                                maxLength="40"
-                                                id="custom-words-pack-name"
-                                                placeholder="Pack name"
-                                            />) : ""}
-                                        <div className="word-report-modal-close"
-                                             onClick={() => this.handleClickCloseCustom()}>✕
-                                        </div>
-                                    </div>
-                                    <div className="custom-packs">
-                                        <div className="custom-pack-list">
-                                            {settingsMode ? (
-                                                <div
-                                                    onClick={() => this.handleSelectCustom()}
-                                                    className={cs("custom-pack-list-item", {selected: data.customPackSelected == null})}>
-                                                    &lt;Custom&gt;</div>) : ""}
-                                            {Object.keys(data.wordPacks).map((name) => (
-                                                <div onClick={() => this.handleSelectCustom(name)}
-                                                     className={cs("custom-pack-list-item", {selected: data.customPackSelected === name})}>
-                                                    {name}</div>))}
-                                        </div>
-                                        <div className="custom-pack-pane">
-                                            {(settingsMode && data.customPackSelected == null)
-                                                ? (<textarea
-                                                    id="custom-word-area"
-                                                    onChange={((event) => this.handleCustomWordsChange(event.target.value))}
-                                                    className="custom-word-textarea text-color"/>)
-                                                : data.customPackSelected != null
-                                                    ? (<div className="custom-pack-word-list">
-                                                        {data.wordPacks[data.customPackSelected] != null
-                                                            ? data.wordPacks[data.customPackSelected].wordList.map((word) => (
-                                                                <div
-                                                                    className="custom-pack-word-list-item">{word}</div>))
-                                                            : "Loading"}
-                                                    </div>) : ""}
-                                        </div>
-                                    </div>
-                                    <div className="word-report-manage-buttons">
-                                        {settingsMode && data.customPackSelected == null ? (<div
-                                            className={cs("word-add-count", {
-                                                overflow: data.wordCustomCount > data.customWordsLimit
-                                            })}>{data.wordCustomCount}/{data.customWordsLimit}
-                                        </div>) : ""}
-                                        {settingsMode ? <div
-                                            className={cs("word-report-save-button", "button", {
-                                                inactive: !(data.customPackSelected != null
-                                                    || (data.wordCustomCount > 0
-                                                        && data.wordCustomCount <= data.customWordsLimit))
-                                            })}
-                                            onClick={() => this.handleClickSetCustomWords()}>Select
-                                        </div> : ""}
-                                    </div>
-                                </div>
-                            </div>) : ""}
+                            <WordPackSelector data={data} app={this} available={settingsMode} />
                             <div id="snackbar" className={cs({pinned: this.state.notificationPinned})}>
                                 {data.wordReportNotify ? (<div>
                                     {data.wordReportNotify.approved.length ? (<div>

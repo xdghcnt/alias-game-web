@@ -631,76 +631,6 @@ body.dark-theme {
     box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
 }
 
-.word-report-modal, .ranked-modal {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #00000057;
-    z-index: 2;
-    padding-top: 42px;
-}
-
-.word-report-modal-bg {
-    background: black;
-}
-
-.word-report-modal-content, .ranked-modal-content {
-    background: white;
-    margin: 0 auto;
-    max-width: 628px;
-    box-shadow: 0 1px 15px rgba(0, 0, 0, 0.4);
-}
-
-.dark-theme .word-report-modal-content, .dark-theme .ranked-modal-content {
-    background: #40403f;
-}
-
-.word-report-title, .ranked-title {
-    font-size: 20px;
-    padding: 8px 13px;
-    text-align: left;
-    position: relative;
-}
-
-.word-report-modal-close, .ranked-modal-close {
-    position: absolute;
-    right: 9px;
-    top: 5px;
-    user-select: none;
-    cursor: pointer;
-}
-
-.button {
-    display: inline-block;
-    padding: 1px 4px;
-    background: #b2e675;
-    margin: 5px;
-    vertical-align: middle;
-    user-select: none;
-    cursor: pointer;
-}
-
-.dark-theme .button {
-    background: rgb(79, 109, 109);
-}
-
-.word-report-manage-buttons input {
-    border: 1px solid #cccaca;
-    padding: 2px;
-    vertical-align: baseline;
-}
-
-.dark-theme .word-report-manage-buttons input {
-    color: #cccaca;
-    background: transparent;
-}
-
-.word-report-manage-buttons {
-    text-align: right;
-}
-
 .word-report-list {
     width: 100%;
     overflow: auto;
@@ -761,10 +691,6 @@ body.dark-theme {
     width: 203px;
 }
 
-.word-report-manage-buttons {
-    padding: 8px;
-}
-
 .word-report-item-status .approved {
     background: #49d2493d;
     padding: 0 8px;
@@ -799,22 +725,6 @@ input:checked + .word-report-approve.no {
 
 input:checked + .word-report-approve.yes {
     background: #49d2493d;
-}
-
-.word-report-modal-stats {
-    font-size: 16px;
-    display: inline-block;
-    margin-left: 7px;
-}
-
-.word-report-stat-num {
-    background: #f3f3f3;
-    margin: 0 7px;
-    padding: 1px 4px;
-}
-
-.dark-theme .word-report-stat-num {
-    background: #5a5a5a;
 }
 
 .host-button.inactive {
@@ -891,16 +801,6 @@ input:checked + .word-report-approve.yes {
     height: 40%;
     white-space: nowrap;
     resize: none;
-}
-
-.word-add-count {
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 6px;
-}
-
-.word-add-count.overflow {
-    color: #f3306b;
 }
 
 .word-add-level-select {
@@ -999,111 +899,8 @@ input:checked + .word-report-approve.yes {
     cursor: pointer;
 }
 
-.custom-packs {
-    display: flex;
-    height: 400px;
-    border-top: 1px solid gainsboro;
-    border-bottom: 1px solid gainsboro;
-}
-
-
-.dark-theme .custom-packs {
-    border-top: 1px solid #828282;
-    border-bottom: 1px solid #828282;
-}
-
-.custom-pack-list {
-    width: 200px;
-    text-align: left;
-    overflow: auto;
-}
-
-.custom-pack-pane {
-    width: 420px;
-    border-left: 1px solid gainsboro;
-    background: #f1f1f1;
-    box-shadow: inset 0 0 4px -2px black;
-}
-
-.dark-theme .custom-pack-pane {
-    background: #2d2d2d;
-    border-left: 1px solid #828282;
-}
-
-.custom-pack-list-item {
-    padding: 6px 14px;
-    cursor: pointer;
-}
-
-.custom-pack-list-item:nth-child(odd) {
-    background: #f3f3f3;
-}
-
-.dark-theme .custom-pack-list-item:nth-child(even) {
-    background: #ffffff;
-}
-
-.dark-theme .custom-pack-list-item:nth-child(odd) {
-    background: #5a5a5a;
-}
-
-.dark-theme .custom-pack-list-item:nth-child(even) {
-    background: #505050;
-}
-
-.custom-pack-list-item.selected {
-    background: #b2e67563;
-}
-
-.custom-pack-list-item:hover {
-    background: #b2e67596;
-}
-
-.dark-theme .custom-pack-list-item.selected {
-    background: rgba(79, 109, 109, 0.85);
-}
-
-.dark-theme .custom-pack-list-item:hover {
-    background: rgb(79, 109, 109);
-}
-
-.word-report-modal.custom .word-report-modal-stats {
-    margin-right: 17px;
-    margin-top: 2px;
-    float: right;
-}
-
-.custom-word-textarea {
-    width: 100%;
-    padding: 10px;
-    background: transparent;
-    white-space: nowrap;
-    resize: none;
-    height: 100%;
-}
-
-.custom-pack-word-list {
-    text-align: left;
-    padding: 7px 12px;
-    overflow: auto;
-    height: calc(100% - 4px);
-    box-sizing: border-box;
-    margin: 2px;
-}
-
 .custom-game-button.has-pack-name {
     width: auto;
-}
-
-.custom-words-pack-name {
-    width: 250px;
-    padding: 5px 10px;
-    border: 1px solid #cacaca;
-    background: transparent;
-    margin: -5px;
-    margin-left: 30px;
-    margin-top: -3px;
-    vertical-align: top;
 }
 
 .history-button, .remove-user-reports {
