@@ -198,7 +198,7 @@ class Player extends React.Component {
                                     negative: data.rankedScoreDiffs[id] < 0,
                                     equal: data.rankedScoreDiffs[id] === 0
                                 })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
-                {data.authUsers[id] ? data.authUsers[id].name : data.playerNames[id]}
+                <PlayerName data={data} id={id} />
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
                         className={cs("word-points", {
@@ -253,9 +253,22 @@ class Player extends React.Component {
 
 class Game extends React.Component {
     componentDidMount() {
+        Toastify({
+            avatar: '/alias/icon-hat.png',
+            text: `Получено достижение говна`,
+        }).showToast();
+        Toastify({
+            avatar: '/alias/icon-hat.png',
+            text: `Получено достижение говна`,
+        }).showToast();
+        setTimeout(() => {
+            Toastify({
+                avatar: '/alias/icon-hat.png',
+                text: `Получено достижение говна`,
+            }).showToast();
+        }, 1000);
         this.gameName = "alias";
         const initArgs = {};
-        localStorage.authToken = localStorage.authToken || makeId();
         if (parseInt(localStorage.darkThemeAlias))
             document.body.classList.add("dark-theme");
         if (!localStorage.aliasUserId || !localStorage.userToken) {
@@ -272,7 +285,6 @@ class Game extends React.Component {
             initArgs.acceptDelete = localStorage.acceptDelete;
             delete localStorage.acceptDelete;
         }
-        initArgs.authToken = localStorage.authToken;
         initArgs.roomId = this.roomId = location.hash.substr(1);
         initArgs.userId = this.userId = localStorage.aliasUserId;
         initArgs.userName = localStorage.userName;
@@ -337,7 +349,7 @@ class Game extends React.Component {
             }));
         });
         this.socket.on("auth-name-duplicated", () => {
-            popup.alert({content: `Никнейм «${this.state.playerNames[this.userId]}» уже занят`});
+            popup.alert({content: `Никнейм «${window.commonRoom.getPlayerName(this.userId)}» уже занят`});
         });
         this.socket.on("word-reports-data", (reportData) => {
             let newWordsCount = 0;
@@ -565,7 +577,7 @@ class Game extends React.Component {
     }
 
     handleClickChangeName() {
-        popup.prompt({content: "New name", value: this.state.playerNames[this.state.userId] || ""}, (evt) => {
+        popup.prompt({content: "New name", value: window.commonRoom.getPlayerName(this.state.userId) || ""}, (evt) => {
             if (evt.proceed && evt.input_value.trim()) {
                 this.socket.emit("change-name", evt.input_value.trim());
                 localStorage.userName = evt.input_value.trim();
@@ -795,7 +807,7 @@ class Game extends React.Component {
 
     handleRemovePlayer(id, evt) {
         evt.stopPropagation();
-        const name = this.state.authUsers[id] ? this.state.authUsers[id].name : this.state.playerNames[id]
+        const name = window.commonRoom.getPlayerName(id);
         if (!this.state.ranked || this.state.phase === 0) {
             if (this.state.phase !== 0)
                 popup.confirm({content: `Removing ${name}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
@@ -807,7 +819,7 @@ class Game extends React.Component {
 
     handleGiveHost(id, evt) {
         evt.stopPropagation();
-        popup.confirm({content: `Give host ${this.state.playerNames[id]}?`}, (evt) => evt.proceed && this.socket.emit("give-host", id));
+        popup.confirm({content: `Give host ${window.commonRoom.getPlayerName(id)}?`}, (evt) => evt.proceed && this.socket.emit("give-host", id));
     }
 
     handleSetTurn(id, evt) {
@@ -965,7 +977,7 @@ class Game extends React.Component {
                         data.gameIsOver = true;
                         const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
                             (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
-                        statusText = `Player ${data.playerNames[playerWin]} wins!`;
+                        statusText = `Player ${window.commonRoom.getPlayerName(playerWin)} wins!`;
                         data.showWatermark = true;
                         if (data.ranked && !data.rankedResultsSaved && data.hostId === data.userId) {
                             this.unsavedRankedResults = true;
