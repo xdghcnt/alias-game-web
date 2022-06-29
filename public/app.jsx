@@ -109,7 +109,7 @@ class Words extends React.Component {
                     >
                         {game.isMobile ? <div className="points-button remove-points" onClick={() =>
                             game.handleRemoveWordPoints(index)}>−</div> : ""}
-                        &nbsp;{hyphenate(word.word)}&nbsp;
+                        &nbsp;{hyphenate(hyphenateEn(word.word))}&nbsp;
                         <input
                             step={data.level === "ranked" ? "0.5" : "1"}
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
@@ -253,20 +253,6 @@ class Player extends React.Component {
 
 class Game extends React.Component {
     componentDidMount() {
-        Toastify({
-            avatar: '/alias/icon-hat.png',
-            text: `Получено достижение говна`,
-        }).showToast();
-        Toastify({
-            avatar: '/alias/icon-hat.png',
-            text: `Получено достижение говна`,
-        }).showToast();
-        setTimeout(() => {
-            Toastify({
-                avatar: '/alias/icon-hat.png',
-                text: `Получено достижение говна`,
-            }).showToast();
-        }, 1000);
         this.gameName = "alias";
         const initArgs = {};
         if (parseInt(localStorage.darkThemeAlias))
