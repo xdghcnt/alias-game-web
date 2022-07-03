@@ -615,7 +615,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 }),
                                 teamsReachedGoalScores = teamsReachedGoal.map((teamId) => room.teams[teamId].score + (room.teams[teamId].wordPoints || 0)).sort((a, b) => b - a);
                             if (teamsReachedGoal.length > 0 && (teamsReachedGoal.length === 1 || teamsReachedGoalScores[0] !== teamsReachedGoalScores[1])) {
-                                winners = [...data.teams[mostPointsTeam].players];
+                                winners = [...room.teams[mostPointsTeam].players];
                             }
                         }
                     } else if (room.soloModeRound >= room.soloModeGoal) {
