@@ -597,7 +597,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     }
                 },
                 checkWin = () => {
-                    if (this.state.winProcessed || room.onlinePlayers.size <= 4) return;
                     let winners = [];
                     if (!room.soloMode) {
                         if (Object.keys(room.teams).indexOf(room.currentTeam) === 0) {

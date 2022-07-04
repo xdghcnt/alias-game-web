@@ -254,29 +254,10 @@ class Player extends React.Component {
 class Game extends React.Component {
     componentDidMount() {
         this.gameName = "alias";
-        const initArgs = {};
+        CommonRoom.roomInit(this);
+        const initArgs = CommonRoom.roomInit(this);
         if (parseInt(localStorage.darkThemeAlias))
             document.body.classList.add("dark-theme");
-        if (!localStorage.aliasUserId || !localStorage.userToken) {
-            while (!localStorage.userName)
-                localStorage.userName = prompt("Your name");
-            localStorage.aliasUserId = makeId();
-            localStorage.userToken = makeId();
-        }
-        if (!location.hash)
-            history.replaceState(undefined, undefined, location.origin + location.pathname + "#" + makeId());
-        else
-            history.replaceState(undefined, undefined, location.origin + location.pathname + location.hash);
-        if (localStorage.acceptDelete) {
-            initArgs.acceptDelete = localStorage.acceptDelete;
-            delete localStorage.acceptDelete;
-        }
-        initArgs.roomId = this.roomId = location.hash.substr(1);
-        initArgs.userId = this.userId = localStorage.aliasUserId;
-        initArgs.userName = localStorage.userName;
-        initArgs.token = this.userToken = localStorage.userToken;
-        initArgs.wssToken = window.wssToken;
-        this.socket = window.socket.of(location.pathname);
         this.socket.on("state", (state) => {
             let initDrawMode, needScroll;
             if (this.state.inited && this.state.currentWords.length < state.currentWords.length)
@@ -383,19 +364,7 @@ class Game extends React.Component {
                 disconnectReason: event.reason
             });
         });
-        this.socket.on("auth-required", () => {
-            this.setState(Object.assign({}, this.state, {
-                userId: this.userId,
-                authRequired: true
-            }));
-            if (grecaptcha)
-                grecaptcha.render("captcha-container", {
-                    sitekey: "",
-                    callback: (key) => this.socket.emit("auth", key, initArgs)
-                });
-            else
-                setTimeout(() => window.location.reload(), 3000)
-        });
+;
         this.socket.on("prompt-delete-prev-room", (roomList) => {
             if (localStorage.acceptDelete =
                 prompt(`Limit for hosting rooms per IP was reached: ${roomList.join(", ")}. Delete one of rooms?`, roomList[0]))
@@ -1034,6 +1003,7 @@ class Game extends React.Component {
                 showWordsBet = false;
                 return (
                     <div className="game">
+                        <CommonRoom state={this.state} app={this}/>
                         <div className={cs("game-board", {
                             active: this.state.inited,
                             "game-over": gameIsOver,
@@ -1544,7 +1514,6 @@ class Game extends React.Component {
                                     </div>) : ""}
                                 </div>) : ""}
                             </div>
-                            <CommonRoom state={this.state} app={this}/>
                         </div>
                     </div>
                 );
