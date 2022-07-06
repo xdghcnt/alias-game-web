@@ -622,7 +622,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             (room.playerScores[idB] + (room.playerWordPoints[idB] || 0)) - (room.playerScores[idA] + (room.playerWordPoints[idA] || 0)))[0];
                         winners = [playerWin];
                     }
-                    if (winners.length > 0) {
+                    if (winners.length > 0 && (room.soloMode ? room.onlinePlayers >= 3 : room.onlinePlayers >= 4)) {
                         this.state.winProcessed = true;
                         for (const user of winners) {
                             const userData = {user, room};
