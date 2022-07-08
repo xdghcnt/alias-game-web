@@ -187,9 +187,9 @@ class Player extends React.Component {
                 assistant: id === data.currentAssistant
             })} data-userId={id} onTouchStart={(e) => e.target.focus()}>
                 <UserAudioMarker user={id} data={data}/>
-                {((data.phase === 0 || data.rankedResultsSaved) && data.authUsers[id] && data.ranked) ? (
+                {((data.phase === 0 || data.rankedResultsSaved) && data.rankedUsers[id] && data.ranked) ? (
                     <span className="ranked-score">[{!data.rankedResultsSaved
-                        ? data.authUsers[id].score : data.authUsers[id].score - (data.rankedScoreDiffs[id] || 0)}
+                        ? data.rankedUsers[id].score : data.rankedUsers[id].score - (data.rankedScoreDiffs[id] || 0)}
                         {(data.rankedResultsSaved && !data.spectators.includes(id)) ? (
                             <span
                                 className={cs("word-points", {
@@ -197,7 +197,7 @@ class Player extends React.Component {
                                     positive: data.rankedScoreDiffs[id] > 0,
                                     negative: data.rankedScoreDiffs[id] < 0,
                                     equal: data.rankedScoreDiffs[id] === 0
-                                })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;</span>) : ''}
+                                })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;&nbsp;</span>) : ''}
                 <PlayerName data={data} id={id} />
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
@@ -491,7 +491,7 @@ class Game extends React.Component {
 
     handleTeamClick(id) {
         if (this.state.phase === 0) {
-            if (this.state.ranked && !this.state.authUsers[this.userId])
+            if (this.state.ranked && !this.state.rankedUsers[this.userId])
                 this.handleClickOpenRanked();
             else
                 this.socket.emit("team-join", id);
@@ -1419,7 +1419,7 @@ class Game extends React.Component {
                                         </div>
                                         <span className="ranked-auth-buttons">
                                             <span className={cs("ranked-auth-button", "button", {
-                                                inactive: !data.authUsers?.[data.userId]?.moderator
+                                                inactive: !data.rankedUsers?.[data.userId]?.moderator
                                             })}
                                                   onClick={() => this.handleClickToggleRankedMode()}>{!data.ranked
                                                 ? 'Активировать' : 'Деактивировать'}
@@ -1427,8 +1427,8 @@ class Game extends React.Component {
                                         </span>
                                         <div className="ranked-status-user">
                                             Пользователь:&nbsp;<span
-                                            className="ranked-status">{data.authUsers[data.userId]
-                                            ? `Авторизован ${!data.authUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
+                                            className="ranked-status">{data.rankedUsers[data.userId]
+                                            ? `Авторизован ${!data.rankedUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
                                             : 'Не авторизован'}</span>
                                         </div>
                                         <div className="ranked-desc">
@@ -1439,7 +1439,7 @@ class Game extends React.Component {
                                             никнейм
                                             (Его нельзя будет поменять)
                                         </div>
-                                        {!data.authUsers[data.userId] ? (
+                                        {!data.rankedUsers[data.userId] ? (
                                             <div className="ranked-auth-buttons">
                                             <span className="ranked-auth-button button"
                                                   onClick={() => this.handleClickAuthGoogle()}>Войти через Google
