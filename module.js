@@ -627,6 +627,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         for (const user of winners) {
                             const userData = {user, room};
                             registry.authUsers.processAchievement(userData, registry.achievements.win100Alias.id);
+                            registry.authUsers.processAchievement(userData, registry.achievements.win1000Alias.id);
                             registry.authUsers.processAchievement(userData, registry.achievements.winGames.id, {game: registry.games.alias.id});
                             if (room.goal >= 100)
                                 registry.authUsers.processAchievement(userData, registry.achievements.aliasMarathon.id);
