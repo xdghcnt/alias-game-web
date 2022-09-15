@@ -932,7 +932,7 @@ class Game extends React.Component {
                         data.gameIsOver = true;
                         const playerWin = Object.keys(data.playerScores).sort((idA, idB) =>
                             (data.playerScores[idB] + (data.playerWordPoints[idB] || 0)) - (data.playerScores[idA] + (data.playerWordPoints[idA] || 0)))[0];
-                        statusText = `Player ${window.commonRoom.getPlayerName(playerWin)} wins!`;
+                        statusText = `Player ${window.commonRoom?.getPlayerName(playerWin)} wins!`;
                         data.showWatermark = true;
                         if (data.ranked && !data.rankedResultsSaved && data.hostId === data.userId) {
                             this.unsavedRankedResults = true;
