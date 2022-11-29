@@ -150,3 +150,10 @@ a {
 .inactive {
     opacity: 0.6;
 }
+
+.show-all {
+    text-decoration: underline;
+    font-size: 21px;
+    margin: auto;
+    margin-top: 6px;
+}

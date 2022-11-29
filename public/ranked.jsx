@@ -87,6 +87,7 @@ class Page extends React.Component {
             });
         }
         this.setState({
+            showFirst20: true,
             rankedUsers: data.rankedUsers,
             moderators: players.filter((user) => user.moderator).map((user) => ({
                 name: user.name,
@@ -140,7 +141,7 @@ class Page extends React.Component {
             </div>
             <div className="title">Игроки</div>
             <div className="players section">
-                {data.players.map((player, index) => (<div className={cs("player-row", {
+                {data.players.slice(0, data.showFirst20 ? 20 : undefined).map((player, index) => (<div className={cs("player-row", {
                     inactive: player.inactive
                 })}>
                     <div className="rank">{index + 1}</div>
@@ -166,6 +167,12 @@ class Page extends React.Component {
                         <i className="material-icons">{player.moderator ? 'key' : 'key_off'}</i>
                     </div>
                 </div>))}
+                {
+                    data.showFirst20 ?
+                        <div className="show-all button" onClick={() => this.setState({...data, showFirst20: false})}>
+                            Полный список
+                        </div> : ''
+                }
             </div>
             <div className="title">Матчи</div>
             <div className="matches section">
