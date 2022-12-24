@@ -357,8 +357,15 @@ body.dark-theme {
 }
 
 .timer {
+    display: table;
+    padding: 0 10px;
     font-size: 39px;
+    margin: auto;
     margin-bottom: 4px;
+}
+
+.has-room-image:not(.dark-theme) .timer {
+    background: white;
 }
 
 .dict-progress {
