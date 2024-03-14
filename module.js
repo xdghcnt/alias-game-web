@@ -628,6 +628,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             const userData = {user, room};
                             registry.authUsers.processAchievement(userData, registry.achievements.win100Alias.id);
                             registry.authUsers.processAchievement(userData, registry.achievements.win1000Alias.id);
+                            registry.authUsers.processAchievement(userData, registry.achievements.win10000Alias.id);
                             registry.authUsers.processAchievement(userData, registry.achievements.winGames.id, {game: registry.games.alias.id});
                             if (room.goal >= 100)
                                 registry.authUsers.processAchievement(userData, registry.achievements.aliasMarathon.id);
@@ -1041,7 +1042,10 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                 `${appDir}/custom/${reportData.packName}.json`, () => {
                                                 }
                                             );
-                                            reportAchievements.push({authUser: reportData.authUser, achievement: registry.achievements.createPack.id});
+                                            reportAchievements.push({
+                                                authUser: reportData.authUser,
+                                                achievement: registry.achievements.createPack.id
+                                            });
                                         } else
                                             fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
                                             });
@@ -1054,7 +1058,10 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     if (reportData.level !== 0)
                                                         defaultWords[reportData.level].push(reportData.word);
                                                 }
-                                                reportAchievements.push({authUser: reportData.authUser, achievement: registry.achievements.reportWords.id});
+                                                reportAchievements.push({
+                                                    authUser: reportData.authUser,
+                                                    achievement: registry.achievements.reportWords.id
+                                                });
                                             } else {
                                                 reportData.wordList.filter((word) =>
                                                     !~defaultWords[1].indexOf(word)
@@ -1063,7 +1070,10 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     && !~defaultWords[4].indexOf(word)).forEach((word) => {
                                                     defaultWords[reportData.level].push(word);
 
-                                                    reportAchievements.push({authUser: reportData.authUser, achievement: registry.achievements.addWords.id});
+                                                    reportAchievements.push({
+                                                        authUser: reportData.authUser,
+                                                        achievement: registry.achievements.addWords.id
+                                                    });
                                                 });
                                             }
                                         }
