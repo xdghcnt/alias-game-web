@@ -147,7 +147,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 soloModeRound: 0,
                 soloModeGoal: 1,
                 packName: null,
-                customWordsLimit: 1500,
+                customWordsLimit: registry.config.customWordsLimit,
                 managedVoice: true,
                 rankedUsers: {},
                 ranked: false,
