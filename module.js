@@ -748,7 +748,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         }
                     }
                     if (room.phase === 2
-                        && (!room.deafMode ? room.currentPlayer === user : room.teams[room.currentTeam].players.has(user) && !this.wordSkippedCoolDown)) {
+                        && (!room.deafMode ? room.currentPlayer === user : (room.teams[room.currentTeam].players.has(user) && room.currentPlayer !== user)
+                            && !this.wordSkippedCoolDown)) {
                         if (room.currentWords.length > 99)
                             endRound();
                         if (room.currentBet > room.currentWords.length + 1) {
