@@ -117,7 +117,7 @@ class Words extends React.Component {
                             onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
 
-                        {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
+                        {(data.level !== 0 && data.level !== 5 && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu"
                                  onClick={() => data.sortMode && game.handleClickReportWordLevel(word.word, 0)}
                                  onTouchStart={(e) => e.target.focus()}>
@@ -198,7 +198,7 @@ class Player extends React.Component {
                                     negative: data.rankedScoreDiffs[id] < 0,
                                     equal: data.rankedScoreDiffs[id] === 0
                                 })}>{Math.abs(data.rankedScoreDiffs[id])}</span>) : ""}]&nbsp;&nbsp;</span>) : ''}
-                <PlayerName data={data} id={id} />
+                <PlayerName data={data} id={id}/>
                 {data.soloMode && !this.props.spectator ? (
                     <span className="player-score">&nbsp;({score}{!data.gameIsOver ? (<span
                         className={cs("word-points", {
@@ -364,7 +364,7 @@ class Game extends React.Component {
                 disconnectReason: event.reason
             });
         });
-;
+        ;
         this.socket.on("prompt-delete-prev-room", (roomList) => {
             if (localStorage.acceptDelete =
                 prompt(`Limit for hosting rooms per IP was reached: ${roomList.join(", ")}. Delete one of rooms?`, roomList[0]))
@@ -1189,6 +1189,14 @@ class Game extends React.Component {
                                                 <i
                                                     className="material-icons">emoji_events</i>Ranked
                                             </div>
+                                            <div
+                                                className={cs("meta-game-button", {
+                                                    "settings-button": settingsMode,
+                                                    "level-selected": this.state.level === 5
+                                                })}
+                                                onClick={() => this.handleClickLevel(5)}><i
+                                                className="material-icons">psychology</i>No meta
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1457,7 +1465,7 @@ class Game extends React.Component {
                                     </div>
                                 </div>
                             </div>) : ""}
-                            <WordPackSelector data={data} app={this} available={settingsMode} />
+                            <WordPackSelector data={data} app={this} available={settingsMode}/>
                             <div id="snackbar" className={cs({pinned: this.state.notificationPinned})}>
                                 {data.wordReportNotify ? (<div>
                                     {data.wordReportNotify.approved.length ? (<div>

@@ -1067,6 +1067,14 @@ a {
     margin-bottom: -14px;
 }
 
+.meta-game-button {
+    text-align: left;
+    padding-bottom: 4px;
+    padding-left: 13px;
+    width: 95px;
+    margin-bottom: -14px;
+}
+
 .ranked-status-room, .ranked-status-user {
     font-size: 18px;
     text-align: left;

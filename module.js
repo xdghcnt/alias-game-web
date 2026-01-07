@@ -358,7 +358,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         room.currentWords = [];
                         room.packName = null;
                         const difficulty = parseFloat(wordSet);
-                        if (!~[1, 2, 3, 4].indexOf(difficulty) > 0) {
+                        if (!~[1, 2, 3, 4, 5].indexOf(difficulty) > 0) {
                             if (user)
                                 send(user, "message", "You did something wrong");
                         } else {
