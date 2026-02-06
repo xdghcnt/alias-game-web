@@ -2,8 +2,6 @@ const fs = require("fs");
 
 function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const
-        fbAdmin = require('firebase-admin'),
-        fbApp = fbConfig && fbAdmin.initializeApp({credential: fbAdmin.credential.cert(fbConfig)}),
         fs = require('fs'),
         app = wsServer.app,
         registry = wsServer.users,
@@ -412,36 +410,23 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     && data.dots.length > 0
                     && data.thickness > 0
                     && data.thickness < 10,
-                registerRankedUser = (user, decodedToken) => {
-                    const nameDuplicated = Object.keys(rankedUsers).find((rankedUserId) => {
-                        return rankedUsers[rankedUserId].name === room.playerNames[user];
-                    });
-                    if (nameDuplicated)
-                        send(user, 'auth-name-duplicated');
-                    else {
-                        fs.appendFile(`${appDir}/auth-logs.txt`, `${JSON.stringify({
-                            user,
-                            name: room.playerNames[user],
-                            decodedToken
-                        }, null, 4)}\n`, () => {
+                registerRankedUser = (user, authUser) => {
+                    rankedUsers[authUser._id] = {
+                        score: 1000,
+                        name: authUser.name,
+                        id: authUser._id,
+                        registerTime: new Date()
+                    };
+                    fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4),
+                        (err) => {
+                            if (!err) {
+                                loginUserRanked(user, authUser._id);
+                            } else {
+                                delete rankedUsers[authUser._id];
+                                registry.log(`- auth-users.json saving error ${err.message}`);
+                                send(user, "message", `Ошибка регистрации: ${err.message}`);
+                            }
                         })
-                        rankedUsers[decodedToken.uid] = {
-                            score: 1000,
-                            name: room.playerNames[user],
-                            id: decodedToken.uid,
-                            registerTime: new Date()
-                        };
-                        fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4),
-                            (err) => {
-                                if (!err) {
-                                    loginUserRanked(user, decodedToken.id);
-                                } else {
-                                    delete rankedUsers[decodedToken.uid];
-                                    registry.log(`- auth-users.json saving error ${err.message}`);
-                                    send(user, "message", `Ошибка регистрации: ${err.message}`);
-                                }
-                            })
-                    }
                 },
                 loginUserRanked = (user, rankedUserId) => {
                     const rankedUser = rankedUsers[rankedUserId];
@@ -1230,20 +1215,14 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         }
                     }
                 },
-                "fb-auth": (user, token) => {
-                    if (fbApp)
-                        fbApp.auth()
-                            .verifyIdToken(token)
-                            .then((decodedToken) => {
-                                if (!rankedUsers[decodedToken.uid])
-                                    registerRankedUser(user, decodedToken);
-                                else
-                                    loginUserRanked(user, decodedToken.uid);
-                            })
-                            .catch((error) => {
-                                registry.log(`- login error - ${error.message}`);
-                            });
-                    else send(user, 'message', 'Ranked-режим не активен');
+                "auth-ranked": (user) => {
+                    if (room.authUsers[user]) {
+                        const authUser = room.authUsers[user];
+                        if (!rankedUsers[authUser._id])
+                            registerRankedUser(user, authUser);
+                        else
+                            loginUserRanked(user, authUser._id);
+                    } else send(user, 'message', 'Вы не авторизованы в Discord');
                 },
                 "fb-logout": (user) => {
                     delete room.rankedUsers[user];

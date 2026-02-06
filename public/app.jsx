@@ -606,44 +606,19 @@ class Game extends React.Component {
         this.socket.emit('fb-logout')
     }
 
-    handleClickAuthSMS() {
-        const auth = fb.getAuth();
-        if (!this.recaptchaVerifier)
-            this.recaptchaVerifier = new fb.RecaptchaVerifier('recaptcha-container', {
-                size: 'invisible'
-            }, auth);
-
-        popup.prompt({content: "Номер телефона"}, async (evt) => {
-            if (evt.proceed) {
-                try {
-                    const confirmationResult = await fb.signInWithPhoneNumber(auth, evt.input_value, this.recaptchaVerifier);
-                    popup.prompt({content: "Код из SMS"}, async (evt) => {
-                        if (evt.proceed) {
-                            try {
-                                const result = await confirmationResult.confirm(evt.input_value);
-                                this.socket.emit('fb-auth', result.user.accessToken);
-                            } catch (error) {
-                                popup.alert({content: error.message})
-                            }
-                        }
-                    });
-                } catch (error) {
-                    popup.alert({content: error.message})
-                }
-            }
-        });
-    }
+    /*handleClickAuthSMS() {
+        // Deprecated
+    }*/
 
     handleClickToggleRankedMode() {
         this.socket.emit('toggle-ranked');
     }
 
-    async handleClickAuthGoogle() {
-        try {
-            const result = await fb.signInWithPopup(fb.getAuth(), new fb.GoogleAuthProvider());
-            this.socket.emit('fb-auth', result.user.accessToken);
-        } catch (error) {
-            popup.alert({content: error.message});
+    handleClickAuthRanked(evt) {
+        if (!this.state.authUsers[this.state.userId]) {
+            window.commonRoom.toggleShowProfile(this.state.userId, evt);
+        } else {
+            this.socket.emit('auth-ranked');
         }
     }
 
@@ -1450,10 +1425,7 @@ class Game extends React.Component {
                                         {!data.rankedUsers[data.userId] ? (
                                             <div className="ranked-auth-buttons">
                                             <span className="ranked-auth-button button"
-                                                  onClick={() => this.handleClickAuthGoogle()}>Войти через Google
-                                            </span>
-                                                <span className="ranked-auth-button button"
-                                                      onClick={() => this.handleClickAuthSMS()}>Войти через SMS
+                                                  onClick={(evt) => this.handleClickAuthRanked(evt)}>Войти в Ranked
                                             </span>
                                             </div>) : (
                                             <div className="ranked-auth-buttons">

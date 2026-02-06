@@ -185,7 +185,7 @@ class Page extends React.Component {
                         <div className="players">
                             {gameRow.playerScoresSorted.map((player) => (<div className="match-player">
                                 <div
-                                    className="player-name">{data.rankedUsers[player].name} {gameRow.moderator === player ? (
+                                    className="player-name">{data.rankedUsers[player]?.name} {gameRow.moderator === player ? (
                                     <i className="material-icons host-button"
                                        title="Game host">
                                         stars

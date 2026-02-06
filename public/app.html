@@ -11,26 +11,6 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" src="/alias/app.jsx?%startTime%" data-presets="es2015,react"></script>
-<script type="module">
-    import {initializeApp} from 'https://www.gstatic.com/firebasejs/9.5.0/firebase-app.js'
-    import {
-        signInWithPhoneNumber,
-        getAuth,
-        RecaptchaVerifier,
-        GoogleAuthProvider,
-        signInWithPopup,
-    } from 'https://www.gstatic.com/firebasejs/9.5.0/firebase-auth.js'
-
-    initializeApp({
-        apiKey: "AIzaSyADMeTimjr-80m0QP1EZvhl_q66npMrJDM",
-        authDomain: "meme-police.firebaseapp.com",
-        projectId: "meme-police",
-        storageBucket: "meme-police.appspot.com",
-        messagingSenderId: "239667813901",
-        appId: "1:239667813901:web:645b3594597e99aaea7f44"
-    });
-    window.fb = {getAuth, RecaptchaVerifier, signInWithPhoneNumber, GoogleAuthProvider, signInWithPopup};
-</script>
 <div id="recaptcha-container"></div>
 </body>
 </html>
