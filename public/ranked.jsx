@@ -11,7 +11,7 @@ class Page extends React.Component {
     setModeratorStatus(id, state) {
         const toggleModerator = async (key, discord) => {
             const result = (await (await fetch(
-                `/alias/ranked/toggle-moderator?key=${key}&user=${id}&discord=${discord}`
+                `/alias/ranked/toggle-moderator?key=${encodeURIComponent(key)}&user=${id}&discord=${discord}`
             )).json());
             if (result.message)
                 popup.alert({content: result.message});
@@ -142,31 +142,31 @@ class Page extends React.Component {
             <div className="title">Игроки</div>
             <div className="players section">
                 {data.players.slice(0, data.showFirst20 ? 20 : undefined).map((player, index) => (<div className={cs("player-row", {
-                    inactive: player.inactive
-                })}>
-                    <div className="rank">{index + 1}</div>
-                    <div className="name">{player.name}</div>
-                    <div className="score">{player.score}</div>
-                    <div className="stats">
-                        <div className="games-count">
-                            <span className="games">Игр: {player.gamesCount}</span>
-                            &nbsp;|&nbsp;
-                            <span className="wins">Побед: {player.winRate}%</span>
+                        inactive: player.inactive
+                    })}>
+                        <div className="rank">{index + 1}</div>
+                        <div className="name">{player.name}</div>
+                        <div className="score">{player.score}</div>
+                        <div className="stats">
+                            <div className="games-count">
+                                <span className="games">Игр: {player.gamesCount}</span>
+                                &nbsp;|&nbsp;
+                                <span className="wins">Побед: {player.winRate}%</span>
+                            </div>
+                            <div className="average-words">В среднем слов: {player.averagePoints}</div>
                         </div>
-                        <div className="average-words">В среднем слов: {player.averagePoints}</div>
-                    </div>
-                    <div className="spacer"/>
-                    <div className="button edit-score"
-                         onClick={() => this.setRankedScore(player.id, player.score)}
-                         title="Изменить рейтинг">
-                        <i className="material-icons">edit</i>
-                    </div>
-                    <div className="button toggle-moderator"
-                         onClick={() => this.setModeratorStatus(player.id, !player.moderator)}
-                         title={!player.moderator ? 'Сделать модератором' : 'Сделать немодератором'}>
-                        <i className="material-icons">{player.moderator ? 'key' : 'key_off'}</i>
-                    </div>
-                </div>))}
+                        <div className="spacer"/>
+                        <div className="button edit-score"
+                             onClick={() => this.setRankedScore(player.id, player.score)}
+                             title="Изменить рейтинг">
+                            <i className="material-icons">edit</i>
+                        </div>
+                        <div className="button toggle-moderator"
+                             onClick={() => this.setModeratorStatus(player.id, !player.moderator)}
+                             title={!player.moderator ? 'Сделать модератором' : 'Сделать немодератором'}>
+                            <i className="material-icons">{player.moderator ? 'key' : 'key_off'}</i>
+                        </div>
+                    </div>))}
                 {
                     data.showFirst20 ?
                         <div className="show-all button" onClick={() => this.setState({...data, showFirst20: false})}>
