@@ -105,7 +105,7 @@ class Page extends React.Component {
                 discord: user.discord,
             })),
             gameList: data.rankedGames,
-            gameListNoMeta: data.rankedGames,
+            gameListNoMeta: data.rankedGamesNoMeta,
             players: players.map((player) => {
                 let gamesCount = 0;
                 let gamesCountWin = 0;
