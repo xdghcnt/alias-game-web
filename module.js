@@ -70,7 +70,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     app.get("/alias/ranked/edit-score", (req, res) => {
         if (req.query.key === moderKey && !isNaN(req.query.score)) {
             if (rankedUsers[req.query.user]) {
-                rankedUsers[req.query.user].score = parseInt(req.query.score);
+                const scoreKey = !req.query.noMeta ? 'score' : 'scoreNoMeta';
+                rankedUsers[req.query.user][scoreKey] = parseInt(req.query.score);
                 fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4), (error) => {
                     if (error)
                         res.send({
@@ -88,9 +89,10 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             const rankedGame = rankedGames.find((game) => game.datetime === req.query.datetime)
             if (rankedGame) {
                 rankedGame.deleted = true;
+                const scoreKey = !rankedGame.noMeta ? 'score' : 'scoreNoMeta';
                 Object.keys(rankedGame.rankedScoreDiffs).forEach((player) => {
                     if (rankedUsers[player])
-                        rankedUsers[player].score -= rankedGame.rankedScoreDiffs[player];
+                        rankedUsers[player][scoreKey] -= rankedGame.rankedScoreDiffs[player];
                 })
                 fs.writeFile(
                     `${appDir}/ranked-games.txt`,
@@ -435,9 +437,10 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     removeDuplicateUserRanked(user);
                     update();
                 },
-                toggleRanked = (state) => {
+                toggleRanked = (state, noMeta) => {
                     room.ranked = state;
-                    selectWordSet(2);
+                    room.rankedNoMeta = !!noMeta;
+                    selectWordSet(room.rankedNoMeta ? 5 : 2);
                     if (room.ranked) {
                         room.level = 'ranked';
                         room.soloModeGoal = 1;
@@ -486,6 +489,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 saveRankedResults = (user, leaverId) => {
                     if (room.ranked && (room.phase === 1 || leaverId) && room.hostId === user
                         && room.rankedUsers[user]?.moderator) {
+                        const scoreKey = !room.rankedNoMeta ? 'score' : 'scoreNoMeta';
                         const users = [...room.teams[Object.keys(room.teams)[0]].players];
                         const players = users.map((player) => room.rankedUsers[player].id);
                         const playerScores = {};
@@ -532,8 +536,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 .filter((scorePlayer) => scorePlayer !== player && scoreRanks[scorePlayer] === scoreRanks[player]).length;
                             const otherPlayers = players.filter((otherPlayer) => otherPlayer !== player);
                             const avgRankScore = otherPlayers.reduce((acc, otherPlayer) =>
-                                rankedUsers[otherPlayer].score + acc, 0) / otherPlayers.length;
-                            const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - rankedUsers[player].score) / rankedScoreMultiplier));
+                                rankedUsers[otherPlayer][scoreKey] + acc, 0) / otherPlayers.length;
+                            const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - rankedUsers[player][scoreKey]) / rankedScoreMultiplier));
                             const rankedScoreDiff = rankedBaseMultiplier
                                 * (((1 - expectedVictory) * playersYouWon)
                                     + ((0.5 - expectedVictory) * playersYouDraw)
@@ -544,13 +548,14 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 rankedScoreDiffs[player] = 0;
                         }
                         const prevScores = {};
-                        Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = rankedUsers[player].score);
+                        Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = rankedUsers[player][scoreKey]);
                         const gameResult = {
                             playerScores,
                             playerRanks: scoreRanks,
                             rankedScoreDiffs,
                             datetime: new Date(),
                             moderator: room.rankedUsers[user].id,
+                            noMeta: room.rankedNoMeta,
                             prevScores,
                             skillGroup: ['Very High', 'High', 'Normal', 'Low'][skillGroup]
                         };
@@ -563,7 +568,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 else {
                                     rankedGames.push(gameResult);
                                     for (const [index, player] of players.entries()) {
-                                        rankedUsers[player].score += rankedScoreDiffs[player];
+                                        rankedUsers[player][scoreKey] += rankedScoreDiffs[player];
                                         room.rankedScoreDiffs[users[index]] = rankedScoreDiffs[player];
                                     }
                                     checkWin();
@@ -1233,9 +1238,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     }
                     update();
                 },
-                "toggle-ranked": (user) => {
+                "toggle-ranked": (user, noMeta) => {
                     if (room.phase === 0 && room.hostId === user && room.rankedUsers[user]?.moderator)
-                        toggleRanked(!room.ranked);
+                        toggleRanked(!room.ranked, noMeta);
                     update();
                 },
                 "toggle-theme": (user) => {

@@ -1134,3 +1134,20 @@ a {
 .ranked .word input {
     width: 62px;
 }
+
+.no-meta-badge {
+    font-size: 11px;
+    margin-top: -9px;
+    margin-left: 15px;
+    margin-bottom: -5px;
+}
+
+.ranked-auth-button.button {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.ranked-auth-button.button i {
+    font-size: 18px;
+}

@@ -610,8 +610,8 @@ class Game extends React.Component {
         // Deprecated
     }*/
 
-    handleClickToggleRankedMode() {
-        this.socket.emit('toggle-ranked');
+    handleClickToggleRankedMode(noMeta) {
+        this.socket.emit('toggle-ranked', noMeta);
     }
 
     handleClickAuthRanked(evt) {
@@ -1163,6 +1163,7 @@ class Game extends React.Component {
                                                 onClick={() => this.handleClickOpenRanked()}>
                                                 <i
                                                     className="material-icons">emoji_events</i>Ranked
+                                                    {data.rankedNoMeta ? <div class="no-meta-badge">No meta</div> : ''}
                                             </div>
                                             <div
                                                 className={cs("meta-game-button", {
@@ -1394,7 +1395,7 @@ class Game extends React.Component {
                                         <br/>
                                         <div className="ranked-status-room">
                                             Ranked-режим:&nbsp;<span
-                                            className="ranked-status">{data.ranked ? 'Активен' : 'Неактивен'}</span>
+                                            className="ranked-status">{data.ranked ? `Активен${data.rankedNoMeta ? ' (no meta)' : ''}` : 'Неактивен'}</span>
                                         </div>
                                         <div className="ranked-desc">
                                             Активировать Ranked-режим могут только <a target="_blank"
@@ -1407,6 +1408,14 @@ class Game extends React.Component {
                                                   onClick={() => this.handleClickToggleRankedMode()}>{!data.ranked
                                                 ? 'Активировать' : 'Деактивировать'}
                                             </span>
+                                            { !data.ranked ? 
+                                                <span className={cs("ranked-auth-button", "button", {
+                                                    inactive: !data.rankedUsers?.[data.userId]?.moderator
+                                                })}
+                                                    onClick={() => this.handleClickToggleRankedMode(true)}>
+                                                        Активировать (no meta)<i className="material-icons">fiber_new</i>
+                                                    </span>
+                                            : ''}
                                         </span>
                                         <div className="ranked-status-user">
                                             Пользователь:&nbsp;<span

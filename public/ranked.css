@@ -157,3 +157,20 @@ a {
     margin: auto;
     margin-top: 6px;
 }
+.no-meta-toggle {
+    display: flex;
+    gap: 10px;
+}
+
+.no-meta-toggle-button {
+    cursor: pointer;
+    background: #40403f;
+    border: 1px dashed #dcdcdc94;
+    padding: 2px 6px;
+    margin: 9px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.no-meta-toggle-button.active {background: rgb(79, 109, 109);color: white;border: 1px solid transparent;}
