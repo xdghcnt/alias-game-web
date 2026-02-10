@@ -117,7 +117,7 @@ class Words extends React.Component {
                             onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
 
-                        {(data.level !== 0 && data.level !== 5 && (data.activeWord !== word.word || word.reported)) ? (
+                        {(data.level !== 0 && data.level !== 5 && !data.rankedNoMeta && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu"
                                  onClick={() => data.sortMode && game.handleClickReportWordLevel(word.word, 0)}
                                  onTouchStart={(e) => e.target.focus()}>
