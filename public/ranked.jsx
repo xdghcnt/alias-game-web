@@ -79,18 +79,18 @@ class Page extends React.Component {
 
     async updateData() {
         const data = (await (await fetch('/alias/ranked/data')).json());
-        data.rankedGames = data.rankedGames.filter(game => !game.deleted && !game.noMeta).reverse();
-        data.rankedGamesNoMeta = data.rankedGames.filter(game => !game.deleted && game.noMeta).reverse();
+        const rankedGames = data.rankedGames.filter(game => !game.deleted && !game.noMeta).reverse();
+        const rankedGamesNoMeta = data.rankedGames.filter(game => !game.deleted && game.noMeta).reverse();
         const players = Object.keys(data.rankedUsers).map((userId) =>
             data.rankedUsers[userId]).sort((a, b) => b.score - a.score);
-        for (const game of data.rankedGames) {
+        for (const game of rankedGames) {
             game.playerScoresSorted = Object.keys(game.playerRanks).sort((a, b) => {
                 return game.playerRanks[a] - game.playerRanks[b];
             });
         }
         const playersNoMeta = Object.keys(data.rankedUsers).map((userId) =>
             data.rankedUsers[userId]).sort((a, b) => b.scoreNoMeta - a.scoreNoMeta);
-        for (const game of data.rankedGamesNoMeta) {
+        for (const game of rankedGamesNoMeta) {
             game.playerScoresSortedNoMeta = Object.keys(game.playerRanks).sort((a, b) => {
                 return game.playerRanks[a] - game.playerRanks[b];
             });
@@ -99,18 +99,18 @@ class Page extends React.Component {
             showFirst20: true,
             noMeta: false,
             rankedUsers: data.rankedUsers,
-            rankedUsersNoMeta: data.rankedGamesNoMeta,
+            rankedUsersNoMeta: data.rankedUsersNoMeta,
             moderators: players.filter((user) => user.moderator).map((user) => ({
                 name: user.name,
                 discord: user.discord,
             })),
-            gameList: data.rankedGames,
-            gameListNoMeta: data.rankedGamesNoMeta,
+            gameList: rankedGames,
+            gameListNoMeta: rankedGamesNoMeta,
             players: players.map((player) => {
                 let gamesCount = 0;
                 let gamesCountWin = 0;
                 let totalPoints = 0;
-                for (const game of data.rankedGames) {
+                for (const game of rankedGames) {
                     if (game.playerScores[player.id])
                         gamesCount++;
                     if (game.playerRanks[player.id] === 1)
@@ -141,7 +141,7 @@ class Page extends React.Component {
                 let gamesCount = 0;
                 let gamesCountWin = 0;
                 let totalPoints = 0;
-                for (const game of data.rankedGamesNoMeta) {
+                for (const game of rankedGamesNoMeta) {
                     if (game.playerScores[player.id])
                         gamesCount++;
                     if (game.playerRanks[player.id] === 1)
