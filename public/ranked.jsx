@@ -111,7 +111,7 @@ class Page extends React.Component {
                 let gamesCountWin = 0;
                 let totalPoints = 0;
                 for (const game of rankedGames) {
-                    if (game.playerScores[player.id])
+                    if (game.playerScores[player.id] !== undefined)
                         gamesCount++;
                     if (game.playerRanks[player.id] === 1)
                         gamesCountWin++;
@@ -142,7 +142,7 @@ class Page extends React.Component {
                 let gamesCountWin = 0;
                 let totalPoints = 0;
                 for (const game of rankedGamesNoMeta) {
-                    if (game.playerScores[player.id])
+                    if (game.playerScores[player.id] !== undefined)
                         gamesCount++;
                     if (game.playerRanks[player.id] === 1)
                         gamesCountWin++;

@@ -111,7 +111,6 @@ class Words extends React.Component {
                             game.handleRemoveWordPoints(index)}>−</div> : ""}
                         &nbsp;{hyphenate(hyphenateEn(word.word))}&nbsp;
                         <input
-                            step={data.level === "ranked" ? "0.5" : "1"}
                             className={cs({positive: word.points > 0, negative: word.points < 0})}
                             type="number" value={word.points} min="-1" max="1"
                             onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
