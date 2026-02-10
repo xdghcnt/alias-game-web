@@ -182,6 +182,8 @@ class Page extends React.Component {
                           href={`https://discordapp.com/users/${moderator.discord}/`}>{moderator.name}</a>
                         {index !== data.moderators.length - 1 ? <span className="spacer"/> : ''}</>))}
             </div>
+            <div style="margin-bottom: 9px; opacity: 0.8;">За модеркой обращайтесь к <a class="moderator" target="_blank" title="Контакт в Discord" href="https://discordapp.com/users/291781392126312448/">orthodox</a>
+            </div>
             <div className="title">Режим</div>
             <div class="no-meta-toggle">
                 <div className={cs("no-meta-toggle-button", {
