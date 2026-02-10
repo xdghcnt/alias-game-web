@@ -12,6 +12,35 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
     const appDir = registry.config.appDir || __dirname;
     let reportedWordsData = [], reportedWords = [], rankedGames = [];
+    let reportedWordsView = [];
+    const updateReportView = () => {
+        const groups = {};
+        const packReports = [];
+        reportedWordsData.forEach(report => {
+            if (report.custom || (report.wordList && report.wordList.length > 1)) {
+                packReports.push(report);
+            } else {
+                const word = report.word || (report.wordList ? report.wordList[0] : null);
+                if (word) {
+                    if (!groups[word]) groups[word] = [];
+                    groups[word].push(report);
+                }
+            }
+        });
+        const structured = [];
+        packReports.forEach(r => structured.push(r));
+        Object.keys(groups).forEach(word => {
+            const reports = groups[word];
+            const latest = reports[reports.length - 1];
+            const history = reports.slice(0, reports.length - 1).reverse();
+            structured.push({
+                ...latest,
+                history: history
+            });
+        });
+        structured.sort((a, b) => (b.datetime || 0) - (a.datetime || 0));
+        reportedWordsView = structured;
+    };
 
     const rankedUsers = JSON.parse(fs.readFileSync(`${appDir}/auth-users.json`));
 
@@ -23,6 +52,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
         if (data) {
             data.split("\n").forEach((row) => row && reportedWordsData.push(JSON.parse(row)));
             reportedWordsData.forEach((it) => !it.processed && reportedWords.push(it.word));
+            updateReportView();
         }
     });
 
@@ -991,6 +1021,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         };
                         room.currentWords.filter((it) => it.word === word)[0].reported = true;
                         reportedWordsData.push(reportInfo);
+                        updateReportView();
                         if (autoDenialRules.some((it) => it[0] === currentLevel && it[1] === level)) {
                             reportInfo.processed = true;
                             reportInfo.approved = false;
@@ -1009,8 +1040,26 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         if (!sortMode) update();
                     }
                 },
-                "get-word-reports-data": (user) => {
-                    send(user, "word-reports-data", reportedWordsData);
+                "get-word-reports-data": (user, data) => {
+                    const offset = data && data.offset || 0;
+                    const limit = data && data.limit || 250;
+                    let newWords = 0;
+                    let approved = 0;
+                    let processed = 0;
+                    reportedWordsData.forEach(it => {
+                        if (it.processed) processed++;
+                        if (it.approved) approved++;
+                        if (it.newWord && it.approved) newWords += (it.wordList ? it.wordList.length : 1);
+                    });
+                    send(user, "word-reports-data", {
+                        words: reportedWordsView.slice(offset, offset + limit),
+                        total: reportedWordsData.length,
+                        viewTotal: reportedWordsView.length,
+                        offset,
+                        approved,
+                        processed,
+                        new: newWords
+                    });
                 },
                 "apply-words-moderation": (user, sentModerKey, moderData) => {
                     if (moderData && moderData[0] && sentModerKey === moderKey) {
@@ -1074,6 +1123,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 }
                             });
                         });
+                        updateReportView();
                         (async () => {
                             for (const item of reportAchievements) {
                                 if (item.authUser)
@@ -1101,7 +1151,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                         }
                                     );
                                     if (!sortMode) {
-                                        send(user, "word-reports-data", reportedWordsData);
                                         send(user, "word-reports-request-status", "Success");
                                     }
                                 } else
@@ -1121,6 +1170,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     });
                             }
                         });
+                        updateReportView();
                         fs.writeFile(`${appDir}/reported-words.txt`,
                             reportedWordsData.map((it) => JSON.stringify(it)).join("\n") + "\n",
                             () => {
@@ -1161,6 +1211,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     };
                                     reportList.push(reportInfo);
                                     reportedWordsData.push(reportInfo);
+                                    updateReportView();
                                     reportedWords.push(word);
                                 }
                             });
@@ -1186,9 +1237,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 fs.writeFile(`${appDir}/custom/new/${reportInfo.datetime}.json`, `${JSON.stringify({
                                     wordList, author: reportInfo.playerName, packName
                                 }, null, true)}`, (err) => {
-                                    if (!err)
+                                    if (!err) {
                                         reportedWordsData.push(reportInfo);
-                                    else
+                                        updateReportView();
+                                        fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
+                                        });
+                                    } else
                                         send(user, err);
                                 });
                             }

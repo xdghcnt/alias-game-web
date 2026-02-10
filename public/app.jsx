@@ -319,32 +319,20 @@ class Game extends React.Component {
         this.socket.on("auth-name-duplicated", () => {
             popup.alert({content: `Никнейм «${window.commonRoom.getPlayerName(this.userId)}» уже занят`});
         });
-        this.socket.on("word-reports-data", (reportData) => {
-            let newWordsCount = 0;
-            const wordSet = new Set();
-            reportData.forEach((it) => {
-                if (it.newWord && it.approved) newWordsCount += it.wordList.length;
-                if (it.wordList?.length > 1)
-                    it.wordList.forEach((word) => wordSet.add(word));
-                else if ((it.word || it.wordList?.length === 1) && !this.isAutoDenied(it)) {
-                    const word = it.wordList ? it.wordList[0] : it.word;
-                    if (wordSet.has(word))
-                        it.hasHistory = true;
-                    else
-                        wordSet.add(word);
-                }
-            });
+        this.socket.on("word-reports-data", (reportStats) => {
+            const isReset = !reportStats.offset;
+            const newWords = isReset ? reportStats.words : [...this.state.wordReportData.words, ...reportStats.words];
             this.setState(Object.assign({}, this.state, {
+                wordReportOffset: newWords.length,
                 wordReportData: {
-                    words: reportData.reverse().filter((it, index) => !it.processed || index < 250),
-                    wordsFull: reportData,
-                    total: reportData.length,
-                    approved: reportData.filter((it) => it.approved).length,
-                    processed: reportData.filter((it) => it.processed).length,
-                    new: newWordsCount
+                    words: newWords,
+                    total: reportStats.total,
+                    viewTotal: reportStats.viewTotal,
+                    approved: reportStats.approved,
+                    processed: reportStats.processed,
+                    new: reportStats.new
                 }
             }));
-            this.reportData = reportData;
         });
         this.socket.on("timer-end", () => {
             this.timerSound.play();
@@ -357,6 +345,10 @@ class Game extends React.Component {
                 wordReportSent: false
             }));
             popup.alert({content: text});
+            if (text === "Success" && this.state.wordReportData) {
+                const limit = this.state.wordReportData.words.length;
+                this.socket.emit("get-word-reports-data", {offset: 0, limit: limit});
+            }
         });
         window.socket.on("disconnect", (event) => {
             this.setState({
@@ -557,7 +549,9 @@ class Game extends React.Component {
     }
 
     handleClickGetReports() {
-        this.socket.emit("get-word-reports-data");
+        this.setState(Object.assign({}, this.state, {wordReportOffset: 0}), () => {
+             this.socket.emit("get-word-reports-data", {offset: 0});
+        });
     }
 
     handleClickCloseReports() {
@@ -647,14 +641,17 @@ class Game extends React.Component {
     }
 
     handleClickShowMoreReports() {
-        this.state.wordReportData.words = this.state.wordReportData.wordsFull.slice(0, this.state.wordReportData.words.length + 1000);
-        this.setState(Object.assign({}, this.state));
+        const newOffset = this.state.wordReportData.words.length;
+        this.setState(Object.assign({}, this.state, {wordReportOffset: newOffset}), () => {
+             this.socket.emit("get-word-reports-data", {offset: newOffset, limit: 250});
+        });
     }
 
     handleClickSubmitReports() {
+        const offset = this.state.wordReportOffset || 0;
         const submitData = this.state.wordReportData.words.filter(
             (it) => !it.processed && it.approved !== null
-        ).map((it) => ({datetime: it.datetime, approved: it.approved, level: it.level}));
+        ).map((it) => ({datetime: it.datetime, approved: it.approved, level: it.level, offset}));
         if (!this.state.wordReportSent && submitData.length) {
             this.socket.emit("apply-words-moderation", document.getElementById("word-moder-key").value, submitData);
             this.setState(Object.assign({}, this.state, {
@@ -845,21 +842,8 @@ class Game extends React.Component {
     toggleWordHistory(it) {
         if (it.wordHistory)
             it.wordHistory = null;
-        else {
-            it.wordHistory = [];
-            this.reportData.forEach((report) => {
-                if (!this.isAutoDenied(report))
-                    if (it.datetime > report.datetime) {
-                        const word = it.wordList?.length === 1 ? it.wordList[0] : it.word;
-                        if (!report.wordList && report.word === word)
-                            it.wordHistory.push(report);
-                        else if (report.wordList && report.wordList.includes(word))
-                            it.wordHistory.push({
-                                ...report, word, wordList: undefined
-                            })
-                    }
-            });
-        }
+        else
+            it.wordHistory = it.history || [];
         this.setState(this.state);
     }
 
@@ -1236,7 +1220,7 @@ class Game extends React.Component {
                                                         <div
                                                             className="word-report-item-word">{!it.custom
                                                             ? ((!it.newWord || it.wordList?.length === 1)
-                                                                ? <span>{it.word || it.wordList[0]}{it.hasHistory ?
+                                                                ? <span>{it.word || it.wordList[0]}{it.history && it.history.length ?
                                                                     <span> <i onClick={() => this.toggleWordHistory(it)}
                                                                               className="material-icons history-button">
                                                                     {!it.wordHistory ? "history" : "close"}
@@ -1300,7 +1284,7 @@ class Game extends React.Component {
                                                                 </div>
                                                             </div>)}
                                                         </div> : ""}
-                                                    </div>))}{(data.wordReportData.wordsFull.length > data.wordReportData.words.length) ? (
+                                                    </div>))}{(data.wordReportData.viewTotal > data.wordReportData.words.length) ? (
                                                 <div className="word-report-show-all"
                                                      onClick={() => this.handleClickShowMoreReports()}>Show
                                                     more</div>) : ""}
