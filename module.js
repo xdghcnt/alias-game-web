@@ -38,7 +38,13 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 history: history
             });
         });
-        structured.sort((a, b) => (b.datetime || 0) - (a.datetime || 0));
+        structured.sort((a, b) => {
+            const aProcessed = !!a.processed;
+            const bProcessed = !!b.processed;
+            if (aProcessed !== bProcessed)
+                return aProcessed ? 1 : -1;
+            return (b.datetime || 0) - (a.datetime || 0)
+        });
         reportedWordsView = structured;
     };
 
@@ -1088,7 +1094,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                 achievement: registry.achievements.createPack.id
                                             });
                                         } else
-                                            fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
+                                            fs.unlink(`${appDir}/custom/new/${reportData.datetime}.json`, () => {
                                             });
                                     } else {
                                         if (reportData.approved) {
@@ -1166,7 +1172,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 reportData.processed = true;
                                 reportData.approved = false;
                                 if (reportData.custom)
-                                    fs.unlink(`${appDir}/custom/new/${reportData.packName}.json`, () => {
+                                    fs.unlink(`${appDir}/custom/new/${reportData.datetime}.json`, () => {
                                     });
                             }
                         });
