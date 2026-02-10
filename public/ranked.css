@@ -174,3 +174,7 @@ a {
 }
 
 .no-meta-toggle-button.active {background: rgb(79, 109, 109);color: white;border: 1px solid transparent;}
+.moder-notice{
+    margin-bottom: 9px; 
+    opacity: 0.8;
+}
