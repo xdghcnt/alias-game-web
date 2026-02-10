@@ -415,6 +415,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 registerRankedUser = (user, authUser) => {
                     rankedUsers[authUser._id] = {
                         score: 1000,
+                        scoreNoMeta: 1000,
                         name: authUser.name,
                         id: authUser._id,
                         registerTime: new Date()
