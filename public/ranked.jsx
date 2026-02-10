@@ -236,7 +236,7 @@ class Page extends React.Component {
                             <i onClick={() => this.removeGame(gameRow.datetime)}
                                className="material-icons remove-game">delete_forever</i></div>
                         <div className="players">
-                            {gameRow.playerScoresSorted.map((player) => (<div className="match-player">
+                            {(!data.noMeta ? gameRow.playerScoresSorted : gameRow.playerScoresSortedNoMeta).map((player) => (<div className="match-player">
                                 <div
                                     className="player-name">{data.rankedUsers[player]?.name} {gameRow.moderator === player ? (
                                     <i className="material-icons host-button"
