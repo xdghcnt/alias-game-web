@@ -543,6 +543,8 @@ class Game extends React.Component {
     handleClickRestart() {
         if (!this.gameIsOver)
             popup.confirm({content: "Restart? Are you sure?"}, (evt) => evt.proceed && this.socket.emit("restart-game"));
+        else if (this.unsavedRankedResults)
+            popup.confirm({content: "Результаты рейтинговой игры будут потеряны. Вы уверены?"}, (evt) => evt.proceed && this.socket.emit("restart-game"))
         else
             this.socket.emit("restart-game")
     }
