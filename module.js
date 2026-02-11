@@ -13,11 +13,22 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const appDir = registry.config.appDir || __dirname;
     let reportedWordsData = [], reportedWords = [], rankedGames = [];
     let reportedWordsView = [];
+    let existingPacks = new Set();
+    const updateExistingPacks = () => {
+        fs.readdir(`${appDir}/custom`, (err, files) => {
+            if (!err && files) {
+                existingPacks = new Set(files.filter(f => f.endsWith('.json')).map(f => f.replace('.json', '')));
+                updateReportView();
+            }
+        });
+    };
     const updateReportView = () => {
         const groups = {};
         const packReports = [];
         reportedWordsData.forEach(report => {
             if (report.custom || (report.wordList && report.wordList.length > 1)) {
+                if (report.custom)
+                    report.exists = existingPacks.has(report.packName);
                 packReports.push(report);
             } else {
                 const word = report.word || (report.wordList ? report.wordList[0] : null);
@@ -53,6 +64,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const rankedUserByToken = {};
 
     const defaultWords = JSON.parse(fs.readFileSync(`${appDir}/moderated-words.json`));
+
+    updateExistingPacks();
 
     fs.readFile(`${appDir}/reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
         if (data) {
@@ -1087,6 +1100,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                             fs.rename(
                                                 `${appDir}/custom/new/${reportData.datetime}.json`,
                                                 `${appDir}/custom/${reportData.packName}.json`, () => {
+                                                    updateExistingPacks();
                                                 }
                                             );
                                             reportAchievements.push({

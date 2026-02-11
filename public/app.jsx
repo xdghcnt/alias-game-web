@@ -1230,6 +1230,7 @@ class Game extends React.Component {
                                                                 </div>))
                                                             : (
                                                                 <span>{it.packName}&nbsp;
+                                                                    {it.exists ? <i className="material-icons duplicate-warning" title="С таким именем уже есть пак">error</i> : ""}
                                                                     {!(it.processed && !it.approved)
                                                                         ? (<span
                                                                             onClick={() => !it.loading && this.handleClickShowPack(index)}

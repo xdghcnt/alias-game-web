@@ -1151,3 +1151,11 @@ a {
 .ranked-auth-button.button i {
     font-size: 18px;
 }
+
+.duplicate-warning {
+    font-size: 17px;
+    margin-right: 5px;
+    top: 4px;
+    position: relative;
+    color: #d9a0a0;
+}
