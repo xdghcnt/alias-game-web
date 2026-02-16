@@ -43,7 +43,7 @@ class Page extends React.Component {
                     value: currentScore
                 }, async (evt) => {
                     if (evt.proceed) {
-                        let query = `/alias/ranked/edit-score?key=${key}&user=${id}&score=${evt.input_value}`;
+                        let query = `/alias/ranked/edit-score?key=${encodeURIComponent(key)}&user=${id}&score=${evt.input_value}`;
                         if (this.state.noMeta)
                             query += '&noMeta=true'
                         const result = (await (await fetch(query)).json());
@@ -65,7 +65,7 @@ class Page extends React.Component {
                 const key = evt.input_value;
                 if (evt.proceed) {
                     const result = (await (await fetch(
-                        `/alias/ranked/remove-game?key=${key}&datetime=${datetime}`
+                        `/alias/ranked/remove-game?key=${encodeURIComponent(key)}&datetime=${datetime}`
                     )).json());
                     if (result.message)
                         popup.alert({content: result.message});
@@ -182,21 +182,25 @@ class Page extends React.Component {
                           href={`https://discordapp.com/users/${moderator.discord}/`}>{moderator.name}</a>
                         {index !== data.moderators.length - 1 ? <span className="spacer"/> : ''}</>))}
             </div>
-            <div class="moder-notice">За модеркой обращайтесь к <a class="moderator" target="_blank" title="Контакт в Discord" href="https://discordapp.com/users/291781392126312448/">orthodox</a>
+            <div class="moder-notice">За модеркой обращайтесь к <a class="moderator" target="_blank"
+                                                                   title="Контакт в Discord"
+                                                                   href="https://discordapp.com/users/291781392126312448/">orthodox</a>
             </div>
             <div className="title">Режим</div>
             <div class="no-meta-toggle">
                 <div className={cs("no-meta-toggle-button", {
-                        active: !data.noMeta
-                    })} onClick={() => this.setState({...data, noMeta: false})}>Обычный</div>
+                    active: !data.noMeta
+                })} onClick={() => this.setState({...data, noMeta: false})}>Обычный
+                </div>
                 <div className={cs("no-meta-toggle-button", {
-                        active: data.noMeta
-                    })} onClick={() => this.setState({...data, noMeta: true})}>No meta
+                    active: data.noMeta
+                })} onClick={() => this.setState({...data, noMeta: true})}>No meta
                     <i className="material-icons">fiber_new</i></div>
             </div>
             <div className="title">Игроки</div>
             <div className="players section">
-                {(!data.noMeta ? data.players : data.playersNoMeta).slice(0, data.showFirst20 ? 20 : undefined).map((player, index) => (<div className={cs("player-row", {
+                {(!data.noMeta ? data.players : data.playersNoMeta).slice(0, data.showFirst20 ? 20 : undefined).map((player, index) => (
+                    <div className={cs("player-row", {
                         inactive: player.inactive
                     })}>
                         <div className="rank">{index + 1}</div>
@@ -238,24 +242,25 @@ class Page extends React.Component {
                             <i onClick={() => this.removeGame(gameRow.datetime)}
                                className="material-icons remove-game">delete_forever</i></div>
                         <div className="players">
-                            {(!data.noMeta ? gameRow.playerScoresSorted : gameRow.playerScoresSortedNoMeta).map((player) => (<div className="match-player">
-                                <div
-                                    className="player-name">{data.rankedUsers[player]?.name} {gameRow.moderator === player ? (
-                                    <i className="material-icons host-button"
-                                       title="Game host">
-                                        stars
-                                    </i>) : ""}</div>
-                                <div className="player-score">
-                                    <i className="material-icons host-button"
-                                       title="Взято слов">
-                                        font_download
-                                    </i>&nbsp;{gameRow.playerScores[player]}</div>
-                                <div className="player-diff">
-                                    <i className="material-icons host-button"
-                                       title="Изменение рейтинга">
-                                        difference
-                                    </i>&nbsp;{gameRow.rankedScoreDiffs[player]}</div>
-                            </div>))}
+                            {(!data.noMeta ? gameRow.playerScoresSorted : gameRow.playerScoresSortedNoMeta).map((player) => (
+                                <div className="match-player">
+                                    <div
+                                        className="player-name">{data.rankedUsers[player]?.name} {gameRow.moderator === player ? (
+                                        <i className="material-icons host-button"
+                                           title="Game host">
+                                            stars
+                                        </i>) : ""}</div>
+                                    <div className="player-score">
+                                        <i className="material-icons host-button"
+                                           title="Взято слов">
+                                            font_download
+                                        </i>&nbsp;{gameRow.playerScores[player]}</div>
+                                    <div className="player-diff">
+                                        <i className="material-icons host-button"
+                                           title="Изменение рейтинга">
+                                            difference
+                                        </i>&nbsp;{gameRow.rankedScoreDiffs[player]}</div>
+                                </div>))}
                         </div>
                         <div className="skill-group">
                             Skill group: {gameRow.skillGroup}
