@@ -315,9 +315,6 @@ class Game extends React.Component {
                 activeWordReported: data && data.reported
             }));
         });
-        this.socket.on("auth-name-duplicated", () => {
-            popup.alert({content: `Никнейм «${window.commonRoom.getPlayerName(this.userId)}» уже занят`});
-        });
         this.socket.on("word-reports-data", (reportStats) => {
             const isReset = !reportStats.offset;
             const newWords = isReset ? reportStats.words : [...this.state.wordReportData.words, ...reportStats.words];
@@ -483,10 +480,16 @@ class Game extends React.Component {
 
     handleTeamClick(id) {
         if (this.state.phase === 0) {
-            if (this.state.ranked && !this.state.rankedUsers[this.userId])
-                this.handleClickOpenRanked();
-            else
+            if (this.state.ranked && !this.state.authUsers[this.userId])
+                window.commonRoom.toggleShowProfile(this.userId);
+            else if (this.state.ranked && !this.state.rankedUsers[this.userId]) {
+                this.socket.emit("check-ranked-account");
+                setTimeout(() => {
+                    this.socket.emit("team-join", id);
+                }, 1000);
+            } else {
                 this.socket.emit("team-join", id);
+            }
         }
     }
 
@@ -551,7 +554,7 @@ class Game extends React.Component {
 
     handleClickGetReports() {
         this.setState(Object.assign({}, this.state, {wordReportOffset: 0}), () => {
-             this.socket.emit("get-word-reports-data", {offset: 0});
+            this.socket.emit("get-word-reports-data", {offset: 0});
         });
     }
 
@@ -598,24 +601,8 @@ class Game extends React.Component {
             popup.alert({content: "Чтобы получить доступ к добавлению слов, нужно включить его в окне просмотра репортов"});
     }
 
-    handleClickAuthLogout() {
-        this.socket.emit('fb-logout')
-    }
-
-    /*handleClickAuthSMS() {
-        // Deprecated
-    }*/
-
     handleClickToggleRankedMode(noMeta) {
         this.socket.emit('toggle-ranked', noMeta);
-    }
-
-    handleClickAuthRanked(evt) {
-        if (!this.state.authUsers[this.state.userId]) {
-            window.commonRoom.toggleShowProfile(this.state.userId, evt);
-        } else {
-            this.socket.emit('auth-ranked');
-        }
     }
 
     handleWordAddChange(value) {
@@ -644,7 +631,7 @@ class Game extends React.Component {
     handleClickShowMoreReports() {
         const newOffset = this.state.wordReportData.words.length;
         this.setState(Object.assign({}, this.state, {wordReportOffset: newOffset}), () => {
-             this.socket.emit("get-word-reports-data", {offset: newOffset, limit: 250});
+            this.socket.emit("get-word-reports-data", {offset: newOffset, limit: 250});
         });
     }
 
@@ -829,9 +816,17 @@ class Game extends React.Component {
     }
 
     handleClickOpenRanked() {
-        this.setState(Object.assign({}, this.state, {
-            rankedModalActive: true,
-        }));
+
+        if (!this.state.authUsers[this.userId]) {
+            window.commonRoom.toggleShowProfile(this.userId);
+        } else {
+            this.socket.emit("check-ranked-account");
+            setTimeout(() => {
+                this.setState(Object.assign({}, this.state, {
+                    rankedModalActive: true,
+                }));
+            }, 1000);
+        }
     }
 
     isAutoDenied(report) {
@@ -1149,7 +1144,7 @@ class Game extends React.Component {
                                                 onClick={() => this.handleClickOpenRanked()}>
                                                 <i
                                                     className="material-icons">emoji_events</i>Ranked
-                                                    {data.rankedNoMeta ? <div class="no-meta-badge">No meta</div> : ''}
+                                                {data.rankedNoMeta ? <div class="no-meta-badge">No meta</div> : ''}
                                             </div>
                                             <div
                                                 className={cs("meta-game-button", {
@@ -1221,7 +1216,8 @@ class Game extends React.Component {
                                                         <div
                                                             className="word-report-item-word">{!it.custom
                                                             ? ((!it.newWord || it.wordList?.length === 1)
-                                                                ? <span>{it.word || it.wordList[0]}{it.history && it.history.length ?
+                                                                ?
+                                                                <span>{it.word || it.wordList[0]}{it.history && it.history.length ?
                                                                     <span> <i onClick={() => this.toggleWordHistory(it)}
                                                                               className="material-icons history-button">
                                                                     {!it.wordHistory ? "history" : "close"}
@@ -1232,7 +1228,9 @@ class Game extends React.Component {
                                                                 </div>))
                                                             : (
                                                                 <span>{it.packName}&nbsp;
-                                                                    {it.exists ? <i className="material-icons duplicate-warning" title="С таким именем уже есть пак">error</i> : ""}
+                                                                    {it.exists ?
+                                                                        <i className="material-icons duplicate-warning"
+                                                                           title="С таким именем уже есть пак">error</i> : ""}
                                                                     {!(it.processed && !it.approved)
                                                                         ? (<span
                                                                             onClick={() => !it.loading && this.handleClickShowPack(index)}
@@ -1388,48 +1386,24 @@ class Game extends React.Component {
                                             Активировать Ranked-режим могут только <a target="_blank"
                                                                                       href="./alias/ranked#moderators">Ranked-модераторы</a>
                                         </div>
-                                        <span className="ranked-auth-buttons">
+                                        {data.rankedUsers?.[data.userId]?.moderator ?
+                                            <span className="ranked-auth-buttons">
                                             <span className={cs("ranked-auth-button", "button", {
                                                 inactive: !data.rankedUsers?.[data.userId]?.moderator
                                             })}
                                                   onClick={() => this.handleClickToggleRankedMode()}>{!data.ranked
-                                                ? 'Активировать' : 'Деактивировать'}
+                                                ? 'Активировать normal' : 'Деактивировать'}
                                             </span>
-                                            { !data.ranked ? 
-                                                <span className={cs("ranked-auth-button", "button", {
-                                                    inactive: !data.rankedUsers?.[data.userId]?.moderator
-                                                })}
-                                                    onClick={() => this.handleClickToggleRankedMode(true)}>
-                                                        Активировать (no meta)<i className="material-icons">fiber_new</i>
+                                                {!data.ranked ?
+                                                    <span className={cs("ranked-auth-button", "button", {
+                                                        inactive: !data.rankedUsers?.[data.userId]?.moderator
+                                                    })}
+                                                          onClick={() => this.handleClickToggleRankedMode(true)}>
+                                                        Активировать no meta<i
+                                                        className="material-icons">fiber_new</i>
                                                     </span>
-                                            : ''}
-                                        </span>
-                                        <div className="ranked-status-user">
-                                            Пользователь:&nbsp;<span
-                                            className="ranked-status">{data.rankedUsers[data.userId]
-                                            ? `Авторизован ${!data.rankedUsers?.[data.userId]?.moderator ? '' : '(модератор)'}`
-                                            : 'Не авторизован'}</span>
-                                        </div>
-                                        <div className="ranked-desc">
-                                            Участвовать в Ranked-играх можно только войдя в Ranked-аккаунт.
-                                        </div>
-                                        <div className="ranked-desc">
-                                            Аккаунт будет создан при первом входе, и будет использовать ваш текущий
-                                            никнейм
-                                            (Его нельзя будет поменять)
-                                        </div>
-                                        {!data.rankedUsers[data.userId] ? (
-                                            <div className="ranked-auth-buttons">
-                                            <span className="ranked-auth-button button"
-                                                  onClick={(evt) => this.handleClickAuthRanked(evt)}>Войти в Ranked
-                                            </span>
-                                            </div>) : (
-                                            <div className="ranked-auth-buttons">
-                                                <span className="ranked-auth-button button"
-                                                      onClick={() => this.handleClickAuthLogout()}>Выйти из Ranked-аккаунта
-                                            </span>
-                                            </div>
-                                        )}
+                                                    : ''}
+                                        </span> : ''}
                                     </div>
                                 </div>
                             </div>) : ""}

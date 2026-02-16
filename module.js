@@ -61,8 +61,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
     const rankedUsers = JSON.parse(fs.readFileSync(`${appDir}/auth-users.json`));
 
-    const rankedUserByToken = {};
-
     const defaultWords = JSON.parse(fs.readFileSync(`${appDir}/moderated-words.json`));
 
     updateExistingPacks();
@@ -88,10 +86,14 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     registry.handleAppPage(path, `${__dirname}/public/app.html`);
     registry.handleAppPage(`${path}/ranked`, `${__dirname}/public/ranked.html`);
 
-    app.get("/alias/ranked/data", (req, res) => {
+    app.get("/alias/ranked/data", async (req, res) => {
+        const profiles = await registry.authUsers.getUsersMiniProfiles(Object.keys(rankedUsers));
+        Object.keys(rankedUsers).map((userId) => {
+            rankedUsers[userId].name = profiles[userId].name;
+        });
         res.send({
             rankedGames,
-            rankedUsers
+            rankedUsers,
         });
     });
 
@@ -481,11 +483,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         })
                 },
                 loginUserRanked = (user, rankedUserId) => {
-                    const rankedUser = rankedUsers[rankedUserId];
-                    rankedUserByToken[user] = rankedUser;
-                    room.rankedUsers[user] = rankedUser;
-                    removeDuplicateUserRanked(user);
-                    update();
+                    room.rankedUsers[user] = rankedUsers[rankedUserId];
                 },
                 toggleRanked = (state, noMeta) => {
                     room.ranked = state;
@@ -498,6 +496,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         room.mode = 'solo';
                         room.deafMode = false;
                         toggleSoloMode(true);
+                        for (const player of [...room.onlinePlayers]) {
+                            authRanked(player, true);
+                        }
                         const firstTeam = Object.keys(room.teams)[0];
                         if (firstTeam)
                             room.teams[firstTeam].players.forEach((playerId) => {
@@ -508,6 +509,19 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             });
                         update();
                     }
+                },
+                authRanked = (user, register) => {
+                    if (room.authUsers[user]) {
+                        const authUser = room.authUsers[user];
+                        if (rankedUsers[authUser._id])
+                            loginUserRanked(user, authUser._id);
+                        else if (register)
+                            registerRankedUser(user, authUser);
+                    }
+                },
+                onUserAuth = (user) => {
+                    authRanked(user, room.ranked);
+                    update();
                 },
                 toggleSoloMode = (state) => {
                     room.soloMode = state;
@@ -522,19 +536,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         });
                     } else room.currentAssistant = null;
                     restartGame();
-                },
-                removeDuplicateUserRanked = (newUser) => {
-                    if (rankedUserByToken[newUser])
-                        Object.keys(room.rankedUsers).forEach((user) => {
-                            if (user !== newUser && room.rankedUsers[user].id === rankedUserByToken[newUser].id) {
-                                delete room.rankedUsers[user];
-                                delete rankedUserByToken[user];
-                                leaveTeams(user);
-                                room.spectators.add(user);
-                                if (room.phase === 2)
-                                    endRound();
-                            }
-                        });
                 },
                 saveRankedResults = (user, leaverId) => {
                     if (room.ranked && (room.phase === 1 || leaverId) && room.hostId === user
@@ -683,12 +684,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         room.spectators.add(user);
                     room.onlinePlayers.add(user);
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
-                    if (rankedUserByToken[user]) {
-                        removeDuplicateUserRanked(user);
-                        room.rankedUsers[user] = rankedUserByToken[user];
-                    }
+
                     if (!this.state.roomWordsList)
-                        selectWordSet(2);
+                        selectWordSet(room.rankedNoMeta ? 5 : 2);
                     if (room.currentPlayer === user && this.state.activeWord)
                         send(user, "active-word", {
                             word: this.state.activeWord,
@@ -724,6 +722,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             this.userJoin = userJoin;
             this.userLeft = userLeft;
             this.userEvent = userEvent;
+            this.onUserAuth = onUserAuth;
             this.eventHandlers = {
                 ...this.eventHandlers,
                 "team-join": (user, id) => {
@@ -907,7 +906,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         selectWordSet(wordSet, user);
                 },
                 "give-host": (user, playerId) => {
-                    if (room.hostId === user && playerId && (!room.ranked || rankedUserByToken[playerId]?.moderator)) {
+                    if (room.hostId === user && playerId) {
                         room.hostId = playerId;
                         this.emit("host-changed", user, playerId);
                     }
@@ -1295,27 +1294,13 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         }
                     }
                 },
-                "auth-ranked": (user) => {
-                    if (room.authUsers[user]) {
-                        const authUser = room.authUsers[user];
-                        if (!rankedUsers[authUser._id])
-                            registerRankedUser(user, authUser);
-                        else
-                            loginUserRanked(user, authUser._id);
-                    } else send(user, 'message', 'Вы не авторизованы в Discord');
-                },
-                "fb-logout": (user) => {
-                    delete room.rankedUsers[user];
-                    delete rankedUserByToken[user];
-                    if (room.ranked) {
-                        leaveTeams(user);
-                        room.spectators.add(user);
-                    }
-                    update();
-                },
                 "toggle-ranked": (user, noMeta) => {
                     if (room.phase === 0 && room.hostId === user && room.rankedUsers[user]?.moderator)
                         toggleRanked(!room.ranked, noMeta);
+                    update();
+                },
+                "check-ranked-account": (user) => {
+                    authRanked(user, true);
                     update();
                 },
                 "toggle-theme": (user) => {
@@ -1353,10 +1338,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
         setSnapshot(snapshot) {
             Object.assign(this.room, snapshot.room);
             this.state = snapshot.state;
-            Object.keys(this.room.rankedUsers).forEach((user) => {
-                rankedUserByToken[user] = rankedUsers[this.room.rankedUsers[user].id];
-                this.room.rankedUsers[user] = rankedUsers[this.room.rankedUsers[user].id];
-            })
             if (this.room.level === 0)
                 this.room.level = 2;
             this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level === 'ranked' ? 2 : this.room.level]]);
