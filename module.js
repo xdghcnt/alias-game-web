@@ -89,7 +89,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     app.get("/alias/ranked/data", async (req, res) => {
         const profiles = await registry.authUsers.getUsersMiniProfiles(Object.keys(rankedUsers));
         Object.keys(rankedUsers).map((userId) => {
-            rankedUsers[userId].name = profiles[userId].name;
+            if (profiles[userId])
+                rankedUsers[userId].name = profiles[userId].name;
         });
         res.send({
             rankedGames,

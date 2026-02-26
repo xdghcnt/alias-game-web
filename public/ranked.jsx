@@ -96,7 +96,7 @@ class Page extends React.Component {
             });
         }
         this.setState({
-            showFirst20: true,
+            showFirst20: this.state.showFirst20 ?? true,
             noMeta: false,
             rankedUsers: data.rankedUsers,
             rankedUsersNoMeta: data.rankedUsersNoMeta,
