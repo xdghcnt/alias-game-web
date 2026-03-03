@@ -605,7 +605,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             playerScores,
                             playerRanks: scoreRanks,
                             rankedScoreDiffs,
-                            datetime: new Date(),
+                            datetime: new Date().toISOString(),
                             moderator: room.rankedUsers[user].id,
                             noMeta: room.rankedNoMeta,
                             prevScores,
