@@ -1289,6 +1289,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     approved: null
                                 }))
                                 reportedWordsData.push(...reportList);
+                                updateReportView();
                                 fs.appendFile(`${appDir}/reported-words.txt`, `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
                                 });
                             }
