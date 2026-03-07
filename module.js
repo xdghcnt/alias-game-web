@@ -491,7 +491,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     room.rankedNoMeta = !!noMeta;
                     selectWordSet(room.rankedNoMeta ? 5 : 2);
                     if (room.ranked) {
-                        room.level = 'ranked';
                         room.soloModeGoal = 1;
                         room.roundTime = 60;
                         room.mode = 'solo';
@@ -1025,8 +1024,6 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)
                         && room.level !== 0 && room.level !== level && [0, 1, 2, 3, 4, 5].includes(level)) {
                         let currentLevel = room.level;
-                        if (currentLevel === 'ranked')
-                            currentLevel = 2;
                         const reportInfo = {
                             datetime: +new Date(),
                             user: user,
@@ -1348,7 +1345,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             this.state = snapshot.state;
             if (this.room.level === 0)
                 this.room.level = 2;
-            this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level === 'ranked' ? 2 : this.room.level]]);
+            this.state.roomWordsList = shuffleArray([...defaultWords[this.room.level]]);
             this.room.phase = 0;
             this.room.currentBet = Infinity;
             this.room.timer = null;

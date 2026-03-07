@@ -1149,7 +1149,7 @@ class Game extends React.Component {
                                             </div>
                                             <div
                                                 className={cs("ranked-game-button", "settings-button", {
-                                                    "level-selected": this.state.level === 'ranked',
+                                                    "level-selected": this.state.ranked || this.state.rankedNoMeta
                                                 })}
                                                 onClick={() => this.handleClickOpenRanked()}>
                                                 <i
