@@ -642,7 +642,7 @@ body.dark-theme {
     width: 100%;
     overflow: auto;
     overflow-x: hidden;
-    height: calc(100% - 100px);
+    height: calc(100% - 116px);
     background: #dedede;
     border: 1px solid gainsboro;
     box-sizing: border-box;
@@ -813,6 +813,10 @@ input:checked + .word-report-approve.yes {
 .word-add-level-select {
     vertical-align: middle;
     text-align: center;
+    display: flex;
+    flex-flow: wrap;
+    margin-bottom: -20px;
+    margin-left: 10px;
 }
 
 .word-add-level-select > span {
@@ -1160,4 +1164,12 @@ a {
     top: 4px;
     position: relative;
     color: #d9a0a0;
+}
+
+.no-meta-toggle {
+    font-size: 14px;
+    padding: 1px 5px;
+    position: absolute;
+    right: 29px;
+    top: 5px;
 }

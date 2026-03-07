@@ -116,11 +116,12 @@ class Words extends React.Component {
                             onChange={evt => game.handleChangeWordPoints(index, evt.target.valueAsNumber)}
                         />
 
-                        {(data.level !== 0 && data.level !== 5 && !data.rankedNoMeta && (data.activeWord !== word.word || word.reported)) ? (
+                        {(data.level !== 0 && (data.activeWord !== word.word || word.reported)) ? (
                             <div className="report-word-menu"
                                  onClick={() => data.sortMode && game.handleClickReportWordLevel(word.word, 0)}
                                  onTouchStart={(e) => e.target.focus()}>
                                 {!word.reported ? (<div className="report-word-list">
+                                    {data.level !== 5 && !data.rankedNoMeta ? (<>
                                     {data.level !== 1 ? (<div
                                         className="settings-button"
                                         onClick={() => game.handleClickReportWordLevel(word.word, 1)}><i
@@ -141,6 +142,7 @@ class Words extends React.Component {
                                         onClick={() => game.handleClickReportWordLevel(word.word, 4)}><i
                                         className="material-icons">whatshot</i> Insane ←
                                     </div>) : ""}
+                                    </>) : ""}
                                     <div
                                         className="settings-button"
                                         onClick={() => game.handleClickReportWordLevel(word.word, 0)}><i
@@ -326,6 +328,7 @@ class Game extends React.Component {
                     viewTotal: reportStats.viewTotal,
                     approved: reportStats.approved,
                     processed: reportStats.processed,
+                    noMeta: reportStats.noMeta,
                     new: reportStats.new
                 }
             }));
@@ -343,7 +346,7 @@ class Game extends React.Component {
             popup.alert({content: text});
             if (text === "Success" && this.state.wordReportData) {
                 const limit = this.state.wordReportData.words.length;
-                this.socket.emit("get-word-reports-data", {offset: 0, limit: limit});
+                this.socket.emit("get-word-reports-data", {offset: 0, limit: limit, noMeta: this.state.wordReportNoMeta});
             }
         });
         window.socket.on("disconnect", (event) => {
@@ -554,7 +557,13 @@ class Game extends React.Component {
 
     handleClickGetReports() {
         this.setState(Object.assign({}, this.state, {wordReportOffset: 0}), () => {
-            this.socket.emit("get-word-reports-data", {offset: 0});
+            this.socket.emit("get-word-reports-data", {offset: 0, noMeta: this.state.wordReportNoMeta});
+        });
+    }
+
+    handleToggleReportNoMeta() {
+        this.setState(Object.assign({}, this.state, {wordReportOffset: 0, wordReportNoMeta: !this.state.wordReportNoMeta}), () => {
+            this.socket.emit("get-word-reports-data", {offset: 0, noMeta: this.state.wordReportNoMeta});
         });
     }
 
@@ -631,7 +640,7 @@ class Game extends React.Component {
     handleClickShowMoreReports() {
         const newOffset = this.state.wordReportData.words.length;
         this.setState(Object.assign({}, this.state, {wordReportOffset: newOffset}), () => {
-            this.socket.emit("get-word-reports-data", {offset: newOffset, limit: 250});
+            this.socket.emit("get-word-reports-data", {offset: newOffset, limit: 250, noMeta: this.state.wordReportNoMeta});
         });
     }
 
@@ -672,6 +681,7 @@ class Game extends React.Component {
     }
 
     toggleWordReportChangeTargetDifficulty(index) {
+        if (this.state.wordReportData.noMeta) return;
         const word = this.state.wordReportData.words[index];
         if (!word.processed) {
             word.level++;
@@ -1188,6 +1198,11 @@ class Game extends React.Component {
                             {data.wordReportData ? (<div className="word-report-modal">
                                 <div className="word-report-modal-content">
                                     <div className="word-report-title">Words moderation
+                                        <span
+                                            className="settings-button no-meta-toggle"
+                                            onClick={() => this.handleToggleReportNoMeta()}>
+                                            {data.wordReportData.noMeta ? "Режим: no meta" : "Режим: обычный"}
+                                        </span>
                                         <div className="word-report-modal-stats">
                                             Total<span
                                             className="word-report-stat-num">{data.wordReportData.total}</span>
@@ -1244,11 +1259,12 @@ class Game extends React.Component {
                                                                         : ""}</span>)}</div>
                                                         <div
                                                             className="word-report-item-transfer">
-                                                            {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
+                                                            {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane", "No meta"][it.currentLevel] : "New"} → {
                                                             !it.custom ?
-                                                                <span className="word-report-item-target"
+                                                                <span className={cs({"word-report-item-target": !data.wordReportData.noMeta})}
+                                                                      style={{cursor: data.wordReportData.noMeta ? 'default' : 'pointer'}}
                                                                       onClick={() => this.toggleWordReportChangeTargetDifficulty(index)}>
-                                                                {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]}
+                                                                {["Removed", "Easy", "Normal", "Hard", "Insane", "No meta"][it.level]}
                                                             </span> : "Custom"}
                                                         </div>
                                                         <div
@@ -1274,8 +1290,8 @@ class Game extends React.Component {
                                                             {it.wordHistory.map((it) => <div className="word-report-item">
                                                                 <div className="word-report-item-name">{it.playerName}</div>
                                                                 <div className="word-report-item-transfer">
-                                                                    {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel] : "New"} → {
-                                                                    !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane"][it.level] : "Custom"}
+                                                                    {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane", "No meta"][it.currentLevel] : "New"} → {
+                                                                    !it.custom ? ["Removed", "Easy", "Normal", "Hard", "Insane", "No meta"][it.level] : "Custom"}
                                                                 </div>
                                                                 <div className="word-report-item-status">
                                                                     {it.approved ? (
@@ -1340,6 +1356,9 @@ class Game extends React.Component {
                                             <span
                                                 onClick={() => this.handleWordAddLevel(4)}
                                                 className={cs("settings-button", {"level-selected": data.wordAddLevel === 4})}>Insane</span>
+                                            <span
+                                                onClick={() => this.handleWordAddLevel(5)}
+                                                className={cs("settings-button", {"level-selected": data.wordAddLevel === 5})}>No&nbsp;meta</span>
                                             <span
                                                 onClick={() => this.handleWordAddLevel("custom")}
                                                 className={cs("settings-button", {"level-selected": data.wordAddLevel === "custom"})}>Custom</span>
@@ -1418,7 +1437,7 @@ class Game extends React.Component {
                                             {data.wordReportNotify.approved.map((it) => (<div
                                                 className="word-report-notify-item">
                                                 {it.word} <span className="word-report-notify-transfer">
-                                        ({["", "Easy", "Normal", "Hard", "Insane"][it.currentLevel]} → {["Removed", "Easy", "Normal", "Hard", "Insane"][it.level]})
+                                        ({["", "Easy", "Normal", "Hard", "Insane", "No meta"][it.currentLevel]} → {["Removed", "Easy", "Normal", "Hard", "Insane", "No meta"][it.level]})
                                     </span></div>))}
                                         </div>
                                     </div>) : ""}

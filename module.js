@@ -24,12 +24,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     };
     const updateReportView = () => {
         const groups = {};
-        const packReports = [];
+        const flatReports = [];
         reportedWordsData.forEach(report => {
-            if (report.custom || (report.wordList && report.wordList.length > 1)) {
+            if (report.custom || (report.wordList && report.wordList.length > 1) || report.level === 5 || report.currentLevel === 5) {
                 if (report.custom)
                     report.exists = existingPacks.has(report.packName);
-                packReports.push(report);
+                flatReports.push(report);
             } else {
                 const word = report.word || (report.wordList ? report.wordList[0] : null);
                 if (word) {
@@ -39,7 +39,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             }
         });
         const structured = [];
-        packReports.forEach(r => structured.push(r));
+        flatReports.forEach(r => structured.push(r));
         Object.keys(groups).forEach(word => {
             const reports = groups[word];
             const latest = reports[reports.length - 1];
@@ -1023,7 +1023,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 },
                 "report-word": (user, word, level) => {
                     if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)
-                        && room.level !== 0 && room.level !== level && [0, 1, 2, 3, 4].includes(level)) {
+                        && room.level !== 0 && room.level !== level && [0, 1, 2, 3, 4, 5].includes(level)) {
                         let currentLevel = room.level;
                         if (currentLevel === 'ranked')
                             currentLevel = 2;
@@ -1062,21 +1062,25 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 "get-word-reports-data": (user, data) => {
                     const offset = data && data.offset || 0;
                     const limit = data && data.limit || 250;
+                    const noMeta = data && data.noMeta || false;
                     let newWords = 0;
                     let approved = 0;
                     let processed = 0;
-                    reportedWordsData.forEach(it => {
+                    const filteredData = reportedWordsData.filter(it => noMeta ? (it.currentLevel === 5 || it.level === 5) : (it.currentLevel !== 5 && it.level !== 5));
+                    const filteredView = reportedWordsView.filter(it => noMeta ? (it.currentLevel === 5 || it.level === 5) : (it.currentLevel !== 5 && it.level !== 5));
+                    filteredData.forEach(it => {
                         if (it.processed) processed++;
                         if (it.approved) approved++;
                         if (it.newWord && it.approved) newWords += (it.wordList ? it.wordList.length : 1);
                     });
                     send(user, "word-reports-data", {
-                        words: reportedWordsView.slice(offset, offset + limit),
-                        total: reportedWordsData.length,
-                        viewTotal: reportedWordsView.length,
+                        words: filteredView.slice(offset, offset + limit),
+                        total: filteredData.length,
+                        viewTotal: filteredView.length,
                         offset,
                         approved,
                         processed,
+                        noMeta,
                         new: newWords
                     });
                 },
@@ -1128,6 +1132,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     !~defaultWords[1].indexOf(word)
                                                     && !~defaultWords[2].indexOf(word)
                                                     && !~defaultWords[3].indexOf(word)
+                                                    && (!defaultWords[5] || !~defaultWords[5].indexOf(word))
                                                     && !~defaultWords[4].indexOf(word)).forEach((word) => {
                                                     defaultWords[reportData.level].push(word);
 
@@ -1266,15 +1271,16 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                         send(user, err);
                                 });
                             }
-                        } else if (wordList.length <= 50 && [1, 2, 3, 4].includes(level)) {
+                        } else if (wordList.length <= 50 && [1, 2, 3, 4, 5].includes(level)) {
                             wordList = [...new Set(wordList.map((word) => word.toLowerCase()))];
                             wordList = wordList.filter((word) =>
                                 word
                                 && word.length <= 50 && word.trim().length > 0
-                                && !~defaultWords[1].indexOf(word)
-                                && !~defaultWords[2].indexOf(word)
-                                && !~defaultWords[3].indexOf(word)
-                                && !~defaultWords[4].indexOf(word));
+                                && (!defaultWords[1] || !~defaultWords[1].indexOf(word))
+                                && (!defaultWords[2] || !~defaultWords[2].indexOf(word))
+                                && (!defaultWords[3] || !~defaultWords[3].indexOf(word))
+                                && (!defaultWords[4] || !~defaultWords[4].indexOf(word))
+                                && (!defaultWords[5] || !~defaultWords[5].indexOf(word)));
                             if (wordList.length > 0) {
                                 let datetime = +new Date();
                                 const reportList = wordList.map(word => ({
