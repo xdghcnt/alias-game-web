@@ -122,26 +122,26 @@ class Words extends React.Component {
                                  onTouchStart={(e) => e.target.focus()}>
                                 {!word.reported ? (<div className="report-word-list">
                                     {data.level !== 5 && !data.rankedNoMeta ? (<>
-                                    {data.level !== 1 ? (<div
-                                        className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, 1)}><i
-                                        className="material-icons">pets</i> Easy ←
-                                    </div>) : ""}
-                                    {(data.level !== 2 && data.level !== "ranked") ? (<div
-                                        className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, 2)}><i
-                                        className="material-icons">child_friendly</i> Normal ←
-                                    </div>) : ""}
-                                    {data.level !== 3 ? (<div
-                                        className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, 3)}><i
-                                        className="material-icons">school</i> Hard ←
-                                    </div>) : ""}
-                                    {data.level !== 4 ? (<div
-                                        className="settings-button"
-                                        onClick={() => game.handleClickReportWordLevel(word.word, 4)}><i
-                                        className="material-icons">whatshot</i> Insane ←
-                                    </div>) : ""}
+                                        {data.level !== 1 ? (<div
+                                            className="settings-button"
+                                            onClick={() => game.handleClickReportWordLevel(word.word, 1)}><i
+                                            className="material-icons">pets</i> Easy ←
+                                        </div>) : ""}
+                                        {(data.level !== 2 && data.level !== "ranked") ? (<div
+                                            className="settings-button"
+                                            onClick={() => game.handleClickReportWordLevel(word.word, 2)}><i
+                                            className="material-icons">child_friendly</i> Normal ←
+                                        </div>) : ""}
+                                        {data.level !== 3 ? (<div
+                                            className="settings-button"
+                                            onClick={() => game.handleClickReportWordLevel(word.word, 3)}><i
+                                            className="material-icons">school</i> Hard ←
+                                        </div>) : ""}
+                                        {data.level !== 4 ? (<div
+                                            className="settings-button"
+                                            onClick={() => game.handleClickReportWordLevel(word.word, 4)}><i
+                                            className="material-icons">whatshot</i> Insane ←
+                                        </div>) : ""}
                                     </>) : ""}
                                     <div
                                         className="settings-button"
@@ -236,7 +236,7 @@ class Player extends React.Component {
                         {isHost && data.userId !== id ?
                             (<i className="material-icons host-button"
                                 title="Remove"
-                                onClick={(evt) => game.handleRemovePlayer(id, evt)}>
+                                onClick={(evt) => game.handleRemovePlayer(id, evt, this.props.spectator)}>
                                 delete_forever
                             </i>) : ""}
                         {(data.hostId === id) ? (
@@ -346,7 +346,11 @@ class Game extends React.Component {
             popup.alert({content: text});
             if (text === "Success" && this.state.wordReportData) {
                 const limit = this.state.wordReportData.words.length;
-                this.socket.emit("get-word-reports-data", {offset: 0, limit: limit, noMeta: this.state.wordReportNoMeta});
+                this.socket.emit("get-word-reports-data", {
+                    offset: 0,
+                    limit: limit,
+                    noMeta: this.state.wordReportNoMeta
+                });
             }
         });
         window.socket.on("disconnect", (event) => {
@@ -562,7 +566,10 @@ class Game extends React.Component {
     }
 
     handleToggleReportNoMeta() {
-        this.setState(Object.assign({}, this.state, {wordReportOffset: 0, wordReportNoMeta: !this.state.wordReportNoMeta}), () => {
+        this.setState(Object.assign({}, this.state, {
+            wordReportOffset: 0,
+            wordReportNoMeta: !this.state.wordReportNoMeta
+        }), () => {
             this.socket.emit("get-word-reports-data", {offset: 0, noMeta: this.state.wordReportNoMeta});
         });
     }
@@ -640,7 +647,11 @@ class Game extends React.Component {
     handleClickShowMoreReports() {
         const newOffset = this.state.wordReportData.words.length;
         this.setState(Object.assign({}, this.state, {wordReportOffset: newOffset}), () => {
-            this.socket.emit("get-word-reports-data", {offset: newOffset, limit: 250, noMeta: this.state.wordReportNoMeta});
+            this.socket.emit("get-word-reports-data", {
+                offset: newOffset,
+                limit: 250,
+                noMeta: this.state.wordReportNoMeta
+            });
         });
     }
 
@@ -731,11 +742,11 @@ class Game extends React.Component {
         });
     }
 
-    handleRemovePlayer(id, evt) {
+    handleRemovePlayer(id, evt, isSpectator) {
         evt.stopPropagation();
         const name = window.commonRoom.getPlayerName(id);
-        if (!this.state.ranked || this.state.phase === 0) {
-            if (this.state.phase !== 0)
+        if (!this.state.ranked || this.state.phase === 0 || isSpectator) {
+            if (this.state.phase !== 0 && !isSpectator)
                 popup.confirm({content: `Removing ${name}?`}, (evt) => evt.proceed && this.socket.emit("remove-player", id));
             else
                 this.socket.emit("remove-player", id);
@@ -1261,9 +1272,10 @@ class Game extends React.Component {
                                                             className="word-report-item-transfer">
                                                             {!it.newWord && !it.custom ? ["", "Easy", "Normal", "Hard", "Insane", "No meta"][it.currentLevel] : "New"} → {
                                                             !it.custom ?
-                                                                <span className={cs({"word-report-item-target": !data.wordReportData.noMeta})}
-                                                                      style={{cursor: data.wordReportData.noMeta ? 'default' : 'pointer'}}
-                                                                      onClick={() => this.toggleWordReportChangeTargetDifficulty(index)}>
+                                                                <span
+                                                                    className={cs({"word-report-item-target": !data.wordReportData.noMeta})}
+                                                                    style={{cursor: data.wordReportData.noMeta ? 'default' : 'pointer'}}
+                                                                    onClick={() => this.toggleWordReportChangeTargetDifficulty(index)}>
                                                                 {["Removed", "Easy", "Normal", "Hard", "Insane", "No meta"][it.level]}
                                                             </span> : "Custom"}
                                                         </div>
