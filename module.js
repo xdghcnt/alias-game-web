@@ -11,8 +11,14 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
 
     const appDir = registry.config.appDir || __dirname;
-    let reportedWordsData = [], reportedWords = [], rankedGames = [];
+    let reportedWordsData = [], rankedGames = [];
+    let reportedWords = [], reportedWordsNoMeta = [];
     let reportedWordsView = [];
+
+    const isWordReported = (word, isNoMeta) => {
+        return isNoMeta ? reportedWordsNoMeta.includes(word) : reportedWords.includes(word);
+    };
+
     let existingPacks = new Set();
     const updateExistingPacks = () => {
         fs.readdir(`${appDir}/custom`, (err, files) => {
@@ -67,8 +73,19 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
     fs.readFile(`${appDir}/reported-words.txt`, {encoding: "utf-8"}, (err, data) => {
         if (data) {
-            data.split("\n").forEach((row) => row && reportedWordsData.push(JSON.parse(row)));
-            reportedWordsData.forEach((it) => !it.processed && reportedWords.push(it.word));
+            data.split("\n").forEach((row) => {
+                if (row) {
+                    const parsed = JSON.parse(row);
+                    reportedWordsData.push(parsed);
+                    if (!parsed.processed && parsed.word) {
+                        if (parsed.currentLevel === 5 || parsed.level === 5) {
+                            reportedWordsNoMeta.push(parsed.word);
+                        } else {
+                            reportedWords.push(parsed.word);
+                        }
+                    }
+                }
+            });
             updateReportView();
         }
     });
@@ -347,7 +364,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         room.currentWords.push({
                             points: 1,
                             word: this.state.activeWord,
-                            reported: !!~reportedWords.indexOf(this.state.activeWord)
+                            reported: isWordReported(this.state.activeWord, room.level === 5)
                         });
                     send(room.onlinePlayers, "active-word", null);
                     this.state.activeWord = undefined;
@@ -690,7 +707,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     if (room.currentPlayer === user && this.state.activeWord)
                         send(user, "active-word", {
                             word: this.state.activeWord,
-                            reported: !!~reportedWords.indexOf(this.state.activeWord)
+                            reported: isWordReported(this.state.activeWord, room.level === 5)
                         });
                     update();
                     if (room.drawMode && this.state.drawList.length)
@@ -798,12 +815,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     room.currentWords.push({
                                         points: 1,
                                         word: this.state.activeWord,
-                                        reported: !!~reportedWords.indexOf(this.state.activeWord)
+                                        reported: isWordReported(this.state.activeWord, room.level === 5)
                                     });
                                 this.state.activeWord = randomWord;
                                 send(room.currentPlayer, "active-word", {
                                     word: this.state.activeWord,
-                                    reported: !!~reportedWords.indexOf(this.state.activeWord)
+                                    reported: isWordReported(this.state.activeWord, room.level === 5)
                                 });
                                 if (room.deafMode) {
                                     this.wordSkippedCoolDown = true;
@@ -1021,7 +1038,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     }
                 },
                 "report-word": (user, word, level) => {
-                    if (!~reportedWords.indexOf(word) && room.currentWords.some((it) => it.word === word)
+                    if (!isWordReported(word, room.level === 5) && room.currentWords.some((it) => it.word === word)
                         && room.level !== 0 && room.level !== level && [0, 1, 2, 3, 4, 5].includes(level)) {
                         let currentLevel = room.level;
                         const reportInfo = {
@@ -1041,7 +1058,13 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         if (autoDenialRules.some((it) => it[0] === currentLevel && it[1] === level)) {
                             reportInfo.processed = true;
                             reportInfo.approved = false;
-                        } else reportedWords.push(word);
+                        } else {
+                            if (currentLevel === 5 || level === 5) {
+                                reportedWordsNoMeta.push(word);
+                            } else {
+                                reportedWords.push(word);
+                            }
+                        }
                         fs.appendFile(`${appDir}/reported-words.txt`, `${JSON.stringify(reportInfo)}\n`, () => {
                             if (sortMode) {
                                 const moderData = [{
@@ -1093,9 +1116,15 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                     reportData.processed = true;
                                     reportData.approved = moderData.approved;
                                     Object.assign(moderData, reportData);
-                                    const reportedWordIndex = reportedWords.indexOf(moderData.word);
-                                    if (reportedWordIndex !== -1)
-                                        reportedWords.splice(reportedWordIndex, 1);
+                                    if (reportData.currentLevel === 5 || reportData.level === 5) {
+                                        const reportedWordIndex = reportedWordsNoMeta.indexOf(moderData.word);
+                                        if (reportedWordIndex !== -1)
+                                            reportedWordsNoMeta.splice(reportedWordIndex, 1);
+                                    } else {
+                                        const reportedWordIndex = reportedWords.indexOf(moderData.word);
+                                        if (reportedWordIndex !== -1)
+                                            reportedWords.splice(reportedWordIndex, 1);
+                                    }
                                     if (reportData.custom) {
                                         if (reportData.approved) {
                                             fs.rename(
@@ -1125,12 +1154,16 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                                     achievement: registry.achievements.reportWords.id
                                                 });
                                             } else {
-                                                reportData.wordList.filter((word) =>
-                                                    !~defaultWords[1].indexOf(word)
-                                                    && !~defaultWords[2].indexOf(word)
-                                                    && !~defaultWords[3].indexOf(word)
-                                                    && (!defaultWords[5] || !~defaultWords[5].indexOf(word))
-                                                    && !~defaultWords[4].indexOf(word)).forEach((word) => {
+                                                reportData.wordList.filter((word) => {
+                                                    if (reportData.level === 5) {
+                                                        return (!defaultWords[5] || !~defaultWords[5].indexOf(word));
+                                                    } else {
+                                                        return !~defaultWords[1].indexOf(word)
+                                                            && !~defaultWords[2].indexOf(word)
+                                                            && !~defaultWords[3].indexOf(word)
+                                                            && !~defaultWords[4].indexOf(word);
+                                                    }
+                                                }).forEach((word) => {
                                                     defaultWords[reportData.level].push(word);
 
                                                     reportAchievements.push({
@@ -1248,8 +1281,12 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 };
                                 reportList.push(reportInfo);
                                 reportedWordsData.push(reportInfo);
+                                if (currentLevel === 5 || newLevel === 5) {
+                                    reportedWordsNoMeta.push(word);
+                                } else {
+                                    reportedWords.push(word);
+                                }
                                 updateReportView();
-                                reportedWords.push(word);
                             }
                         });
                         if (reportList.length) {
@@ -1295,14 +1332,17 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             }
                         } else if (wordList.length <= 50 && [1, 2, 3, 4, 5].includes(level)) {
                             wordList = [...new Set(wordList.map((word) => word.toLowerCase()))];
-                            wordList = wordList.filter((word) =>
-                                word
-                                && word.length <= 50 && word.trim().length > 0
-                                && (!defaultWords[1] || !~defaultWords[1].indexOf(word))
-                                && (!defaultWords[2] || !~defaultWords[2].indexOf(word))
-                                && (!defaultWords[3] || !~defaultWords[3].indexOf(word))
-                                && (!defaultWords[4] || !~defaultWords[4].indexOf(word))
-                                && (!defaultWords[5] || !~defaultWords[5].indexOf(word)));
+                            wordList = wordList.filter((word) => {
+                                if (!word || word.length > 50 || word.trim().length === 0) return false;
+                                if (level === 5) {
+                                    return (!defaultWords[5] || !~defaultWords[5].indexOf(word));
+                                } else {
+                                    return (!defaultWords[1] || !~defaultWords[1].indexOf(word))
+                                        && (!defaultWords[2] || !~defaultWords[2].indexOf(word))
+                                        && (!defaultWords[3] || !~defaultWords[3].indexOf(word))
+                                        && (!defaultWords[4] || !~defaultWords[4].indexOf(word));
+                                }
+                            });
                             if (wordList.length > 0) {
                                 let datetime = +new Date();
                                 const reportList = wordList.map(word => ({
