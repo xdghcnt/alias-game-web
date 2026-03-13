@@ -1173,3 +1173,9 @@ a {
     right: 29px;
     top: 5px;
 }
+
+.moder-report-button {
+    margin-right: 6px;
+    vertical-align: middle;
+    margin-top: -4px;
+}

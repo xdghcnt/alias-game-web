@@ -343,8 +343,10 @@ class Game extends React.Component {
             this.setState(Object.assign({}, this.state, {
                 wordReportSent: false
             }));
-            popup.alert({content: text});
-            if (text === "Success" && this.state.wordReportData) {
+            if (text !== "Silent Success") {
+                popup.alert({content: text});
+            }
+            if ((text === "Success" || text === "Silent Success") && this.state.wordReportData) {
                 const limit = this.state.wordReportData.words.length;
                 this.socket.emit("get-word-reports-data", {
                     offset: 0,
@@ -674,6 +676,24 @@ class Game extends React.Component {
             this.socket.emit("allow-report");
         }
         this.setState(Object.assign({}, this.state));
+    }
+
+    handleCustomModerReport(type) {
+        const noMeta = this.state.wordReportData.noMeta;
+        const title = type === 'edit'
+            ? "Создать репорт на перенос"
+            : (noMeta ? "Создать репорт на удаление (no meta)" : "Создать репорт на удаление");
+
+        popup.textarea({content: title}, (evt1) => {
+            if (evt1.proceed && evt1.input_value) {
+                const words = evt1.input_value;
+                popup.prompt({content: "Moder key"}, (evt2) => {
+                    if (evt2.proceed && evt2.input_value) {
+                        this.socket.emit("add-moder-report", type, noMeta, evt2.input_value, words);
+                    }
+                });
+            }
+        });
     }
 
     toggleNotificationPinned() {
@@ -1326,6 +1346,14 @@ class Game extends React.Component {
                                         ? "check_box" : "check_box_outline_blank"}</i> Разрешить
                                         репорты и добавление
                                     </span>
+                                        {!data.wordReportData.noMeta ? (
+                                            <i className="material-icons settings-button moder-report-button"
+                                               title="Создать репорт на перенос"
+                                               onClick={() => this.handleCustomModerReport("edit")}>edit</i>
+                                        ) : null}
+                                        <i className="material-icons settings-button moder-report-button"
+                                           title={data.wordReportData.noMeta ? "Создать репорт на удаление (no meta)" : "Создать репорт на удаление"}
+                                           onClick={() => this.handleCustomModerReport("remove")}>delete</i>
                                         <input className="word-moder-key" id="word-moder-key" placeholder="Moder key"
                                                type="password"/>
                                         <div

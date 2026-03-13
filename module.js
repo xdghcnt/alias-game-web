@@ -712,7 +712,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     this.lastInteraction = new Date();
                     try {
                         if (this.eventHandlers[event])
-                            this.eventHandlers[event](user, data[0], data[1], data[2]);
+                            this.eventHandlers[event](user, data[0], data[1], data[2], data[3]);
                     } catch (error) {
                         console.error(error);
                         registry.log(error.message);
@@ -1203,45 +1203,70 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     } else
                         send(user, "word-reports-request-status", "Wrong key");
                 },
-                "add-words": (user, words, level, packName) => {
+                "add-moder-report": (user, type, noMeta, sentModerKey, words) => {
+                    if (sentModerKey !== moderKey) {
+                        return send(user, "word-reports-request-status", "Wrong key");
+                    }
+                    if (noMeta && type !== "remove") {
+                        return send(user, "word-reports-request-status", "Invalid type for noMeta");
+                    }
                     if (words && words.length) {
                         let wordList = [...(new Set(words.split("\n").map((word) => word.trim().replace(/­/g, ""))))];
-                        if ((wordList[0] === "!edit" || wordList[0] === "!remove") && wordList[1] === moderKey) {
-                            const
-                                reportList = [],
-                                newLevel = wordList[0] === "!remove" ? 0 : level;
-                            wordList.splice(0, 2);
-                            wordList.forEach((word) => {
-                                let currentLevel = null;
+                        wordList = wordList.filter((word) => word && word.trim().length > 0);
+                        const reportList = [];
+                        wordList.forEach((word) => {
+                            let currentLevel = null;
+                            if (noMeta) {
+                                if (defaultWords[5] && ~defaultWords[5].indexOf(word)) {
+                                    currentLevel = 5;
+                                }
+                            } else {
                                 [1, 2, 3, 4].some((level) => {
-                                    if (level !== newLevel && ~defaultWords[level].indexOf(word)) {
+                                    if (defaultWords[level] && ~defaultWords[level].indexOf(word)) {
                                         currentLevel = level;
                                         return true;
                                     }
                                 });
-                                if (currentLevel !== null) {
-                                    const reportInfo = {
-                                        datetime: +new Date(),
-                                        user: user,
-                                        authUser: room.authUsers[user]?._id,
-                                        playerName: room.playerNames[user],
-                                        word: word,
-                                        currentLevel: currentLevel,
-                                        level: newLevel,
-                                        processed: false,
-                                        approved: null
-                                    };
-                                    reportList.push(reportInfo);
-                                    reportedWordsData.push(reportInfo);
-                                    updateReportView();
-                                    reportedWords.push(word);
+                            }
+                            
+                            if (currentLevel !== null) {
+                                let newLevel = 0;
+                                if (type === "edit") {
+                                    newLevel = currentLevel === 4 ? 3 : currentLevel + 1;
                                 }
-                            });
-                            if (reportList.length)
-                                fs.appendFile(`${appDir}/reported-words.txt`,
-                                    `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
-                                    });
-                        } else if (level === "custom" && wordList.length <= room.customWordsLimit
+                                
+                                const reportInfo = {
+                                    datetime: +new Date(),
+                                    user: user,
+                                    authUser: room.authUsers[user]?._id,
+                                    playerName: room.playerNames[user],
+                                    word: word,
+                                    currentLevel: currentLevel,
+                                    level: newLevel,
+                                    processed: false,
+                                    approved: null
+                                };
+                                reportList.push(reportInfo);
+                                reportedWordsData.push(reportInfo);
+                                updateReportView();
+                                reportedWords.push(word);
+                            }
+                        });
+                        if (reportList.length) {
+                            fs.appendFile(`${appDir}/reported-words.txt`,
+                                `${reportList.map((it) => JSON.stringify(it)).join("\n")}\n`, () => {
+                                });
+                            if (!sortMode) {
+                                send(user, "word-reports-request-status", "Silent Success");
+                            }
+                        }
+                    }
+                },
+                "add-words": (user, words, level, packName) => {
+                    if (words && words.length) {
+                        let wordList = [...(new Set(words.split("\n").map((word) => word.trim().replace(/­/g, ""))))];
+                        if (wordList[0] === "!edit" || wordList[0] === "!remove") return;
+                        if (level === "custom" && wordList.length <= room.customWordsLimit
                             && packName && packName.length <= 40 && !~packName.indexOf("...")) {
                             wordList = wordList.filter((word) => word
                                 && word.trim().length > 0);
