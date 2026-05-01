@@ -32,22 +32,24 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
         const groups = {};
         const flatReports = [];
         reportedWordsData.forEach(report => {
-            if (report.custom || (report.wordList && report.wordList.length > 1) || report.level === 5 || report.currentLevel === 5) {
+            if (report.custom || (report.wordList && report.wordList.length > 1)) {
                 if (report.custom)
                     report.exists = existingPacks.has(report.packName);
                 flatReports.push(report);
             } else {
                 const word = report.word || (report.wordList ? report.wordList[0] : null);
                 if (word) {
-                    if (!groups[word]) groups[word] = [];
-                    groups[word].push(report);
+                    const isNoMeta = report.level === 5 || report.currentLevel === 5;
+                    const key = word + (isNoMeta ? "_nometa" : "");
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(report);
                 }
             }
         });
         const structured = [];
         flatReports.forEach(r => structured.push(r));
-        Object.keys(groups).forEach(word => {
-            const reports = groups[word];
+        Object.keys(groups).forEach(key => {
+            const reports = groups[key];
             const latest = reports[reports.length - 1];
             const history = reports.slice(0, reports.length - 1).reverse();
             structured.push({
@@ -139,7 +141,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
     app.get("/alias/ranked/edit-score", (req, res) => {
         if (req.query.key === moderKey && !isNaN(req.query.score)) {
             if (rankedUsers[req.query.user]) {
-                const scoreKey = !req.query.noMeta ? 'score' : 'scoreNoMeta';
+                const scoreKey = req.query.rankedMode === 'nometa' ? 'scoreNoMeta' : req.query.rankedMode === 'easy' ? 'scoreEasy' : 'score';
                 rankedUsers[req.query.user][scoreKey] = parseInt(req.query.score);
                 fs.writeFile(`${appDir}/auth-users.json`, JSON.stringify(rankedUsers, null, 4), (error) => {
                     if (error)
@@ -158,7 +160,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             const rankedGame = rankedGames.find((game) => game.datetime === req.query.datetime)
             if (rankedGame) {
                 rankedGame.deleted = true;
-                const scoreKey = !rankedGame.noMeta ? 'score' : 'scoreNoMeta';
+                const scoreKey = rankedGame.rankedMode === 'nometa' ? 'scoreNoMeta' : rankedGame.rankedMode === 'easy' ? 'scoreEasy' : (rankedGame.noMeta ? 'scoreNoMeta' : 'score');
                 Object.keys(rankedGame.rankedScoreDiffs).forEach((player) => {
                     if (rankedUsers[player])
                         rankedUsers[player][scoreKey] -= rankedGame.rankedScoreDiffs[player];
@@ -485,6 +487,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     rankedUsers[authUser._id] = {
                         score: 1000,
                         scoreNoMeta: 1000,
+                        scoreEasy: 1000,
                         name: authUser.name,
                         id: authUser._id,
                         registerTime: new Date()
@@ -503,10 +506,11 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 loginUserRanked = (user, rankedUserId) => {
                     room.rankedUsers[user] = rankedUsers[rankedUserId];
                 },
-                toggleRanked = (state, noMeta) => {
+                toggleRanked = (state, mode) => {
                     room.ranked = state;
-                    room.rankedNoMeta = !!noMeta;
-                    selectWordSet(room.rankedNoMeta ? 5 : 2);
+                    room.rankedMode = mode || 'normal';
+                    room.rankedNoMeta = room.rankedMode === 'nometa';
+                    selectWordSet(room.rankedMode === 'nometa' ? 5 : room.rankedMode === 'easy' ? 1 : 2);
                     if (room.ranked) {
                         room.soloModeGoal = 1;
                         room.roundTime = 60;
@@ -557,7 +561,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 saveRankedResults = (user, leaverId) => {
                     if (room.ranked && (room.phase === 1 || leaverId) && room.hostId === user
                         && room.rankedUsers[user]?.moderator) {
-                        const scoreKey = !room.rankedNoMeta ? 'score' : 'scoreNoMeta';
+                        const scoreKey = room.rankedMode === 'nometa' ? 'scoreNoMeta' : room.rankedMode === 'easy' ? 'scoreEasy' : 'score';
                         const users = [...room.teams[Object.keys(room.teams)[0]].players];
                         const players = users.map((player) => room.rankedUsers[player].id);
                         const playerScores = {};
@@ -624,6 +628,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                             datetime: new Date().toISOString(),
                             moderator: room.rankedUsers[user].id,
                             noMeta: room.rankedNoMeta,
+                            easy: room.rankedMode === 'easy',
+                            rankedMode: room.rankedMode,
                             prevScores,
                             skillGroup: ['Very High', 'High', 'Normal', 'Low'][skillGroup]
                         };
@@ -703,7 +709,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     room.playerNames[user] = data.userName.substr && data.userName.substr(0, 60);
 
                     if (!this.state.roomWordsList)
-                        selectWordSet(room.rankedNoMeta ? 5 : 2);
+                        selectWordSet(room.rankedMode === 'nometa' ? 5 : room.rankedMode === 'easy' ? 1 : 2);
                     if (room.currentPlayer === user && this.state.activeWord)
                         send(user, "active-word", {
                             word: this.state.activeWord,
@@ -1364,9 +1370,9 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         }
                     }
                 },
-                "toggle-ranked": (user, noMeta) => {
+                "toggle-ranked": (user, rankedMode) => {
                     if (room.phase === 0 && room.hostId === user && room.rankedUsers[user]?.moderator)
-                        toggleRanked(!room.ranked, noMeta);
+                        toggleRanked(!room.ranked, rankedMode);
                     update();
                 },
                 "check-ranked-account": (user) => {

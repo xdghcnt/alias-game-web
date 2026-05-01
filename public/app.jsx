@@ -179,7 +179,7 @@ class Player extends React.Component {
         let score = data.playerScores[id] || 0;
         if (data.gameIsOver && data.playerWordPoints[id] > 0)
             score += data.playerWordPoints[id];
-        const scoreKey = !data.rankedNoMeta ? 'score' : 'scoreNoMeta';
+        const scoreKey = data.rankedMode === 'nometa' ? 'scoreNoMeta' : data.rankedMode === 'easy' ? 'scoreEasy' : 'score';
         return (
             <div className={cs("player", {
                 ready: ~data.readyPlayers.indexOf(id),
@@ -619,8 +619,8 @@ class Game extends React.Component {
             popup.alert({content: "Чтобы получить доступ к добавлению слов, нужно включить его в окне просмотра репортов"});
     }
 
-    handleClickToggleRankedMode(noMeta) {
-        this.socket.emit('toggle-ranked', noMeta);
+    handleClickToggleRankedMode(rankedMode) {
+        this.socket.emit('toggle-ranked', rankedMode);
     }
 
     handleWordAddChange(value) {
@@ -1439,7 +1439,7 @@ class Game extends React.Component {
                                         <br/>
                                         <div className="ranked-status-room">
                                             Ranked-режим:&nbsp;<span
-                                            className="ranked-status">{data.ranked ? `Активен${data.rankedNoMeta ? ' (no meta)' : ''}` : 'Неактивен'}</span>
+                                            className="ranked-status">{data.ranked ? `Активен${data.rankedMode === 'nometa' ? ' (no meta)' : data.rankedMode === 'easy' ? ' (easy)' : ''}` : 'Неактивен'}</span>
                                         </div>
                                         <div className="ranked-desc">
                                             Активировать Ranked-режим могут только <a target="_blank"
@@ -1450,16 +1450,25 @@ class Game extends React.Component {
                                             <span className={cs("ranked-auth-button", "button", {
                                                 inactive: !data.rankedUsers?.[data.userId]?.moderator
                                             })}
-                                                  onClick={() => this.handleClickToggleRankedMode()}>{!data.ranked
+                                                  onClick={() => this.handleClickToggleRankedMode('normal')}>{!data.ranked
                                                 ? 'Активировать normal' : 'Деактивировать'}
                                             </span>
                                                 {!data.ranked ?
                                                     <span className={cs("ranked-auth-button", "button", {
                                                         inactive: !data.rankedUsers?.[data.userId]?.moderator
                                                     })}
-                                                          onClick={() => this.handleClickToggleRankedMode(true)}>
+                                                          onClick={() => this.handleClickToggleRankedMode('nometa')}>
                                                         Активировать no meta<i
                                                         className="material-icons">fiber_new</i>
+                                                    </span>
+                                                    : ''}
+                                                {!data.ranked ?
+                                                    <span className={cs("ranked-auth-button", "button", {
+                                                        inactive: !data.rankedUsers?.[data.userId]?.moderator
+                                                    })}
+                                                          onClick={() => this.handleClickToggleRankedMode('easy')}>
+                                                        Активировать easy<i
+                                                        className="material-icons">pets</i>
                                                     </span>
                                                     : ''}
                                         </span> : ''}

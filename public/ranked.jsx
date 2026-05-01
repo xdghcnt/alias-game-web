@@ -1,7 +1,7 @@
 class Page extends React.Component {
     constructor() {
         super();
-        this.state = {moderators: [], gameList: [], players: []}
+        this.state = {moderators: [], gameList: [], gameListEasy: [], gameListNoMeta: [], players: [], playersEasy: [], playersNoMeta: [], rankedMode: 'normal'};
     }
 
     componentDidMount() {
@@ -44,8 +44,8 @@ class Page extends React.Component {
                 }, async (evt) => {
                     if (evt.proceed) {
                         let query = `/alias/ranked/edit-score?key=${encodeURIComponent(key)}&user=${id}&score=${evt.input_value}`;
-                        if (this.state.noMeta)
-                            query += '&noMeta=true'
+                        if (this.state.rankedMode)
+                            query += '&rankedMode=' + this.state.rankedMode;
                         const result = (await (await fetch(query)).json());
                         if (result.message)
                             popup.alert({content: result.message});
@@ -79,8 +79,9 @@ class Page extends React.Component {
 
     async updateData() {
         const data = (await (await fetch('/alias/ranked/data')).json());
-        const rankedGames = data.rankedGames.filter(game => !game.deleted && !game.noMeta).reverse();
+        const rankedGames = data.rankedGames.filter(game => !game.deleted && !game.noMeta && !game.easy).reverse();
         const rankedGamesNoMeta = data.rankedGames.filter(game => !game.deleted && game.noMeta).reverse();
+        const rankedGamesEasy = data.rankedGames.filter(game => !game.deleted && game.easy).reverse();
         const players = Object.keys(data.rankedUsers).map((userId) =>
             data.rankedUsers[userId]).sort((a, b) => b.score - a.score);
         for (const game of rankedGames) {
@@ -95,17 +96,26 @@ class Page extends React.Component {
                 return game.playerRanks[a] - game.playerRanks[b];
             });
         }
+        const playersEasy = Object.keys(data.rankedUsers).map((userId) =>
+            data.rankedUsers[userId]).sort((a, b) => b.scoreEasy - a.scoreEasy);
+        for (const game of rankedGamesEasy) {
+            game.playerScoresSortedEasy = Object.keys(game.playerRanks).sort((a, b) => {
+                return game.playerRanks[a] - game.playerRanks[b];
+            });
+        }
         this.setState({
             showFirst20: this.state.showFirst20 ?? true,
-            noMeta: false,
+            rankedMode: this.state.rankedMode || 'normal',
             rankedUsers: data.rankedUsers,
             rankedUsersNoMeta: data.rankedUsersNoMeta,
+            rankedUsersEasy: data.rankedUsersEasy,
             moderators: players.filter((user) => user.moderator).map((user) => ({
                 name: user.name,
                 discord: user.discord,
             })),
             gameList: rankedGames,
             gameListNoMeta: rankedGamesNoMeta,
+            gameListEasy: rankedGamesEasy,
             players: players.map((player) => {
                 let gamesCount = 0;
                 let gamesCountWin = 0;
@@ -124,6 +134,37 @@ class Page extends React.Component {
                     id: player.id,
                     name: player.name,
                     score: player.score,
+                    moderator: player.moderator,
+                    gamesCount,
+                    winRate: gamesCount ? Math.round(gamesCountWin / gamesCount * 100) : 0,
+                    averagePoints: gamesCount ? (totalPoints / gamesCount).toFixed(1) : 0
+                };
+            }).sort((a, b) => {
+                if (a.inactive && !b.inactive)
+                    return 1;
+                else if (!a.inactive && b.inactive)
+                    return -1;
+                else
+                    return 0;
+            }),
+            playersEasy: playersEasy.map((player) => {
+                let gamesCount = 0;
+                let gamesCountWin = 0;
+                let totalPoints = 0;
+                for (const game of rankedGamesEasy) {
+                    if (game.playerScores[player.id] !== undefined)
+                        gamesCount++;
+                    if (game.playerRanks[player.id] === 1)
+                        gamesCountWin++;
+                    else if (game.playerRanks[player.id] === 2)
+                        gamesCountWin += 0.6;
+                    totalPoints += (game.playerScores[player.id] || 0);
+                }
+                return {
+                    inactive: gamesCount === 0 && (player.scoreEasy === 1000 || player.scoreEasy === undefined),
+                    id: player.id,
+                    name: player.name,
+                    score: player.scoreEasy || 1000,
                     moderator: player.moderator,
                     gamesCount,
                     winRate: gamesCount ? Math.round(gamesCountWin / gamesCount * 100) : 0,
@@ -189,22 +230,26 @@ class Page extends React.Component {
             <div className="title">Режим</div>
             <div class="no-meta-toggle">
                 <div className={cs("no-meta-toggle-button", {
-                    active: !data.noMeta
-                })} onClick={() => this.setState({...data, noMeta: false})}>Обычный
+                    active: data.rankedMode === 'normal'
+                })} onClick={() => this.setState({...data, rankedMode: 'normal'})}>Обычный
                 </div>
                 <div className={cs("no-meta-toggle-button", {
-                    active: data.noMeta
-                })} onClick={() => this.setState({...data, noMeta: true})}>No meta
+                    active: data.rankedMode === 'nometa'
+                })} onClick={() => this.setState({...data, rankedMode: 'nometa'})}>No meta
                     <i className="material-icons">fiber_new</i></div>
+                <div className={cs("no-meta-toggle-button", {
+                    active: data.rankedMode === 'easy'
+                })} onClick={() => this.setState({...data, rankedMode: 'easy'})}>Easy
+                    <i className="material-icons">pets</i></div>
             </div>
             <div className="title">Игроки</div>
             <div className="players section">
-                {(!data.noMeta ? data.players : data.playersNoMeta).slice(0, data.showFirst20 ? 20 : undefined).map((player, index) => (
+                {(data.rankedMode === 'normal' ? data.players : data.rankedMode === 'easy' ? data.playersEasy : data.playersNoMeta).slice(0, data.showFirst20 ? 20 : undefined).map((player, index) => (
                     <div className={cs("player-row", {
                         inactive: player.inactive
                     })}>
                         <div className="rank">{index + 1}</div>
-                        <div className="name">{player.name}</div>
+                        <a className="name" href={`/bg/profile/${player.id}`} target="_blank" style={{textDecoration: "underline", textDecorationThickness: "1px", textDecorationColor: "#cbc9c987", textUnderlineOffset: "3px", color: "inherit"}}>{player.name}</a>
                         <div className="score">{player.score}</div>
                         <div className="stats">
                             <div className="games-count">
@@ -235,21 +280,21 @@ class Page extends React.Component {
             </div>
             <div className="title">Матчи</div>
             <div className="matches section">
-                {(!data.noMeta ? data.gameList : data.gameListNoMeta).map((gameRow) => (
+                {(data.rankedMode === 'normal' ? data.gameList : data.rankedMode === 'easy' ? data.gameListEasy : data.gameListNoMeta).map((gameRow) => (
                     <div className="match">
                         <div
                             className="date">{(new Date(gameRow.datetime)).toLocaleDateString()} {(new Date(gameRow.datetime)).toLocaleTimeString()}
                             <i onClick={() => this.removeGame(gameRow.datetime)}
                                className="material-icons remove-game">delete_forever</i></div>
                         <div className="players">
-                            {(!data.noMeta ? gameRow.playerScoresSorted : gameRow.playerScoresSortedNoMeta).map((player) => (
+                            {(data.rankedMode === 'normal' ? gameRow.playerScoresSorted : data.rankedMode === 'easy' ? gameRow.playerScoresSortedEasy : gameRow.playerScoresSortedNoMeta).map((player) => (
                                 <div className="match-player">
-                                    <div
-                                        className="player-name">{data.rankedUsers[player]?.name} {gameRow.moderator === player ? (
+                                    <a
+                                        className="player-name" href={`/bg/profile/${player}`} target="_blank" style={{textDecoration: "underline", textDecorationThickness: "1px", textDecorationColor: "#cbc9c987", textUnderlineOffset: "3px", color: "inherit"}}>{data.rankedUsers[player]?.name} {gameRow.moderator === player ? (
                                         <i className="material-icons host-button"
                                            title="Game host">
                                             stars
-                                        </i>) : ""}</div>
+                                        </i>) : ""}</a>
                                     <div className="player-score">
                                         <i className="material-icons host-button"
                                            title="Взято слов">
