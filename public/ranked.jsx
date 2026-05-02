@@ -97,7 +97,7 @@ class Page extends React.Component {
             });
         }
         const playersEasy = Object.keys(data.rankedUsers).map((userId) =>
-            data.rankedUsers[userId]).sort((a, b) => b.scoreEasy - a.scoreEasy);
+            data.rankedUsers[userId]).sort((a, b) => (b.scoreEasy || 1000) - (a.scoreEasy || 1000));
         for (const game of rankedGamesEasy) {
             game.playerScoresSortedEasy = Object.keys(game.playerRanks).sort((a, b) => {
                 return game.playerRanks[a] - game.playerRanks[b];

@@ -191,7 +191,7 @@ class Player extends React.Component {
                 <UserAudioMarker user={id} data={data}/>
                 {((data.phase === 0 || data.rankedResultsSaved) && data.rankedUsers[id] && data.ranked) ? (
                     <span className="ranked-score">[{!data.rankedResultsSaved
-                        ? data.rankedUsers[id][scoreKey] : data.rankedUsers[id][scoreKey] - (data.rankedScoreDiffs[id] || 0)}
+                        ? (data.rankedUsers[id][scoreKey] || 1000) : (data.rankedUsers[id][scoreKey] || 1000) - (data.rankedScoreDiffs[id] || 0)}
                         {(data.rankedResultsSaved && !data.spectators.includes(id)) ? (
                             <span
                                 className={cs("word-points", {

@@ -163,7 +163,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 const scoreKey = rankedGame.rankedMode === 'nometa' ? 'scoreNoMeta' : rankedGame.rankedMode === 'easy' ? 'scoreEasy' : (rankedGame.noMeta ? 'scoreNoMeta' : 'score');
                 Object.keys(rankedGame.rankedScoreDiffs).forEach((player) => {
                     if (rankedUsers[player])
-                        rankedUsers[player][scoreKey] -= rankedGame.rankedScoreDiffs[player];
+                        rankedUsers[player][scoreKey] = (rankedUsers[player][scoreKey] || 1000) - rankedGame.rankedScoreDiffs[player];
                 })
                 fs.writeFile(
                     `${appDir}/ranked-games.txt`,
@@ -608,8 +608,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 .filter((scorePlayer) => scorePlayer !== player && scoreRanks[scorePlayer] === scoreRanks[player]).length;
                             const otherPlayers = players.filter((otherPlayer) => otherPlayer !== player);
                             const avgRankScore = otherPlayers.reduce((acc, otherPlayer) =>
-                                rankedUsers[otherPlayer][scoreKey] + acc, 0) / otherPlayers.length;
-                            const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - rankedUsers[player][scoreKey]) / rankedScoreMultiplier));
+                                (rankedUsers[otherPlayer][scoreKey] || 1000) + acc, 0) / otherPlayers.length;
+                            const expectedVictory = 1 / (1 + 10 ** ((avgRankScore - (rankedUsers[player][scoreKey] || 1000)) / rankedScoreMultiplier));
                             const rankedScoreDiff = rankedBaseMultiplier
                                 * (((1 - expectedVictory) * playersYouWon)
                                     + ((0.5 - expectedVictory) * playersYouDraw)
@@ -620,7 +620,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 rankedScoreDiffs[player] = 0;
                         }
                         const prevScores = {};
-                        Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = rankedUsers[player][scoreKey]);
+                        Object.keys(rankedScoreDiffs).forEach((player) => prevScores[player] = rankedUsers[player][scoreKey] || 1000);
                         const gameResult = {
                             playerScores,
                             playerRanks: scoreRanks,
@@ -642,7 +642,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 else {
                                     rankedGames.push(gameResult);
                                     for (const [index, player] of players.entries()) {
-                                        rankedUsers[player][scoreKey] += rankedScoreDiffs[player];
+                                        rankedUsers[player][scoreKey] = (rankedUsers[player][scoreKey] || 1000) + rankedScoreDiffs[player];
                                         room.rankedScoreDiffs[users[index]] = rankedScoreDiffs[player];
                                     }
                                     checkWin();
