@@ -3,6 +3,7 @@ const fs = require("fs");
 function init(wsServer, path, moderKey, fbConfig, sortMode) {
     const
         fs = require('fs'),
+        crypto = require('crypto'),
         app = wsServer.app,
         registry = wsServer.users,
         autoDenialRules = [
@@ -235,6 +236,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 drawList: [],
                 drawTempList: [],
                 winProcessed: false,
+                round: null,
+                gameEntryIndex: 0,
             };
             this.lastInteraction = new Date();
             this.wordSkippedCoolDown = false;
@@ -361,13 +364,73 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     room.timer = null;
                     clearInterval(timer);
                 },
+                recordWordTime = () => {
+                    const round = this.state.round;
+                    if (!round || round.lastWordTime == null) return;
+                    const now = Date.now();
+                    round.wordGuessTimes.push(now - round.lastWordTime);
+                    round.lastWordTime = now;
+                },
+                isGameFinished = () => {
+                    if (room.soloMode)
+                        return room.soloModeRound >= room.soloModeGoal;
+                    if (Object.keys(room.teams).indexOf(room.currentTeam) !== 0)
+                        return false;
+                    let mostPoints = 0;
+                    const teamsReachedGoal = Object.keys(room.teams).filter(teamId => {
+                        const points = room.teams[teamId].score + (room.teams[teamId].wordPoints || 0);
+                        if (points > mostPoints)
+                            mostPoints = points;
+                        return points >= room.goal;
+                    });
+                    const reachedScores = teamsReachedGoal
+                        .map(teamId => room.teams[teamId].score + (room.teams[teamId].wordPoints || 0))
+                        .sort((a, b) => b - a);
+                    return teamsReachedGoal.length > 0
+                        && (teamsReachedGoal.length === 1 || reachedScores[0] !== reachedScores[1]);
+                },
+                writeRoundLog = () => {
+                    const round = this.state.round;
+                    if (!round) return;
+                    try {
+                        const dictionary = room.level === 5 ? "nometa"
+                            : (room.level === 0 || room.packName) ? "custom"
+                                : String(room.level);
+                        const logItem = {
+                            _id: round.id,
+                            datetime: new Date().toISOString(),
+                            goal: room.soloMode ? room.soloModeGoal : room.goal,
+                            teamTime: room.roundTime,
+                            gameType: room.mode,
+                            dictionary,
+                            customPackName: room.packName || undefined,
+                            isRanked: !!room.ranked,
+                            explainerId: round.explainerId,
+                            guesserIds: round.guesserIds,
+                            words: room.currentWords.map(w => w.word),
+                            wordIds: null,
+                            wordGuessTimes: round.wordGuessTimes,
+                            wordScores: room.currentWords.map(w => w.points),
+                            roomId: room.roomId,
+                            teamIndex: round.teamIndex,
+                            teamCount: round.teamCount,
+                            gameEntryIndex: round.gameEntryIndex,
+                            isFinished: isGameFinished(),
+                        };
+                        fs.appendFile(`${appDir}/alias-stats.db`, JSON.stringify(logItem) + '\n', () => {});
+                    } catch (error) {
+                        registry.log(`alias round log error: ${error.message}`);
+                    }
+                },
                 endRound = () => {
-                    if (this.state.activeWord)
+                    if (this.state.activeWord) {
                         room.currentWords.push({
                             points: 1,
                             word: this.state.activeWord,
                             reported: isWordReported(this.state.activeWord, room.level === 5)
                         });
+                        recordWordTime();
+                    }
                     send(room.onlinePlayers, "active-word", null);
                     this.state.activeWord = undefined;
                     calcWordPoints();
@@ -377,6 +440,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                     }
                     stopTimer();
                     room.phase = 1;
+                    writeRoundLog();
                 },
                 startTimer = () => {
                     room.timer = room.roundTime * 1000;
@@ -403,6 +467,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                 },
                 restartGame = () => {
                     checkWin();
+                    this.state.gameEntryIndex = (this.state.gameEntryIndex || 0) + 1;
+                    this.state.round = null;
                     this.state.winProcessed = false;
                     addWordPoints();
                     room.phase = 0;
@@ -806,6 +872,20 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                                 room.playerWordPoints[room.currentPlayer] = 0;
                                 room.playerWordPoints[room.currentAssistant] = 0;
                             }
+                            const roundTeam = room.teams[room.currentTeam];
+                            const roundGuessers = room.soloMode
+                                ? [room.currentAssistant]
+                                : [...roundTeam.players].filter(p => p !== room.currentPlayer);
+                            this.state.round = {
+                                id: crypto.randomUUID(),
+                                explainerId: registry.authUsers.getUserId(room.currentPlayer, room),
+                                guesserIds: roundGuessers.map(p => registry.authUsers.getUserId(p, room)),
+                                wordGuessTimes: [],
+                                lastWordTime: null,
+                                teamIndex: Object.keys(room.teams).indexOf(room.currentTeam),
+                                teamCount: Object.keys(room.teams).length,
+                                gameEntryIndex: this.state.gameEntryIndex || 0,
+                            };
                             startTimer();
                         }
                     }
@@ -817,13 +897,17 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         if (room.currentBet > room.currentWords.length + 1) {
                             if (room.wordIndex < this.state.roomWordsList.length) {
                                 const randomWord = this.state.roomWordsList[room.wordIndex++];
-                                if (this.state.activeWord)
+                                if (this.state.activeWord) {
                                     room.currentWords.push({
                                         points: 1,
                                         word: this.state.activeWord,
                                         reported: isWordReported(this.state.activeWord, room.level === 5)
                                     });
+                                    recordWordTime();
+                                }
                                 this.state.activeWord = randomWord;
+                                if (this.state.round && this.state.round.lastWordTime == null)
+                                    this.state.round.lastWordTime = Date.now();
                                 send(room.currentPlayer, "active-word", {
                                     word: this.state.activeWord,
                                     reported: isWordReported(this.state.activeWord, room.level === 5)
@@ -870,6 +954,7 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         room.currentWords = value;
                         room.readyPlayers.delete(room.currentPlayer);
                         calcWordPoints();
+                        writeRoundLog();
                         update();
                         send(room.onlinePlayers, "highlight-user", user);
                     }
