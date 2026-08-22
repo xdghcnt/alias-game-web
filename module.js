@@ -299,6 +299,16 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 round: null,
                 gameEntryIndex: 0,
             };
+            /* Комнаты турика (turik-1А и такие же) заводятся сразу в соло-режиме и на
+               лёгком словаре: в турнире каждый играет за себя, а словарь там всегда изи.
+               Список слов заряжаем тут же — иначе первый вошедший получил бы словарь по
+               умолчанию, и уровень сбросился бы на второй (см. userJoin) */
+            if (String(room.roomId || "").toLowerCase().startsWith("turik-")) {
+                room.soloMode = true;
+                room.mode = 'solo';
+                room.level = 1;
+                this.state.roomWordsList = shuffleArray([...defaultWords[room.level]]);
+            }
             this.lastInteraction = new Date();
             this.wordSkippedCoolDown = false;
             let timer;
