@@ -110,16 +110,20 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
        вносить баллы руками. Отдаём только «id пользователя на сайте → очки»,
        поэтому ключа не спрашиваем: ничего закрытого тут нет.
 
-       В соло-режиме очки лежат по игрокам (room.playerScores), в командном — по
-       командам, и тогда каждому игроку отдаём счёт его команды. К набранному
-       прибавляем очки текущего раунда (playerWordPoints): так же считает сама игра,
-       когда сохраняет результаты. */
+       Считаем только соло-режим: в турике каждый играет за себя, а командный счёт
+       разложить по участникам нечем. Командную комнату отдаём так же, как
+       несуществующую, — пусть турик-менеджер считает, что игры нет.
+
+       К набранному прибавляем очки текущего раунда (playerWordPoints): так же
+       считает сама игра, когда сохраняет результаты. */
     app.get(`${path}/room-scores`, (req, res) => {
         const roomManager = registry.roomManagers.get(path);
         const roomState = roomManager && roomManager.rooms.get(req.query.room);
         if (!roomState) return res.send({found: false});
 
         const room = roomState.room;
+        if (!room.soloMode) return res.send({found: false});
+
         const scores = {};
         const put = (user, value) => {
             const authId = room.authUsers[user] && room.authUsers[user]._id;
@@ -128,24 +132,17 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             if (authId) scores[authId] = value;
         };
 
-        if (room.soloMode) {
-            const players = new Set([
-                ...Object.keys(room.playerScores || {}),
-                ...(room.onlinePlayers || []),
-            ]);
-            players.forEach((user) => put(
-                user,
-                (room.playerScores?.[user] || 0) + (room.playerWordPoints?.[user] || 0),
-            ));
-        } else
-            Object.keys(room.teams || {}).forEach((teamId) => {
-                const team = room.teams[teamId];
-                team.players.forEach((user) => put(user, (team.score || 0) + (team.wordPoints || 0)));
-            });
+        const players = new Set([
+            ...Object.keys(room.playerScores || {}),
+            ...(room.onlinePlayers || []),
+        ]);
+        players.forEach((user) => put(
+            user,
+            (room.playerScores?.[user] || 0) + (room.playerWordPoints?.[user] || 0),
+        ));
 
         res.send({
             found: true,
-            soloMode: !!room.soloMode,
             phase: room.phase,
             online: room.onlinePlayers ? room.onlinePlayers.size : 0,
             scores,
