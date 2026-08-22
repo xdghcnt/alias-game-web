@@ -1,6 +1,9 @@
 const fs = require("fs");
 
-function init(wsServer, path, moderKey, fbConfig, sortMode) {
+/* turikAdmins — дискорд-айди организаторов турика (можно через запятую). Они
+   назначают хоста в любой комнате, не будучи хостом: турик ведут снаружи, и
+   ждать, пока действующий хост сам передаст управление, некогда. */
+function init(wsServer, path, moderKey, turikAdmins, sortMode) {
     const
         fs = require('fs'),
         crypto = require('crypto'),
@@ -12,6 +15,16 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
 
 
     const appDir = registry.config.appDir || __dirname;
+
+    /* Приходят дискорд-айди, а игра знает людей по _id на сайте — переводим одно
+       в другое один раз при старте. Кого не нашли, тот просто не организатор */
+    const turikAdminIds = new Set();
+    (async () => {
+        for (const discordId of String(turikAdmins || "").split(",").map((it) => it.trim()).filter(Boolean)) {
+            const userId = await registry.authUsers.getByDiscordId(discordId);
+            if (userId) turikAdminIds.add(userId);
+        }
+    })();
     let reportedWordsData = [], rankedGames = [];
     let reportedWords = [], reportedWordsNoMeta = [];
     let reportedWordsView = [];
@@ -287,9 +300,15 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
             let timer;
             const
                 send = (target, event, data) => userRegistry.send(target, event, data),
+                isTurikAdmin = (user) =>
+                    turikAdminIds.has(room.authUsers[user] && room.authUsers[user]._id),
                 update = () => {
                     if (room.voiceEnabled)
                         processUserVoice();
+                    /* Кто в этой комнате организатор — считаем перед отправкой, а не
+                       ловим по событиям входа: список короткий, а промахнуться мимо
+                       события авторизации легко */
+                    room.turikAdmins = [...room.onlinePlayers].filter(isTurikAdmin);
                     send(room.onlinePlayers, "state", room);
                 },
                 rotatePlayers = (teamId) => {
@@ -1057,7 +1076,8 @@ function init(wsServer, path, moderKey, fbConfig, sortMode) {
                         selectWordSet(wordSet, user);
                 },
                 "give-host": (user, playerId) => {
-                    if (room.hostId === user && playerId) {
+                    // организатор турика передаёт хост в любой комнате, даже не будучи хостом
+                    if ((room.hostId === user || isTurikAdmin(user)) && playerId) {
                         room.hostId = playerId;
                         this.emit("host-changed", user, playerId);
                     }

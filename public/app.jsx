@@ -175,7 +175,10 @@ class Player extends React.Component {
             data = this.props.data,
             game = this.props.game,
             id = this.props.id,
-            isHost = data.hostId === data.userId;
+            isHost = data.hostId === data.userId,
+            /* Организатор турика передаёт хост, не будучи хостом: турик ведут
+               снаружи, и ждать, пока действующий хост сам отдаст управление, некогда */
+            canGiveHost = isHost || (data.turikAdmins || []).includes(data.userId);
         let score = data.playerScores[id] || 0;
         if (data.gameIsOver && data.playerWordPoints[id] > 0)
             score += data.playerWordPoints[id];
@@ -213,7 +216,7 @@ class Player extends React.Component {
                             onClick={(evt) => game.handleSetPlayerScore(id, evt)}>
                             edit
                         </i>) : ""})</span>) : ""}
-                {(isHost || data.hostId === id) ? (
+                {(isHost || canGiveHost || data.hostId === id) ? (
                     <div className="player-host-controls">
                         {isHost && !this.props.spectator && id !== data.currentPlayer && id !== data.currentAssistant ?
                             (<i className="material-icons host-button"
@@ -227,7 +230,7 @@ class Player extends React.Component {
                                 onClick={(evt) => game.handleSetAssistant(id, evt)}>
                                 reply_all
                             </i>) : ""}
-                        {isHost && data.userId !== id ?
+                        {canGiveHost && data.hostId !== id ?
                             (<i className="material-icons host-button"
                                 title="Give host"
                                 onClick={(evt) => game.handleGiveHost(id, evt)}>
