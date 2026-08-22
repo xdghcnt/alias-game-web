@@ -157,6 +157,10 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
         res.send({
             found: true,
             phase: room.phase,
+            /* Сколько кругов доиграли и сколько заказано: по ним снаружи видно, что
+               игра закончилась, — счёт сам по себе об этом не говорит */
+            soloModeRound: room.soloModeRound,
+            soloModeGoal: room.soloModeGoal,
             online: room.onlinePlayers ? room.onlinePlayers.size : 0,
             scores,
         });
