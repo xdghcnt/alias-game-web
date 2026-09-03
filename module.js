@@ -123,45 +123,64 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
        вносить баллы руками. Отдаём только «id пользователя на сайте → очки»,
        поэтому ключа не спрашиваем: ничего закрытого тут нет.
 
-       Считаем только соло-режим: в турике каждый играет за себя, а командный счёт
-       разложить по участникам нечем. Командную комнату отдаём так же, как
-       несуществующую, — пусть турик-менеджер считает, что игры нет.
+       Отдаём оба режима, но по-разному: в соло у каждого свои очки, в команде
+       личных очков не существует вовсе — есть счёт команды, и снаружи его
+       раскладывают по её участникам. Что именно пришло, говорит gameMode.
 
-       К набранному прибавляем очки текущего раунда (playerWordPoints): так же
-       считает сама игра, когда сохраняет результаты. */
+       К набранному прибавляем очки текущего раунда (playerWordPoints,
+       team.wordPoints): так же считает сама игра, когда сохраняет результаты. */
     app.get(`${path}/room-scores`, (req, res) => {
         const roomManager = registry.roomManagers.get(path);
         const roomState = roomManager && roomManager.rooms.get(req.query.room);
         if (!roomState) return res.send({found: false});
 
         const room = roomState.room;
-        if (!room.soloMode) return res.send({found: false});
+        /* id пользователя на сайте; гостей без аккаунта пропускаем — сопоставить
+           их с участником турика всё равно нечем */
+        const authIdOf = (user) => room.authUsers[user] && room.authUsers[user]._id;
 
-        const scores = {};
-        const put = (user, value) => {
-            const authId = room.authUsers[user] && room.authUsers[user]._id;
-            /* гостей без аккаунта пропускаем: сопоставить их с участником турика
-               всё равно нечем */
-            if (authId) scores[authId] = value;
+        const common = {
+            found: true,
+            gameMode: room.soloMode ? 'solo' : 'team',
+            /* 1 — раунд кончился и очки за слова ещё правят, 2 — идёт раунд.
+               Снаружи по этому видно, что счёт прямо сейчас может поехать */
+            phase: room.phase,
+            online: room.onlinePlayers ? room.onlinePlayers.size : 0,
         };
 
+        if (!room.soloMode) {
+            const teams = Object.keys(room.teams).map((teamId) => ({
+                id: teamId,
+                players: [...room.teams[teamId].players].map(authIdOf).filter(Boolean),
+                /* живой счёт: он решает, кто выиграл матч, в том числе после
+                   добавочных раундов на тайбрейк */
+                score: room.teams[teamId].score + (room.teams[teamId].wordPoints || 0),
+                /* счёт на момент, когда четвёртый раунд закрыт. Пока его нет,
+                   живой счёт и есть счёт этапа */
+                stageScore: room.teamStageScores?.[teamId] ?? null,
+            }));
+            return res.send({...common, round: room.teamRound, teams});
+        }
+
+        const scores = {};
         const players = new Set([
             ...Object.keys(room.playerScores || {}),
             ...(room.onlinePlayers || []),
         ]);
-        players.forEach((user) => put(
-            user,
-            (room.playerScores?.[user] || 0) + (room.playerWordPoints?.[user] || 0),
-        ));
+        players.forEach((user) => {
+            const authId = authIdOf(user);
+            if (authId)
+                scores[authId] =
+                    (room.playerScores?.[user] || 0) + (room.playerWordPoints?.[user] || 0);
+        });
 
         res.send({
-            found: true,
-            phase: room.phase,
+            ...common,
             /* Сколько кругов доиграли и сколько заказано: по ним снаружи видно, что
                игра закончилась, — счёт сам по себе об этом не говорит */
+            round: room.soloModeRound,
             soloModeRound: room.soloModeRound,
             soloModeGoal: room.soloModeGoal,
-            online: room.onlinePlayers ? room.onlinePlayers.size : 0,
             scores,
         });
     });
@@ -278,6 +297,16 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 soloMode: false,
                 soloModeRound: 0,
                 soloModeGoal: 1,
+                /* Счётчик раундов командного режима: один раунд — один заход
+                   загадывающего. Нужен турик-менеджеру: формат «цепочка» играет
+                   ровно четыре, по одному на каждого из четверых */
+                teamRound: 0,
+                /* Снимок командного счёта на момент, когда четвёртый раунд
+                   закрыт. Дальше в комнате могут играть добавочные раунды на
+                   тайбрейк, и живой счёт поедет, а этот — нет: в турике он и
+                   есть счёт этапа. Снимается один раз за игру, рестарт его
+                   сбрасывает вместе со счётом */
+                teamStageScores: null,
                 packName: null,
                 customWordsLimit: registry.config.customWordsLimit,
                 managedVoice: true,
@@ -286,6 +315,9 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 rankedResultsSaved: false,
                 rankedScoreDiffs: {},
                 deafMode: false,
+                /* комната турика: имя начинается на turik-. Клиенту это нужно,
+                   чтобы убирать то, что мешает организатору вести игру */
+                turik: false,
                 mode: 'team',
                 sortMode
             };
@@ -299,15 +331,33 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 round: null,
                 gameEntryIndex: 0,
             };
-            /* Комнаты турика (turik-1А и такие же) заводятся сразу в соло-режиме и на
-               лёгком словаре: в турнире каждый играет за себя, а словарь там всегда изи.
-               Список слов заряжаем тут же — иначе первый вошедший получил бы словарь по
-               умолчанию, и уровень сбросился бы на второй (см. userJoin) */
-            if (String(room.roomId || "").toLowerCase().startsWith("turik-")) {
-                room.soloMode = true;
-                room.mode = 'solo';
-                room.level = 1;
+            /* Комнаты турика заводятся сразу в нужном режиме и словаре: всё это
+               задаёт само имя комнаты — turik-<solo|team-chain>-<easy|normal|hard>-<игра>.
+               Форматов турнира два: в сольном каждый играет за себя, в командном
+               («цепочка») матчи идут два на два, — а словарь орг выбирает при
+               создании турика, поэтому зашивать изи, как раньше, больше нельзя.
+
+               Имя без этих частей (turik-1А) значит соло на изи: так турик работал
+               до второго формата, и ссылки прошлых туриков должны открываться.
+
+               Список слов заряжаем тут же — иначе первый вошедший получил бы словарь
+               по умолчанию, и уровень сбросился бы на второй (см. userJoin) */
+            const турик = /^turik-(?:(solo|team-chain)-(easy|normal|hard)-)?/
+                .exec(String(room.roomId || "").toLowerCase());
+            if (турик) {
+                const командный = турик[1] === "team-chain";
+                room.turik = true;
+                room.soloMode = !командный;
+                room.mode = командный ? 'team' : 'solo';
+                room.level = {easy: 1, normal: 2, hard: 3}[турик[2] || "easy"];
                 this.state.roomWordsList = shuffleArray([...defaultWords[room.level]]);
+                /* Командный этап турика играется на количество раундов, а не до
+                   набранных очков, и при ничьей доигрывается добавочными. Цель по
+                   очкам тут только мешает: набрав её, команда выигрывает игру, всех
+                   выбрасывает на экран победы, и кто-нибудь жмёт рестарт вместо
+                   тайбрейка. Ставим заведомо недостижимую */
+                if (командный)
+                    room.goal = 999;
             }
             this.lastInteraction = new Date();
             this.wordSkippedCoolDown = false;
@@ -419,6 +469,19 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                         });
                     }
                 },
+                snapshotStageScores = () => {
+                    /* Четвёртый раунд закрыт и игра тронулась дальше — фиксируем
+                       счёт этапа. Событие «раунд доигран» в игре размазано: от
+                       конца таймера до старта следующего раунда очки за слова
+                       ещё правятся, поэтому цепляемся не за таймер, а за момент,
+                       когда они уже ушли в счёт команды */
+                    if (room.soloMode || room.teamStageScores || room.teamRound < 4)
+                        return;
+                    room.teamStageScores = {};
+                    Object.keys(room.teams).forEach(teamId => {
+                        room.teamStageScores[teamId] = room.teams[teamId].score;
+                    });
+                },
                 addWordPoints = () => {
                     if (!room.soloMode)
                         Object.keys(room.teams).forEach(teamId => {
@@ -435,6 +498,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                             delete room.playerWordPoints[playerId];
                         }
                     });
+                    snapshotStageScores();
                 },
                 stopTimer = () => {
                     room.timer = null;
@@ -511,6 +575,8 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                     this.state.activeWord = undefined;
                     calcWordPoints();
                     if (room.phase !== 1) {
+                        if (!room.soloMode)
+                            room.teamRound++;
                         rotatePlayers();
                         rotateTeams();
                     }
@@ -553,6 +619,8 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                     //room.wordIndex = 0;
                     room.wordsEnded = false;
                     room.soloModeRound = 0;
+                    room.teamRound = 0;
+                    room.teamStageScores = null;
                     room.rankedResultsSaved = false;
                     room.rankedScoreDiffs = {};
                     Object.keys(room.teams).forEach(teamId => {
@@ -839,8 +907,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                             if (room.goal >= 100)
                                 registry.authUsers.processAchievement(userData, registry.achievements.aliasMarathon.id);
                             if (room.ranked)
-                                registry.authUsers.processAchievement(userData, registry.achievements.rankedAliasWin.id);
-                        }
+                                registry.authUsers.processAchievement(userData, registry.achievements.rankedAliasWin.id);                        }
                     }
                 },
                 userJoin = (data) => {

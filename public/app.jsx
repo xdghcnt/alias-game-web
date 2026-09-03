@@ -1026,8 +1026,13 @@ class Game extends React.Component {
                                 {data.soloMode ? (data.ranked ? "Ranked players" : "Players") : "Teams"}:
                                 <Teams data={this.state} game={this}/>
                                 <br/>
-                                <div className={cs(
-                                    "spectators-section", {active: this.state.phase === 0 || this.state.spectators && this.state.spectators.length})}>
+                                {/* В турике блок зрителей на залоченной комнате скрыт целиком:
+                                    зрители заходят и выходят посреди игры, и список под
+                                    командами дёргал бы вёрстку прямо во время раунда */}
+                                <div className={cs("spectators-section", {
+                                    active: this.state.phase === 0
+                                        || (!data.turik && this.state.spectators && this.state.spectators.length)
+                                })}>
                                     Spectators:
                                     <br/>
                                     <Spectators data={this.state} game={this}/>
