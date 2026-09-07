@@ -1215,34 +1215,9 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                         send(room.onlinePlayers, "draw-clear");
                     }
                 },
-                "view-words-pack": (user, packName, index, isNew) => {
-                    if (!(packName.indexOf && ~packName.indexOf("..."))) {
-                        fs.readFile(`${appDir}/custom/${(isNew ? "new/" : "")}${packName}.json`, "utf8", function (err, str) {
-                            if (str) {
-                                const data = JSON.parse(str);
-                                send(user, "words-pack", {
-                                    wordList: data.wordList,
-                                    author: data.author,
-                                    packName,
-                                    index
-                                });
-                            }
-                            if (err)
-                                send(user, "message", JSON.stringify(err));
-                        });
-
-                    }
-                },
-                "words-pack-list": (user) => {
-                    fs.readdir(`${appDir}/custom`, "utf8", function (err, files) {
-                        if (files)
-                            send(user, "words-pack-list", files
-                                .filter((name) => name.endsWith(".json"))
-                                .map((name) => name.replace(".json", "")));
-                        if (err)
-                            send(user, "message", err);
-                    });
-                },
+                /* "view-words-pack" и "words-pack-list" живут в движке
+                   (ws-server-engine/room.js) — здесь лежали их дословные копии,
+                   которые перекрывали движковые через spread eventHandlers. */
                 "setup-words": (user, packName, words) => {
                     if (room.hostId === user && words.length <= 10000) {
                         if (words) {
