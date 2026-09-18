@@ -307,6 +307,8 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                    есть счёт этапа. Снимается один раз за игру, рестарт его
                    сбрасывает вместе со счётом */
                 teamStageScores: null,
+                /* Швейцарка: счётом этапа служит живой счёт, снимок не снимаем */
+                turikLiveScore: false,
                 packName: null,
                 customWordsLimit: registry.config.customWordsLimit,
                 managedVoice: true,
@@ -342,15 +344,24 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
 
                Список слов заряжаем тут же — иначе первый вошедший получил бы словарь
                по умолчанию, и уровень сбросился бы на второй (см. userJoin) */
-            const турик = /^turik-(?:(solo|team-chain)-(easy|normal|hard)-)?/
-                .exec(String(room.roomId || "").toLowerCase());
+            /* Имя разбираем как есть, не приводя к нижнему регистру: последней
+               частью в нём может стоять название пака, а оно — имя файла, и
+               регистр в нём настоящий. Регистр самих частей режима нам не важен,
+               их и сверяем без учёта регистра */
+            const турик = /^turik-(?:(solo|team-chain|swiss)-(easy|normal|hard)-([^-]+)(?:-(.+))?)?/i
+                .exec(String(room.roomId || ""));
             if (турик) {
-                const командный = турик[1] === "team-chain";
+                const формат = (турик[1] || "").toLowerCase();
+                const командный = формат === "team-chain" || формат === "swiss";
                 room.turik = true;
                 room.soloMode = !командный;
                 room.mode = командный ? 'team' : 'solo';
-                room.level = {easy: 1, normal: 2, hard: 3}[турик[2] || "easy"];
+                room.level = {easy: 1, normal: 2, hard: 3}[(турик[2] || "easy").toLowerCase()];
                 this.state.roomWordsList = shuffleArray([...defaultWords[room.level]]);
+                /* Швейцарка считает счёт этапа живым счётом комнаты: тайбрейков
+                   в ней нет вовсе, поэтому и снимок после четвёртого раунда ей
+                   не нужен — переигранный из-за лагов раунд просто учитывается */
+                room.turikLiveScore = формат === "swiss";
                 /* Командный этап турика играется на количество раундов, а не до
                    набранных очков, и при ничьей доигрывается добавочными. Цель по
                    очкам тут только мешает: набрав её, команда выигрывает игру, всех
@@ -358,6 +369,33 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                    тайбрейка. Ставим заведомо недостижимую */
                 if (командный)
                     room.goal = 999;
+                /* Пак приезжает последней частью имени: передать его иначе нечем
+                   — комнату создаёт первый вошедший, и поставить пак успел бы
+                   только он. Имя из адресной строки приходит закодированным,
+                   поэтому раскодируем; берём только пак, который у нас правда
+                   есть, — имя файла из чужих рук в путь пускать нельзя */
+                if (турик[4]) {
+                    let имяПака = турик[4];
+                    try {
+                        имяПака = decodeURIComponent(имяПака);
+                    } catch (e) {
+                        /* имя пришло битым — играем на обычном словаре */
+                    }
+                    if (existingPacks.has(имяПака))
+                        fs.readFile(`${appDir}/custom/${имяПака}.json`, "utf8", (err, str) => {
+                            if (!str) return;
+                            const data = JSON.parse(str);
+                            this.state.roomWordsList = shuffleArray(data.wordList);
+                            room.wordIndex = 0;
+                            room.wordsEnded = false;
+                            room.level = 0;
+                            room.packName = имяПака;
+                            /* Файл читается асинхронно, и первый игрок может
+                               успеть войти раньше: разошлём состояние ещё раз,
+                               иначе у него в комнате не будет видно пака */
+                            update();
+                        });
+                }
             }
             this.lastInteraction = new Date();
             this.wordSkippedCoolDown = false;
@@ -475,7 +513,8 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                        конца таймера до старта следующего раунда очки за слова
                        ещё правятся, поэтому цепляемся не за таймер, а за момент,
                        когда они уже ушли в счёт команды */
-                    if (room.soloMode || room.teamStageScores || room.teamRound < 4)
+                    if (room.soloMode || room.teamStageScores || room.teamRound < 4
+                        || room.turikLiveScore)
                         return;
                     room.teamStageScores = {};
                     Object.keys(room.teams).forEach(teamId => {
