@@ -334,7 +334,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 gameEntryIndex: 0,
             };
             /* Комнаты турика заводятся сразу в нужном режиме и словаре: всё это
-               задаёт само имя комнаты — turik-<solo|team-chain>-<easy|normal|hard>-<игра>.
+               задаёт само имя комнаты — turik-<solo|team-chain>-<easy|normal|hard|nometa>-<игра>.
                Форматов турнира два: в сольном каждый играет за себя, в командном
                («цепочка») матчи идут два на два, — а словарь орг выбирает при
                создании турика, поэтому зашивать изи, как раньше, больше нельзя.
@@ -348,7 +348,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                частью в нём может стоять название пака, а оно — имя файла, и
                регистр в нём настоящий. Регистр самих частей режима нам не важен,
                их и сверяем без учёта регистра */
-            const турик = /^turik-(?:(solo|team-chain|swiss)-(easy|normal|hard)-([^-]+)(?:-(.+))?)?/i
+            const турик = /^turik-(?:(solo|team-chain|swiss)-(easy|normal|hard|nometa)-([^-]+)(?:-(.+))?)?/i
                 .exec(String(room.roomId || ""));
             if (турик) {
                 const формат = (турик[1] || "").toLowerCase();
@@ -356,7 +356,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 room.turik = true;
                 room.soloMode = !командный;
                 room.mode = командный ? 'team' : 'solo';
-                room.level = {easy: 1, normal: 2, hard: 3}[(турик[2] || "easy").toLowerCase()];
+                room.level = {easy: 1, normal: 2, hard: 3, nometa: 5}[(турик[2] || "easy").toLowerCase()];
                 this.state.roomWordsList = shuffleArray([...defaultWords[room.level]]);
                 /* Швейцарка считает счёт этапа живым счётом комнаты: тайбрейков
                    в ней нет вовсе, поэтому и снимок после четвёртого раунда ей
