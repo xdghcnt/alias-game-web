@@ -1076,7 +1076,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                             && !this.wordSkippedCoolDown)) {
                         if (room.currentWords.length > 99)
                             endRound();
-                        if (room.currentBet > room.currentWords.length + 1) {
+                        else if (room.currentBet > room.currentWords.length + 1) {
                             if (room.wordIndex < this.state.roomWordsList.length) {
                                 const randomWord = this.state.roomWordsList[room.wordIndex++];
                                 if (this.state.activeWord) {
