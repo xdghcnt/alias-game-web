@@ -299,16 +299,17 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                 soloModeGoal: 1,
                 /* Счётчик раундов командного режима: один раунд — один заход
                    загадывающего. Нужен турик-менеджеру: формат «цепочка» играет
-                   ровно четыре, по одному на каждого из четверых */
+                   четыре, а биатлон восемь — по два на каждого из четверых */
                 teamRound: 0,
-                /* Снимок командного счёта на момент, когда четвёртый раунд
-                   закрыт. Дальше в комнате могут играть добавочные раунды на
+                /* Снимок командного счёта после четырёх ходов в цепочке
+                   или восьми в биатлоне. Дальше в комнате могут играть добавочные раунды на
                    тайбрейк, и живой счёт поедет, а этот — нет: в турике он и
                    есть счёт этапа. Снимается один раз за игру, рестарт его
                    сбрасывает вместе со счётом */
                 teamStageScores: null,
                 /* Швейцарка: счётом этапа служит живой счёт, снимок не снимаем */
                 turikLiveScore: false,
+                turikStageRounds: 4,
                 packName: null,
                 customWordsLimit: registry.config.customWordsLimit,
                 managedVoice: true,
@@ -348,11 +349,11 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                частью в нём может стоять название пака, а оно — имя файла, и
                регистр в нём настоящий. Регистр самих частей режима нам не важен,
                их и сверяем без учёта регистра */
-            const турик = /^turik-(?:(solo|team-chain|swiss)-(easy|normal|hard|nometa)-([^-]+)(?:-(.+))?)?/i
+            const турик = /^turik-(?:(solo|team-chain|swiss|biathlon)-(easy|normal|hard|nometa)-([^-]+)(?:-(.+))?)?/i
                 .exec(String(room.roomId || ""));
             if (турик) {
                 const формат = (турик[1] || "").toLowerCase();
-                const командный = формат === "team-chain" || формат === "swiss";
+                const командный = формат === "team-chain" || формат === "swiss" || формат === "biathlon";
                 room.turik = true;
                 room.soloMode = !командный;
                 room.mode = командный ? 'team' : 'solo';
@@ -362,6 +363,7 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                    в ней нет вовсе, поэтому и снимок после четвёртого раунда ей
                    не нужен — переигранный из-за лагов раунд просто учитывается */
                 room.turikLiveScore = формат === "swiss";
+                room.turikStageRounds = формат === "biathlon" ? 8 : 4;
                 /* Командный этап турика играется на количество раундов, а не до
                    набранных очков, и при ничьей доигрывается добавочными. Цель по
                    очкам тут только мешает: набрав её, команда выигрывает игру, всех
@@ -508,12 +510,12 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                     }
                 },
                 snapshotStageScores = () => {
-                    /* Четвёртый раунд закрыт и игра тронулась дальше — фиксируем
+                    /* Нужное число ходов (4 в цепочке, 8 в биатлоне) закрыто — фиксируем
                        счёт этапа. Событие «раунд доигран» в игре размазано: от
                        конца таймера до старта следующего раунда очки за слова
                        ещё правятся, поэтому цепляемся не за таймер, а за момент,
                        когда они уже ушли в счёт команды */
-                    if (room.soloMode || room.teamStageScores || room.teamRound < 4
+                    if (room.soloMode || room.teamStageScores || room.teamRound < (room.turikStageRounds || 4)
                         || room.turikLiveScore)
                         return;
                     room.teamStageScores = {};
