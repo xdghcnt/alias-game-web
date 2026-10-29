@@ -608,7 +608,7 @@ class Game extends React.Component {
         if (!!parseInt(localStorage.aliasAllowReport)) {
             const
                 words = document.getElementById("word-add-area").value,
-                wordsPackName = document.getElementById("word-add-pack-name").value;
+                wordsPackName = document.getElementById("word-add-pack-name").value.trim();
             if (this.state.wordAddCount > 0
                 && (this.state.wordAddCount <= (this.state.wordAddLevel === "custom" ? this.state.customWordsLimit : 50))) {
                 if (this.state.wordAddLevel === "custom" && !wordsPackName)
