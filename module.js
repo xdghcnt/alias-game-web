@@ -1453,7 +1453,8 @@ function init(wsServer, path, moderKey, turikAdmins, sortMode) {
                                                 }
                                             });
                                             if (!sortMode)
-                                                userRegistry.send(aliasPlayers, "word-report-notify", moderData);
+                                                // All alias rooms, not just this one: the room's own sender reaches only its users
+                                                registry.of(path).send(aliasPlayers, "word-report-notify", moderData);
                                         }
                                     );
                                     if (!sortMode) {
